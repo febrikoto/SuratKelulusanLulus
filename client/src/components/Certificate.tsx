@@ -228,22 +228,19 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
             <p>{data.cityName}, {formatDate(data.graduationDate)}</p>
             <p>Kepala,</p>
             
-            <div className="h-36 flex flex-col items-center justify-center">
-              {/* Tanda tangan di atas stempel */}
-              <div className="z-10 relative"> 
-                {data.headmasterSignature ? (
-                  <img 
-                    src={data.headmasterSignature} 
-                    alt="Tanda Tangan Kepala Sekolah" 
-                    className="h-24 object-contain mb-1" 
-                  />
-                ) : (
-                  <p className="font-semibold underline mb-8">{data.headmasterName}</p>
-                )}
-              </div>
+            <div className="h-28 flex items-end justify-center relative">
+              {data.headmasterSignature ? (
+                <img 
+                  src={data.headmasterSignature} 
+                  alt="Tanda Tangan Kepala Sekolah" 
+                  className="h-20 object-contain mb-2 z-10 relative" 
+                />
+              ) : (
+                <p className="font-semibold underline">{data.headmasterName}</p>
+              )}
               
-              {/* Digital Stamp - Di bawah tanda tangan tetapi di atas nama */}
-              <div className="w-40 h-40 opacity-60 mx-auto -mt-8">
+              {/* Digital Stamp - Kembali ke posisi awal (di kanan) */}
+              <div className="absolute -right-5 bottom-2 w-40 h-40 opacity-60">
                 {data.schoolStamp ? (
                   <img src={data.schoolStamp} alt="Stempel Sekolah" className="w-full h-full object-contain" />
                 ) : (
