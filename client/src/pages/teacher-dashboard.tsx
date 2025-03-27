@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Student } from '@shared/schema';
-import { DashboardStats, UserInfo } from '@shared/types';
-import { Loader2, Search, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { DashboardStats, UserInfo, CertificateData } from '@shared/types';
+import { Loader2, Search, Eye, CheckCircle, XCircle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -18,6 +18,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import TeacherHeader from '@/components/TeacherHeader';
+import { Certificate } from '@/components/Certificate';
+import { prepareCertificateData, generatePdf } from '@/lib/utils';
 
 export default function TeacherDashboard(): React.JSX.Element {
   const [user, setUser] = useState<UserInfo | null>(null);
@@ -28,6 +30,9 @@ export default function TeacherDashboard(): React.JSX.Element {
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [verificationNote, setVerificationNote] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
+  const [showCertificatePreview, setShowCertificatePreview] = useState(false);
+  const [certificateData, setCertificateData] = useState<CertificateData | null>(null);
+  const [showGrades, setShowGrades] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -76,6 +81,32 @@ export default function TeacherDashboard(): React.JSX.Element {
   const openRejectionModal = (id: number) => {
     setSelectedStudentId(id);
     setShowRejectionModal(true);
+  };
+  
+  const openCertificatePreview = (student: Student) => {
+    const certData = prepareCertificateData(student, showGrades);
+    setCertificateData(certData);
+    setShowCertificatePreview(true);
+  };
+  
+  const handleDownloadCertificate = () => {
+    if (!certificateData) return;
+    
+    generatePdf('certificate-preview-container', `SKL_${certificateData.nisn}.pdf`)
+      .then(() => {
+        toast({
+          title: "Success",
+          description: "SKL berhasil diunduh",
+        });
+      })
+      .catch((error) => {
+        toast({
+          title: "Error",
+          description: "Gagal mengunduh SKL",
+          variant: "destructive",
+        });
+        console.error(error);
+      });
   };
 
   // Handle logout
@@ -371,29 +402,43 @@ export default function TeacherDashboard(): React.JSX.Element {
                         </div>
                       </div>
                       
-                      <div className="flex justify-between mt-4">
+                      <div className="flex flex-col space-y-3 mt-4">
                         <Button 
-                          variant="outline"
+                          variant="default"
                           onClick={() => {
                             setShowStudentDetailModal(false);
-                            openVerificationModal(student.id);
+                            openCertificatePreview(student);
                           }}
-                          className="w-1/2 mr-2"
+                          className="w-full"
                         >
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Verifikasi
+                          <Eye className="mr-2 h-4 w-4" />
+                          Lihat Pratinjau SKL
                         </Button>
-                        <Button 
-                          variant="outline"
-                          onClick={() => {
-                            setShowStudentDetailModal(false);
-                            openRejectionModal(student.id);
-                          }}
-                          className="w-1/2 ml-2"
-                        >
-                          <XCircle className="mr-2 h-4 w-4" />
-                          Tolak
-                        </Button>
+                        
+                        <div className="flex justify-between">
+                          <Button 
+                            variant="outline"
+                            onClick={() => {
+                              setShowStudentDetailModal(false);
+                              openVerificationModal(student.id);
+                            }}
+                            className="w-1/2 mr-2"
+                          >
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Verifikasi
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            onClick={() => {
+                              setShowStudentDetailModal(false);
+                              openRejectionModal(student.id);
+                            }}
+                            className="w-1/2 ml-2"
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Tolak
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -551,6 +596,56 @@ export default function TeacherDashboard(): React.JSX.Element {
                   );
                 })()}
               </div>
+            ) : (
+              <div className="flex justify-center p-10">
+                <Loader2 className="h-10 w-10 animate-spin text-border" />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Certificate Preview Modal */}
+      <Dialog open={showCertificatePreview} onOpenChange={setShowCertificatePreview}>
+        <DialogContent className="sm:max-w-4xl h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Pratinjau Surat Keterangan Lulus</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {certificateData ? (
+              <>
+                <div id="certificate-preview-container">
+                  <Certificate data={certificateData} />
+                </div>
+                
+                <div className="flex justify-center space-x-4 mt-6">
+                  <Button 
+                    onClick={() => setCertificateData((prevData: CertificateData | null) => prevData ? {...prevData, showGrades: false} : null)}
+                    variant={!certificateData.showGrades ? "default" : "outline"}
+                    className={!certificateData.showGrades ? "bg-primary hover:bg-primary/90" : ""}
+                  >
+                    SKL Tanpa Nilai
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => setCertificateData((prevData: CertificateData | null) => prevData ? {...prevData, showGrades: true} : null)}
+                    variant={certificateData.showGrades ? "default" : "outline"}
+                    className={certificateData.showGrades ? "bg-primary hover:bg-primary/90" : ""}
+                  >
+                    SKL Dengan Nilai
+                  </Button>
+                </div>
+                
+                <div className="flex justify-center mt-4">
+                  <Button 
+                    onClick={handleDownloadCertificate}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Download className="mr-2 h-5 w-5" />
+                    Unduh SKL
+                  </Button>
+                </div>
+              </>
             ) : (
               <div className="flex justify-center p-10">
                 <Loader2 className="h-10 w-10 animate-spin text-border" />

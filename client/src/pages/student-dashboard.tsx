@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Student } from '@shared/schema';
 import { UserInfo, CertificateData } from '@shared/types';
-import { generatePdf, prepareCertificateData } from '@/lib/utils.tsx';
+import { generatePdf, prepareCertificateData } from '@/lib/utils';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import StudentHeader from '@/components/StudentHeader';
-import Certificate from '@/components/Certificate';
+import { Certificate } from '@/components/Certificate';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
