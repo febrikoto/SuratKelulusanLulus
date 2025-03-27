@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Student } from '@shared/schema';
+import { Student, Settings } from '@shared/schema';
 import { UserInfo, CertificateData } from '@shared/types';
 import { generatePdf, prepareCertificateData } from '@/lib/utils';
 import { Download, Loader2, FileText, X } from 'lucide-react';
@@ -36,7 +36,7 @@ export default function StudentDashboard() {
   });
   
   // Fetch school settings
-  const { data: schoolSettings, isLoading: settingsLoading } = useQuery({
+  const { data: schoolSettings, isLoading: settingsLoading } = useQuery<Settings>({
     queryKey: ['/api/settings'],
   });
   
