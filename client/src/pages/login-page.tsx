@@ -162,9 +162,12 @@ export default function LoginPage() {
           </CardContent>
           
           <CardFooter className="text-center text-sm text-muted-foreground">
-            <p className="w-full">
-              Untuk demo, gunakan username: admin, password: admin123 untuk role Admin
-            </p>
+            <div className="w-full space-y-1">
+              <p>Untuk demo, gunakan kredensial berikut:</p>
+              <p><b>Admin:</b> username: admin, password: admin123</p>
+              <p><b>Guru:</b> username: guru1, password: guru123</p>
+              <p><b>Siswa:</b> username: siswa1, password: siswa123</p>
+            </div>
           </CardFooter>
         </Card>
       </div>

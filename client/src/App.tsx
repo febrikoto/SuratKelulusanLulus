@@ -10,12 +10,12 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 
 function AppRoutes() {
-  // Note: useAuth is used inside individual routes, not here
+  // Note: useAuth adalah hook kustom yang digunakan dalam peran
   const [location, setLocation] = useLocation();
   
-  // Simple handler for public routes only
+  // Simple handler untuk public routes saja
   useEffect(() => {
-    // Force redirect from root to login
+    // Redirect dari root ke login
     if (location === "/") {
       setLocation("/login");
     }
