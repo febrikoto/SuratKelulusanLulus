@@ -5,6 +5,20 @@ import { z } from "zod";
 // Define role enum
 export const userRoleEnum = pgEnum('user_role', ['admin', 'guru', 'siswa']);
 
+// Settings table for school and certificate data
+export const settings = pgTable("settings", {
+  id: serial("id").primaryKey(),
+  schoolName: varchar("school_name", { length: 200 }).notNull(),
+  schoolAddress: text("school_address").notNull(),
+  schoolLogo: text("school_logo").notNull(),
+  headmasterName: varchar("headmaster_name", { length: 100 }).notNull(),
+  headmasterNip: varchar("headmaster_nip", { length: 50 }).notNull(),
+  certHeader: varchar("cert_header", { length: 200 }).notNull(),
+  certFooter: text("cert_footer").notNull(),
+  academicYear: varchar("academic_year", { length: 20 }).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Students table
 export const students = pgTable("students", {
   id: serial("id").primaryKey(),
@@ -47,12 +61,20 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true
 });
 
+export const insertSettingsSchema = createInsertSchema(settings).omit({
+  id: true,
+  updatedAt: true
+});
+
 // Define types
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
 export type Student = typeof students.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export type InsertSettings = z.infer<typeof insertSettingsSchema>;
+export type Settings = typeof settings.$inferSelect;
 
 // Login schema
 export const loginSchema = z.object({

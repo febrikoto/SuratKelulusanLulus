@@ -1,4 +1,4 @@
-import { User, Student, InsertUser, InsertStudent, VerificationData, students, users } from "@shared/schema";
+import { User, Student, InsertUser, InsertStudent, VerificationData, Settings, InsertSettings, students, users, settings } from "@shared/schema";
 import { DashboardStats } from "@shared/types";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -30,6 +30,11 @@ export interface IStorage {
 
   // Verification operations
   verifyStudent(verificationData: VerificationData, verifiedBy: number): Promise<Student | undefined>;
+  
+  // Settings operations
+  getSettings(): Promise<Settings | undefined>;
+  saveSettings(settings: InsertSettings): Promise<Settings>;
+  updateSettings(data: Partial<InsertSettings>): Promise<Settings | undefined>;
   
   // Dashboard operations
   getDashboardStats(): Promise<DashboardStats>;
@@ -152,6 +157,43 @@ export class DatabaseStorage implements IStorage {
         verificationNotes: verificationData.verificationNotes || null
       })
       .where(eq(students.id, verificationData.studentId))
+      .returning();
+    
+    return result[0];
+  }
+
+  async getSettings(): Promise<Settings | undefined> {
+    const result = await this.db.select().from(settings);
+    return result[0];
+  }
+  
+  async saveSettings(settingsData: InsertSettings): Promise<Settings> {
+    // Check if settings already exist
+    const existing = await this.getSettings();
+    
+    if (existing) {
+      // Update existing settings
+      return this.updateSettings(settingsData) as Promise<Settings>;
+    } else {
+      // Create new settings
+      const result = await this.db.insert(settings).values(settingsData).returning();
+      return result[0];
+    }
+  }
+  
+  async updateSettings(data: Partial<InsertSettings>): Promise<Settings | undefined> {
+    const existing = await this.getSettings();
+    
+    if (!existing) {
+      return undefined;
+    }
+    
+    const result = await this.db.update(settings)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(settings.id, existing.id))
       .returning();
     
     return result[0];
