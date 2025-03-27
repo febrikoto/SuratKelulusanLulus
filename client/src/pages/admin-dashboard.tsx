@@ -15,7 +15,8 @@ import {
   PencilLine, 
   Eye, 
   Download, 
-  Loader2
+  Loader2,
+  FileSpreadsheet
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,8 @@ import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/u
 import AdminHeader from '@/components/AdminHeader';
 import { Certificate } from '@/components/Certificate';
 import AddStudentModal from '@/components/modals/AddStudentModal';
+import GradesModal from '@/components/modals/GradesModal';
+import GradeImportModal from '@/components/modals/GradeImportModal';
 
 export default function AdminDashboard() {
   const [user, setUser] = useState<any>(null);
@@ -84,7 +87,10 @@ export default function AdminDashboard() {
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showImportCsvModal, setShowImportCsvModal] = useState(false);
   const [showStudentDetailModal, setShowStudentDetailModal] = useState(false);
+  const [showGradeImportModal, setShowGradeImportModal] = useState(false);
+  const [showGradeModal, setShowGradeModal] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<number | undefined>(undefined);
+  const [selectedStudentName, setSelectedStudentName] = useState<string | undefined>(undefined);
   const [previewCertificateData, setPreviewCertificateData] = useState<any | null>(null);
   
   // Fetch dashboard stats
@@ -211,6 +217,14 @@ export default function AdminDashboard() {
             >
               <Upload className="mr-2 h-4 w-4" />
               Import CSV
+            </Button>
+            <Button 
+              onClick={() => setShowGradeImportModal(true)}
+              variant="secondary"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Import Nilai Excel
             </Button>
             <Button 
               onClick={handleGenerateAllCertificates}
@@ -380,6 +394,7 @@ export default function AdminDashboard() {
                       <TableHead>Nama Siswa</TableHead>
                       <TableHead>Kelas</TableHead>
                       <TableHead>Status SKL</TableHead>
+                      <TableHead>Nilai</TableHead>
                       <TableHead>Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -398,6 +413,20 @@ export default function AdminDashboard() {
                              student.status === 'pending' ? 'Menunggu Verifikasi' : 
                              'Ditolak'}
                           </span>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => {
+                              setSelectedStudentId(student.id);
+                              setSelectedStudentName(student.fullName);
+                              setShowGradeModal(true);
+                            }}
+                          >
+                            Kelola Nilai
+                          </Button>
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
@@ -555,6 +584,20 @@ export default function AdminDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Grade Management Modal */}
+      <GradesModal
+        isOpen={showGradeModal}
+        onClose={() => setShowGradeModal(false)}
+        studentId={selectedStudentId}
+        studentName={selectedStudentName}
+      />
+      
+      {/* Grade Import Modal */}
+      <GradeImportModal
+        isOpen={showGradeImportModal}
+        onClose={() => setShowGradeImportModal(false)}
+      />
       
       {/* Hidden certificate for PDF generation */}
       <div className="hidden" id="certificate-container">

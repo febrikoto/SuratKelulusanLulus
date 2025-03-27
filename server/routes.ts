@@ -254,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/students/:id/grades", requireRole(["admin", "guru"]), async (req, res) => {
+  app.post("/api/students/:id/grades", requireRole(["admin"]), async (req, res) => {
     try {
       const studentId = parseInt(req.params.id);
       if (isNaN(studentId)) {
@@ -310,7 +310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/grades/:id", requireRole(["admin", "guru"]), async (req, res) => {
+  app.delete("/api/grades/:id", requireRole(["admin"]), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -325,6 +325,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).end();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete grade" });
+    }
+  });
+  
+  // Bulk import grades from Excel
+  app.post("/api/grades/import", requireRole(["admin"]), async (req, res) => {
+    try {
+      const gradesData = req.body;
+      
+      if (!Array.isArray(gradesData) || gradesData.length === 0) {
+        return res.status(400).json({ message: "Invalid grades data format" });
+      }
+      
+      let successCount = 0;
+      let errorCount = 0;
+      
+      // Process each grade entry
+      for (const gradeEntry of gradesData) {
+        const { nisn, subjectName, value } = gradeEntry;
+        
+        if (!nisn || !subjectName || value === undefined) {
+          errorCount++;
+          continue;
+        }
+        
+        try {
+          // Find student by NISN
+          const student = await storage.getStudentByNisn(nisn);
+          if (!student) {
+            errorCount++;
+            continue;
+          }
+          
+          // Save grade for this student
+          await storage.saveGrade({
+            studentId: student.id,
+            subjectName,
+            value
+          });
+          
+          successCount++;
+        } catch (error) {
+          console.error(`Error processing grade for NISN ${nisn}:`, error);
+          errorCount++;
+        }
+      }
+      
+      res.status(200).json({
+        success: successCount,
+        errors: errorCount,
+        message: `Successfully imported ${successCount} grades, with ${errorCount} errors.`
+      });
+    } catch (error) {
+      console.error("Failed to import grades:", error);
+      res.status(500).json({ message: "Failed to import grades" });
     }
   });
 
