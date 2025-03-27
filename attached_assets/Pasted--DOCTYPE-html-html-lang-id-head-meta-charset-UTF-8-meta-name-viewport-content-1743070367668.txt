@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi SKL (Surat Keterangan Lulus)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .transition-all {
+            transition: all 0.3s ease;
+        }
+        
+        .dark body {
+            background-color: #181818;
+            color: #f3f4f6;
+        }
+        
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .dark .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Certificate styling */
+        .certificate {
+            border: 10px solid #5D5CDE;
+            padding: 20px;
+            position: relative;
+            background-color: #fff;
+            color: #000;
+        }
+        
+        .certificate::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: 5px;
+            bottom: 5px;
+            border: 2px solid #5D5CDE;
+            pointer-events: none;
+        }
+        
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            background-color: #4CAF50;
+            color: white;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+        
+        /* Loading spinner */
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #5D5CDE;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        .dark .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #5D5CDE;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* PDF preview */
+        .pdf-preview {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 dark:bg-gray-900 transition-all">
+    <div id="app" class="container mx-auto px-4 py-6 max-w-6xl">
+        <div id="toast" class="toast">
+            Notifikasi
+        </div>
+        
+        <!-- Header -->
+        <header class="mb-8 relative">
+            <!-- Judul Aplikasi (Centered) dengan Logo -->
+            <div class="text-center mb-4">
+                <!-- Logo (SVG Certificate Icon) -->
+                <div class="flex justify-center mb-2">
+                    <div class="w-16 h-16 text-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M11.7 2.805a.75.75 0 01.6 0A60.65 60.65 0 0122.83 8.72a.75.75 0 01-.231 1.337 49.949 49.949 0 00-9.902 3.912l-.003.002-.34.18a.75.75 0 01-.707 0A50.009 50.009 0 007.5 12.174v-.224c0-.131.067-.248.172-.311a54.614 54.614 0 014.653-2.52.75.75 0 00-.65-1.352 56.129 56.129 0 00-4.78 2.589 1.858 1.858 0 00-.859 1.228 49.803 49.803 0 00-4.634-1.527.75.75 0 01-.231-1.337A60.653 60.653 0 0111.7 2.805z" />
+                            <path d="M13.06 15.473a48.45 48.45 0 017.666-3.282c.134 1.414.22 2.843.255 4.285a.75.75 0 01-.46.71 47.878 47.878 0 00-8.105 4.342.75.75 0 01-.832 0 47.877 47.877 0 00-8.104-4.342.75.75 0 01-.461-.71c.035-1.442.121-2.87.255-4.286A48.4 48.4 0 016 13.18v1.27a1.5 1.5 0 00-.14 2.508c-.09.38-.222.753-.397 1.11.452.213.901.434 1.346.661a6.729 6.729 0 00.551-1.608 1.5 1.5 0 00.14-2.67v-.645a48.549 48.549 0 013.44 1.668 2.25 2.25 0 002.12 0z" />
+                            <path d="M4.462 19.462c.42-.419.753-.89 1-1.394.453.213.902.434 1.347.661a6.743 6.743 0 01-1.286 1.794.75.75 0 11-1.06-1.06z" />
+                        </svg>
+                    </div>
+                </div>
+                
+                <h1 class="text-2xl md:text-3xl font-bold text-primary">Aplikasi SKL</h1>
+                <div class="text-sm md:text-base text-gray-500 dark:text-gray-400">Surat Keterangan Lulus</div>
+                <div class="text-sm md:text-base font-medium text-primary mt-1">Tahun Ajaran 2024/2025</div>
+            </div>
+            
+            <!-- User Info & Logout (Absolute Right) -->
+            <div class="absolute top-0 right-0 flex items-center">
+                <div id="userInfo" class="mr-4 hidden text-right">
+                    <div id="userName" class="font-medium"></div>
+                    <div id="userRole" class="text-sm text-gray-500 dark:text-gray-400"></div>
+                </div>
+                <button id="logoutBtn" class="hidden bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
+                    Logout
+                </button>
+            </div>
+        </header>
+        
+        <!-- Login Screen -->
+        <div id="loginScreen" class="flex flex-col items-center justify-center py-8">
+            <div class="w-full max-w-lg bg-white dark:bg-gray-800 rounded-lg card-shadow p-6 md:p-8">
+                <h2 class="text-xl md:text-2xl font-semibold mb-6 text-center text-gray-800 dark:text-gray-100">Login ke Aplikasi SKL</h2>
+                
+                <div class="mb-4">
+                    <label for="username" class="block text-gray-700 dark:text-gray-300 mb-2">Username</label>
+                    <input type="text" id="username" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Masukkan username">
+                </div>
+                
+                <div class="mb-6">
+                    <label for="password" class="block text-gray-700 dark:text-gray-300 mb-2">Password</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Masukkan password">
+                </div>
+                
+                <div class="mb-6">
+                    <label for="role" class="block text-gray-700 dark:text-gray-300 mb-2">Pilih Peran</label>
+                    <select id="role" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option value="admin">Admin</option>
+                        <option value="guru">Guru</option>
+                        <option value="siswa">Siswa</option>
+                    </select>
+                </div>
+                
+                <button id="loginBtn" class="w-full bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-md transition-all">
+                    Login
+                </button>
+            </div>
+        </div>
+        
+        <!-- Admin Dashboard -->
+        <div id="adminDashboard" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl md:text-2xl font-semibold text-gray-800 dark:text-gray-100">Dashboard Admin</h2>
+                <div class="flex flex-wrap gap-2">
+                    <button id="addStudentBtn" class="bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-md">
+                        Tambah Siswa
+                    </button>
+                    <button id="importCsvBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md">
+                        Import CSV
+                    </button>
+                    <button id="generateSkl" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md">
+                        Generate SKL
+                    </button>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-gray-800 rounded-lg card-shadow p-4 md:p-6 mb-6">
+                <h3 class="text-lg font-medium mb-4 text-gray-800 dark:text-gray-100">Data Siswa</h3>
+                
+                <div class="overflow-x-auto">
+                    <table id="studentTable" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead>
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">NISN</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nama Siswa</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Kelas</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status SKL</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="studentTableBody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Teacher Dashboard -->
+        <div id="guruDashboard" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl md:text-2xl font-semibold text-gray-800 dark:text-gray-100">Dashboard Guru</h2>
+            </div>
+            
+            <div class="bg-white dark:bg-gray-800 rounded-lg card-shadow p-4 md:p-6 mb-6">
+                <h3 class="text-lg font-medium mb-4 text-gray-800 dark:text-gray-100">Verifikasi Data Siswa</h3>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead>
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">NISN</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nama Siswa</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Kelas</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="verificationTableBody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-gray-800 rounded-lg card-shadow p-4 md:p-6">
+                <h3 class="text-lg font-medium mb-4 text-gray-800 dark:text-gray-100">Persetujuan SKL</h3>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead>
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">NISN</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nama Siswa</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Kelas</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="approvalTableBody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Student Dashboard -->
+        <div id="siswaDashboard" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl md:text-2xl font-semibold text-gray-800 dark:text-gray-100">Dashboard Siswa</h2>
+                <button id="requestSklBtn" class="bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-md">
+                    Ajukan SKL
+                </button>
+            </div>
+            
+            <div class="bg-white dark:bg-gray-800 rounded-lg card-shadow p-4 md:p-6 mb-6">
+                <h3 class="text-lg font-medium mb-4 text-gray-800 dark:text-gray-100">Status Permohonan SKL</h3>
+                
+                <div id="sklStatusCard" class="p-4 rounded-md bg-gray-100 dark:bg-gray-700 mb-4">
+                    <div class="flex items-center mb-2">
+                        <div id="statusIcon" class="w-8 h-8 rounded-full flex items-center justify-center mr-3 bg-yellow-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-800 dark:text-gray-100">Permohonan SKL</h4>
+                            <p id="sklStatus" class="text-sm text-gray-600 dark:text-gray-300">Menunggu Konfirmasi</p>
+                        </div>
+                    </div>
+                    <div class="ml-11">
+                        <p class="text-sm text-gray-600 dark:text-gray-300">
+                            Status SKL Anda sedang dalam proses. Anda akan menerima notifikasi ketika SKL Anda siap diunduh.
+                        </p>
+                    </div>
+                </div>
+                
+                <div id="downloadSklSection" class="hidden">
+                    <h3 class="text-lg font-medium mb-4 text-gray-800 dark:text-gray-100">Unduh SKL</h3>
+                    <div class="flex justify-between items-center p-4 rounded-md bg-green-50 dark:bg-green-900 border-l-4 border-green-500">
+                        <div>
+                            <p class="font-medium text-green-800 dark:text-green-100">SKL Anda telah disetujui!</p>
+                            <p class="text-sm text-green-700 dark:text-green-200">SKL Anda siap untuk diunduh dan dilihat.</p>
+                        </div>
+                        <button id="viewSklBtn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md">
+                            Lihat SKL
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add Student Modal -->
+        <div id="addStudentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg p-6 card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Tambah Data Siswa</h3>
+                    <button id="closeAddStudentModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <form id="addStudentForm">
+                    <div class="mb-4">
+                        <label for="nisn" class="block text-gray-700 dark:text-gray-300 mb-2">NISN</label>
+                        <input type="text" id="nisn" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Masukkan NISN">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="studentName" class="block text-gray-700 dark:text-gray-300 mb-2">Nama Siswa</label>
+                        <input type="text" id="studentName" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Masukkan nama siswa">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="class" class="block text-gray-700 dark:text-gray-300 mb-2">Kelas</label>
+                        <input type="text" id="class" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Masukkan kelas">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="birthdate" class="block text-gray-700 dark:text-gray-300 mb-2">Tanggal Lahir</label>
+                        <input type="date" id="birthdate" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="parentName" class="block text-gray-700 dark:text-gray-300 mb-2">Nama Orang Tua</label>
+                        <input type="text" id="parentName" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Masukkan nama orang tua">
+                    </div>
+                    
+                    <div class="flex justify-end mt-6">
+                        <button type="button" id="cancelAddStudent" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 mr-2">
+                            Batal
+                        </button>
+                        <button type="submit" class="bg-primary hover:bg-opacity-90 text-white font-medium px-4 py-2 rounded-md">
+                            Simpan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Generate SKL Modal -->
+        <div id="generateSklModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg p-6 card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Generate SKL</h3>
+                    <button id="closeGenerateSklModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="sklStudent" class="block text-gray-700 dark:text-gray-300 mb-2">Pilih Siswa</label>
+                    <select id="sklStudent" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                        <!-- Students will be loaded here -->
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="schoolYear" class="block text-gray-700 dark:text-gray-300 mb-2">Tahun Ajaran</label>
+                    <input type="text" id="schoolYear" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Contoh: 2023/2024">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="sklDate" class="block text-gray-700 dark:text-gray-300 mb-2">Tanggal SKL</label>
+                    <input type="date" id="sklDate" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="principalName" class="block text-gray-700 dark:text-gray-300 mb-2">Nama Kepala Sekolah</label>
+                    <input type="text" id="principalName" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Nama Kepala Sekolah">
+                </div>
+                
+                <div class="flex justify-end mt-6">
+                    <button id="cancelGenerateSkl" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 mr-2">
+                        Batal
+                    </button>
+                    <button id="generateSklBtn" class="bg-primary hover:bg-opacity-90 text-white font-medium px-4 py-2 rounded-md">
+                        Generate
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Request SKL Modal -->
+        <div id="requestSklModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg p-6 card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Ajukan SKL</h3>
+                    <button id="closeRequestSklModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="p-4 mb-4 bg-yellow-50 dark:bg-yellow-900 rounded-md">
+                    <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                        Pastikan semua data Anda sudah benar sebelum mengajukan SKL. Data yang salah dapat menyebabkan penolakan atau penundaan pemrosesan SKL Anda.
+                    </p>
+                </div>
+                
+                <div class="mb-4">
+                    <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">Nama Siswa</h4>
+                    <p id="requestName" class="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">-</p>
+                </div>
+                
+                <div class="mb-4">
+                    <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">NISN</h4>
+                    <p id="requestNisn" class="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">-</p>
+                </div>
+                
+                <div class="mb-4">
+                    <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">Kelas</h4>
+                    <p id="requestClass" class="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">-</p>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="requestNotes" class="block text-gray-700 dark:text-gray-300 mb-2">Catatan Tambahan (Opsional)</label>
+                    <textarea id="requestNotes" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary" rows="3" placeholder="Masukkan catatan jika ada"></textarea>
+                </div>
+                
+                <div class="flex justify-end mt-6">
+                    <button id="cancelRequestSkl" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 mr-2">
+                        Batal
+                    </button>
+                    <button id="submitRequestSkl" class="bg-primary hover:bg-opacity-90 text-white font-medium px-4 py-2 rounded-md">
+                        Ajukan
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- View SKL Modal -->
+        <div id="viewSklModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl p-6 card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Surat Keterangan Lulus</h3>
+                    <button id="closeViewSklModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="pdf-preview mb-4">
+                    <div class="certificate">
+                        <div class="text-center mb-6">
+                            <h2 class="text-2xl font-bold mb-1">SURAT KETERANGAN LULUS</h2>
+                            <p class="text-lg">Nomor: 421/SKL/2024</p>
+                        </div>
+                        
+                        <p class="mb-4">
+                            Yang bertanda tangan di bawah ini, Kepala SMAN 1 Indonesia menerangkan bahwa:
+                        </p>
+                        
+                        <div class="mb-4">
+                            <table class="w-full">
+                                <tr>
+                                    <td class="py-1 w-1/3">Nama</td>
+                                    <td class="py-1 w-1/12">:</td>
+                                    <td class="py-1 font-semibold" id="sklName">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1">NISN</td>
+                                    <td class="py-1">:</td>
+                                    <td class="py-1 font-semibold" id="sklNisn">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1">Tempat, Tanggal Lahir</td>
+                                    <td class="py-1">:</td>
+                                    <td class="py-1 font-semibold" id="sklBirthdate">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1">Nama Orang Tua</td>
+                                    <td class="py-1">:</td>
+                                    <td class="py-1 font-semibold" id="sklParent">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1">Nomor Peserta Ujian</td>
+                                    <td class="py-1">:</td>
+                                    <td class="py-1 font-semibold" id="sklExamNumber">-</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <p class="mb-4 font-semibold text-center">
+                            Dinyatakan LULUS dari SMAN 1 Indonesia Tahun Pelajaran <span id="sklYear">-</span>
+                        </p>
+                        
+                        <p class="mb-8">
+                            Surat Keterangan ini berlaku sampai dengan diterbitkannya Ijazah yang asli.
+                        </p>
+                        
+                        <div class="text-right">
+                            <p id="sklDate">Indonesia, 20 Mei 2024</p>
+                            <p class="mb-12">Kepala Sekolah</p>
+                            
+                            <p id="sklPrincipal" class="font-bold underline">Drs. Nanang Supriyatna, M.Pd</p>
+                            <p>NIP. 19680523 199403 1 002</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 text-center">
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Untuk menyimpan SKL, gunakan fitur "Cetak" di browser Anda (Ctrl+P atau klik kanan → Cetak) dan pilih "Simpan sebagai PDF".
+                    </p>
+                    <button id="printSklBtn" class="bg-primary hover:bg-opacity-90 text-white font-medium px-6 py-2 rounded-md">
+                        Cetak SKL
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Verification Modal -->
+        <div id="verificationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg p-6 card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Verifikasi Data Siswa</h3>
+                    <button id="closeVerificationModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div>
+                    <div class="mb-4">
+                        <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">Nama Siswa</h4>
+                        <p id="verifyName" class="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">-</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">NISN</h4>
+                        <p id="verifyNisn" class="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">-</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">Kelas</h4>
+                        <p id="verifyClass" class="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">-</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">Tanggal Lahir</h4>
+                        <p id="verifyBirthdate" class="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">-</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">Nama Orang Tua</h4>
+                        <p id="verifyParent" class="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">-</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="verificationNotes" class="block text-gray-700 dark:text-gray-300 mb-2">Catatan Verifikasi</label>
+                        <textarea id="verificationNotes" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary" rows="3" placeholder="Masukkan catatan verifikasi jika ada"></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end mt-6">
+                    <button id="rejectVerification" class="bg-red-500 hover:bg-red-600 text-white font-medium px-4 py-2 rounded-md mr-2">
+                        Tolak
+                    </button>
+                    <button id="approveVerification" class="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-md">
+                        Setujui
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Import CSV Modal -->
+        <div id="importCsvModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg p-6 card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Import Data Siswa dari CSV</h3>
+                    <button id="closeImportCsvModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="p-4 mb-4 bg-blue-50 dark:bg-blue-900 rounded-md">
+                    <p class="text-sm text-blue-800 dark:text-blue-200">
+                        Upload file CSV dengan format berikut: NISN, Nama Siswa, Kelas, Tanggal Lahir (YYYY-MM-DD), Nama Orang Tua
+                    </p>
+                </div>
+                
+                <div class="mb-6">
+                    <label for="csvFile" class="block text-gray-700 dark:text-gray-300 mb-2">Pilih File CSV</label>
+                    <input type="file" id="csvFile" accept=".csv" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                </div>
+                
+                <div id="csvPreviewContainer" class="mb-6 hidden">
+                    <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">Preview Data (5 baris pertama)</h4>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead>
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">NISN</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nama</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Kelas</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tanggal Lahir</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Orang Tua</th>
+                                </tr>
+                            </thead>
+                            <tbody id="csvPreviewBody" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                <!-- Preview data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <p id="totalRowsInfo" class="mt-2 text-sm text-gray-600 dark:text-gray-400"></p>
+                </div>
+                
+                <div id="csvImportError" class="mb-4 hidden p-3 bg-red-50 dark:bg-red-900 rounded-md text-red-700 dark:text-red-200 text-sm">
+                    <!-- Error message will be displayed here -->
+                </div>
+                
+                <div id="loadingSpinner" class="mb-4 hidden flex justify-center">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div class="flex justify-end mt-6">
+                    <button id="cancelImportCsv" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 mr-2">
+                        Batal
+                    </button>
+                    <button id="importCsvBtn" class="bg-primary hover:bg-opacity-90 text-white font-medium px-4 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        Import Data
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Approval Modal -->
+        <div id="approvalModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg p-6 card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Persetujuan SKL</h3>
+                    <button id="closeApprovalModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div>
+                    <div class="mb-4">
+                        <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">Nama Siswa</h4>
+                        <p id="approveName" class="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">-</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">NISN</h4>
+                        <p id="approveNisn" class="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">-</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">Kelas</h4>
+                        <p id="approveClass" class="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">-</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">Nomor SKL</h4>
+                        <p id="approveSklNumber" class="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">421/SKL/2024</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="approvalNotes" class="block text-gray-700 dark:text-gray-300 mb-2">Catatan Persetujuan</label>
+                        <textarea id="approvalNotes" class="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-primary" rows="3" placeholder="Masukkan catatan persetujuan jika ada"></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end mt-6">
+                    <button id="rejectApproval" class="bg-red-500 hover:bg-red-600 text-white font-medium px-4 py-2 rounded-md mr-2">
+                        Tolak
+                    </button>
+                    <button id="finalApproval" class="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-md">
+                        Setujui Final
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    
+    <script>
+        // Initialize dark mode
+        function initDarkMode() {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark');
+            }
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+                if (event.matches) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            });
+        }
+        
+        // Initialize the app data (mock data for demonstration purposes)
+        const appData = {
+            currentUser: null,
+            students: [
+                { id: 1, nisn: '12345678', name: 'Andi Wijaya', class: 'XII-IPA-1', birthdate: '2005-06-15', parentName: 'Budi Wijaya', status: 'verified', sklStatus: 'approved' },
+                { id: 2, nisn: '12345679', name: 'Budi Santoso', class: 'XII-IPA-2', birthdate: '2005-07-20', parentName: 'Agus Santoso', status: 'pending', sklStatus: 'pending' },
+                { id: 3, nisn: '12345680', name: 'Cindy Pratiwi', class: 'XII-IPS-1', birthdate: '2005-08-10', parentName: 'Dewi Pratiwi', status: 'pending', sklStatus: 'none' },
+                { id: 4, nisn: '12345681', name: 'Denny Hermawan', class: 'XII-IPS-2', birthdate: '2005-09-05', parentName: 'Heru Hermawan', status: 'rejected', sklStatus: 'none' },
+                { id: 5, nisn: '12345682', name: 'Eka Maharani', class: 'XII-IPA-3', birthdate: '2005-10-12', parentName: 'Indra Maharani', status: 'verified', sklStatus: 'pending' }
+            ],
+            users: {
+                admin: { username: 'admin', password: 'admin123', name: 'Administrator', role: 'admin' },
+                guru: { username: 'guru', password: 'guru123', name: 'Bapak Ahmad', role: 'guru' },
+                siswa: { username: 'siswa', password: 'siswa123', name: 'Andi Wijaya', role: 'siswa', nisn: '12345678', class: 'XII-IPA-1', birthdate: '2005-06-15', parentName: 'Budi Wijaya' }
+            }
+        };
+        
+        // Toast notification function
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show';
+            
+            if (type === 'success') {
+                toast.style.backgroundColor = '#4CAF50';
+            } else if (type === 'error') {
+                toast.style.backgroundColor = '#F44336';
+            } else if (type === 'warning') {
+                toast.style.backgroundColor = '#FF9800';
+            } else if (type === 'info') {
+                toast.style.backgroundColor = '#2196F3';
+            }
+            
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 3000);
+        }
+        
+        // Show the appropriate dashboard based on user role
+        function showDashboard(role) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('adminDashboard').style.display = 'none';
+            document.getElementById('guruDashboard').style.display = 'none';
+            document.getElementById('siswaDashboard').style.display = 'none';
+            
+            document.getElementById('userInfo').style.display = 'block';
+            document.getElementById('logoutBtn').style.display = 'block';
+            
+            document.getElementById('userName').textContent = appData.currentUser.name;
+            document.getElementById('userRole').textContent = appData.currentUser.role === 'admin' ? 'Administrator' : 
+                                                            appData.currentUser.role === 'guru' ? 'Guru' : 'Siswa';
+            
+            if (role === 'admin') {
+                document.getElementById('adminDashboard').style.display = 'block';
+                loadStudentTable();
+            } else if (role === 'guru') {
+                document.getElementById('guruDashboard').style.display = 'block';
+                loadVerificationTable();
+                loadApprovalTable();
+            } else if (role === 'siswa') {
+                document.getElementById('siswaDashboard').style.display = 'block';
+                updateSklStatus();
+            }
+        }
+        
+        // Load student data into the admin dashboard table
+        function loadStudentTable() {
+            const tableBody = document.getElementById('studentTableBody');
+            tableBody.innerHTML = '';
+            
+            appData.students.forEach(student => {
+                const statusBadge = getStatusBadge(student.status, student.sklStatus);
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap">${student.nisn}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">${student.name}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">${student.class}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">${statusBadge}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <button class="text-primary hover:text-opacity-80 mr-2 viewStudentBtn" data-id="${student.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <button class="text-blue-500 hover:text-blue-700 mr-2 editStudentBtn" data-id="${student.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                            </svg>
+                        </button>
+                        <button class="text-red-500 hover:text-red-700 deleteStudentBtn" data-id="${student.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+            
+            // Also populate the student select in the generate SKL modal
+            const sklStudentSelect = document.getElementById('sklStudent');
+            sklStudentSelect.innerHTML = '';
+            
+            appData.students.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.id;
+                option.textContent = `${student.name} (${student.nisn})`;
+                sklStudentSelect.appendChild(option);
+            });
+        }
+        
+        // Load data for teacher verification table
+        function loadVerificationTable() {
+            const tableBody = document.getElementById('verificationTableBody');
+            tableBody.innerHTML = '';
+            
+            const pendingStudents = appData.students.filter(s => s.status === 'pending');
+            
+            if (pendingStudents.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="5" class="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
+                        Tidak ada data yang perlu diverifikasi
+                    </td>
+                `;
+                tableBody.appendChild(row);
+                return;
+            }
+            
+            pendingStudents.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap">${student.nisn}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">${student.name}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">${student.class}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100">
+                            Menunggu Verifikasi
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <button class="bg-primary hover:bg-opacity-90 text-white text-sm font-medium py-1 px-3 rounded-md verifyStudentBtn" data-id="${student.id}">
+                            Verifikasi
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Load data for teacher approval table
+        function loadApprovalTable() {
+            const tableBody = document.getElementById('approvalTableBody');
+            tableBody.innerHTML = '';
+            
+            const pendingApprovalStudents = appData.students.filter(s => s.status === 'verified' && s.sklStatus === 'pending');
+            
+            if (pendingApprovalStudents.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="5" class="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
+                        Tidak ada SKL yang perlu disetujui
+                    </td>
+                `;
+                tableBody.appendChild(row);
+                return;
+            }
+            
+            pendingApprovalStudents.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap">${student.nisn}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">${student.name}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">${student.class}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-100">
+                            Menunggu Persetujuan
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <button class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-1 px-3 rounded-md approveStudentBtn" data-id="${student.id}">
+                            Setujui
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Update SKL status in the student dashboard
+        function updateSklStatus() {
+            const student = appData.students.find(s => s.nisn === appData.currentUser.nisn);
+            if (!student) return;
+            
+            const statusIcon = document.getElementById('statusIcon');
+            const sklStatus = document.getElementById('sklStatus');
+            const downloadSklSection = document.getElementById('downloadSklSection');
+            
+            if (student.sklStatus === 'approved') {
+                statusIcon.classList.remove('bg-yellow-500');
+                statusIcon.classList.add('bg-green-500');
+                
+                statusIcon.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                `;
+                
+                sklStatus.textContent = 'SKL Disetujui';
+                downloadSklSection.style.display = 'block';
+            } else if (student.sklStatus === 'pending') {
+                statusIcon.classList.remove('bg-green-500');
+                statusIcon.classList.add('bg-yellow-500');
+                
+                statusIcon.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                    </svg>
+                `;
+                
+                sklStatus.textContent = 'Dalam Proses';
+                downloadSklSection.style.display = 'none';
+            } else {
+                statusIcon.classList.remove('bg-green-500', 'bg-yellow-500');
+                statusIcon.classList.add('bg-gray-500');
+                
+                statusIcon.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                    </svg>
+                `;
+                
+                sklStatus.textContent = 'Belum Diajukan';
+                downloadSklSection.style.display = 'none';
+            }
+        }
+        
+        // Helper function to get status badge HTML
+        function getStatusBadge(dataStatus, sklStatus) {
+            if (dataStatus === 'rejected') {
+                return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100">
+                    Ditolak
+                </span>`;
+            } else if (dataStatus === 'verified') {
+                if (sklStatus === 'approved') {
+                    return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100">
+                        SKL Disetujui
+                    </span>`;
+                } else if (sklStatus === 'pending') {
+                    return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-100">
+                        Menunggu Persetujuan SKL
+                    </span>`;
+                } else {
+                    return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-700 dark:text-purple-100">
+                        Terverifikasi
+                    </span>`;
+                }
+            } else if (dataStatus === 'pending') {
+                return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100">
+                    Menunggu Verifikasi
+                </span>`;
+            } else {
+                return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100">
+                    Belum Diproses
+                </span>`;
+            }
+        }
+        
+        // Format date to Indonesian format
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('id-ID', options);
+        }
+        
+        // Parse CSV string to array of rows and columns
+        function parseCSV(csvText) {
+            const lines = csvText.split(/\r?\n/);
+            return lines
+                .filter(line => line.trim() !== '')
+                .map(line => {
+                    // Handle both comma and semicolon delimiters
+                    const delimiter = line.includes(';') ? ';' : ',';
+                    
+                    // Split by delimiter, handling quoted values
+                    const values = [];
+                    let inQuotes = false;
+                    let currentValue = '';
+                    
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === delimiter && !inQuotes) {
+                            values.push(currentValue.trim());
+                            currentValue = '';
+                        } else {
+                            currentValue += char;
+                        }
+                    }
+                    
+                    // Add the last value
+                    values.push(currentValue.trim());
+                    
+                    return values;
+                });
+        }
+        
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize dark mode
+            initDarkMode();
+            
+            // Login event
+            document.getElementById('loginBtn').addEventListener('click', function() {
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                const role = document.getElementById('role').value;
+                
+                const user = appData.users[role];
+                
+                if (user && user.username === username && user.password === password) {
+                    appData.currentUser = user;
+                    showDashboard(role);
+                    showToast(`Selamat datang, ${user.name}!`);
+                } else {
+                    showToast('Username atau password salah!', 'error');
+                }
+            });
+            
+            // Logout event
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                appData.currentUser = null;
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('adminDashboard').style.display = 'none';
+                document.getElementById('guruDashboard').style.display = 'none';
+                document.getElementById('siswaDashboard').style.display = 'none';
+                document.getElementById('userInfo').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'none';
+                
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                
+                showToast('Berhasil logout');
+            });
+            
+            // CSV Import Events
+            document.getElementById('importCsvBtn').addEventListener('click', function() {
+                document.getElementById('importCsvModal').style.display = 'flex';
+                resetCsvImportForm();
+            });
+            
+            document.getElementById('closeImportCsvModal').addEventListener('click', function() {
+                document.getElementById('importCsvModal').style.display = 'none';
+            });
+            
+            document.getElementById('cancelImportCsv').addEventListener('click', function() {
+                document.getElementById('importCsvModal').style.display = 'none';
+            });
+            
+            function resetCsvImportForm() {
+                document.getElementById('csvFile').value = '';
+                document.getElementById('csvPreviewContainer').classList.add('hidden');
+                document.getElementById('csvImportError').classList.add('hidden');
+                document.getElementById('loadingSpinner').classList.add('hidden');
+                document.getElementById('csvPreviewBody').innerHTML = '';
+                document.getElementById('totalRowsInfo').textContent = '';
+                document.getElementById('importCsvBtn').disabled = true;
+            }
+            
+            // Parse CSV file
+            document.getElementById('csvFile').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) {
+                    resetCsvImportForm();
+                    return;
+                }
+                
+                if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+                    document.getElementById('csvImportError').textContent = 'File harus berformat CSV';
+                    document.getElementById('csvImportError').classList.remove('hidden');
+                    document.getElementById('importCsvBtn').disabled = true;
+                    return;
+                }
+                
+                document.getElementById('csvImportError').classList.add('hidden');
+                document.getElementById('loadingSpinner').classList.remove('hidden');
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const csvData = event.target.result;
+                        const parsedData = parseCSV(csvData);
+                        
+                        if (parsedData.length === 0) {
+                            showCsvError('File CSV kosong atau tidak valid');
+                            return;
+                        }
+                        
+                        // Validate headers (first row)
+                        if (parsedData[0].length < 5) {
+                            showCsvError('Format CSV tidak valid. Pastikan file memiliki minimal 5 kolom: NISN, Nama, Kelas, Tanggal Lahir, Nama Orang Tua');
+                            return;
+                        }
+                        
+                        // Preview data (show first 5 rows)
+                        displayCsvPreview(parsedData);
+                        
+                        document.getElementById('loadingSpinner').classList.add('hidden');
+                        document.getElementById('csvPreviewContainer').classList.remove('hidden');
+                        document.getElementById('importCsvBtn').disabled = false;
+                        
+                        // Store parsed data for import
+                        document.getElementById('importCsvBtn').setAttribute('data-csv', JSON.stringify(parsedData));
+                        
+                    } catch (error) {
+                        showCsvError('Gagal memproses file CSV: ' + error.message);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    showCsvError('Gagal membaca file CSV');
+                };
+                
+                reader.readAsText(file);
+            });
+            
+            function displayCsvPreview(data) {
+                const previewBody = document.getElementById('csvPreviewBody');
+                previewBody.innerHTML = '';
+                
+                // Skip header row and show up to 5 data rows
+                const dataRows = data.slice(1);
+                const rowsToShow = Math.min(dataRows.length, 5);
+                
+                for (let i = 0; i < rowsToShow; i++) {
+                    const row = document.createElement('tr');
+                    
+                    // For each column in the data row
+                    for (let j = 0; j < 5; j++) {
+                        const cell = document.createElement('td');
+                        cell.className = 'px-3 py-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300';
+                        cell.textContent = dataRows[i][j] || '';
+                        row.appendChild(cell);
+                    }
+                    
+                    previewBody.appendChild(row);
+                }
+                
+                document.getElementById('totalRowsInfo').textContent = `Total: ${dataRows.length} baris data`;
+            }
+            
+            function showCsvError(message) {
+                document.getElementById('csvImportError').textContent = message;
+                document.getElementById('csvImportError').classList.remove('hidden');
+                document.getElementById('loadingSpinner').classList.add('hidden');
+                document.getElementById('importCsvBtn').disabled = true;
+            }
+            
+            // Import data from CSV
+            document.getElementById('importCsvBtn').addEventListener('click', function() {
+                const csvDataStr = this.getAttribute('data-csv');
+                if (!csvDataStr) {
+                    showToast('Tidak ada data yang diimpor', 'error');
+                    return;
+                }
+                
+                try {
+                    const csvData = JSON.parse(csvDataStr);
+                    
+                    // Skip header row
+                    const dataRows = csvData.slice(1);
+                    
+                    // Process each row
+                    let importedCount = 0;
+                    let errorCount = 0;
+                    
+                    dataRows.forEach(row => {
+                        if (row.length < 5) {
+                            errorCount++;
+                            return;
+                        }
+                        
+                        const nisn = row[0].trim();
+                        const name = row[1].trim();
+                        const className = row[2].trim();
+                        let birthdate = row[3].trim();
+                        const parentName = row[4].trim();
+                        
+                        // Basic validation
+                        if (!nisn || !name || !className || !birthdate || !parentName) {
+                            errorCount++;
+                            return;
+                        }
+                        
+                        // Check if NISN already exists
+                        if (appData.students.some(s => s.nisn === nisn)) {
+                            errorCount++;
+                            return;
+                        }
+                        
+                        // Format date if needed (handle different formats)
+                        if (birthdate.includes('/')) {
+                            const parts = birthdate.split('/');
+                            if (parts.length === 3) {
+                                // Assume DD/MM/YYYY format
+                                birthdate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                            }
+                        }
+                        
+                        // Add new student
+                        const newId = appData.students.length > 0 ? Math.max(...appData.students.map(s => s.id)) + 1 : 1;
+                        appData.students.push({
+                            id: newId,
+                            nisn,
+                            name,
+                            class: className,
+                            birthdate,
+                            parentName,
+                            status: 'pending',
+                            sklStatus: 'none'
+                        });
+                        
+                        importedCount++;
+                    });
+                    
+                    // Reload table and close modal
+                    loadStudentTable();
+                    document.getElementById('importCsvModal').style.display = 'none';
+                    
+                    if (errorCount > 0) {
+                        showToast(`${importedCount} siswa berhasil diimpor. ${errorCount} data gagal diimpor.`, 'info');
+                    } else {
+                        showToast(`${importedCount} siswa berhasil diimpor.`, 'success');
+                    }
+                    
+                } catch (error) {
+                    showToast('Gagal mengimpor data: ' + error.message, 'error');
+                }
+            });
+            
+            // Add Student Modal Events
+            document.getElementById('addStudentBtn').addEventListener('click', function() {
+                document.getElementById('addStudentModal').style.display = 'flex';
+                document.getElementById('addStudentForm').reset();
+            });
+            
+            document.getElementById('closeAddStudentModal').addEventListener('click', function() {
+                document.getElementById('addStudentModal').style.display = 'none';
+            });
+            
+            document.getElementById('cancelAddStudent').addEventListener('click', function() {
+                document.getElementById('addStudentModal').style.display = 'none';
+            });
+            
+            document.getElementById('addStudentForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const nisn = document.getElementById('nisn').value;
+                const name = document.getElementById('studentName').value;
+                const className = document.getElementById('class').value;
+                const birthdate = document.getElementById('birthdate').value;
+                const parentName = document.getElementById('parentName').value;
+                
+                if (!nisn || !name || !className || !birthdate || !parentName) {
+                    showToast('Semua field harus diisi!', 'error');
+                    return;
+                }
+                
+                // Add new student
+                const newId = appData.students.length > 0 ? Math.max(...appData.students.map(s => s.id)) + 1 : 1;
+                appData.students.push({
+                    id: newId,
+                    nisn,
+                    name,
+                    class: className,
+                    birthdate,
+                    parentName,
+                    status: 'pending',
+                    sklStatus: 'none'
+                });
+                
+                loadStudentTable();
+                document.getElementById('addStudentModal').style.display = 'none';
+                showToast('Data siswa berhasil ditambahkan');
+            });
+            
+            // Generate SKL Events
+            document.getElementById('generateSkl').addEventListener('click', function() {
+                document.getElementById('generateSklModal').style.display = 'flex';
+                
+                // Set default date to today
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('sklDate').value = today;
+                
+                // Set default school year
+                const currentYear = new Date().getFullYear();
+                document.getElementById('schoolYear').value = `${currentYear}/${currentYear + 1}`;
+                
+                // Set default principal name
+                document.getElementById('principalName').value = 'Drs. Nanang Supriyatna, M.Pd';
+            });
+            
+            document.getElementById('closeGenerateSklModal').addEventListener('click', function() {
+                document.getElementById('generateSklModal').style.display = 'none';
+            });
+            
+            document.getElementById('cancelGenerateSkl').addEventListener('click', function() {
+                document.getElementById('generateSklModal').style.display = 'none';
+            });
+            
+            document.getElementById('generateSklBtn').addEventListener('click', function() {
+                const studentId = parseInt(document.getElementById('sklStudent').value);
+                const schoolYear = document.getElementById('schoolYear').value;
+                const sklDate = document.getElementById('sklDate').value;
+                const principalName = document.getElementById('principalName').value;
+                
+                if (!studentId || !schoolYear || !sklDate || !principalName) {
+                    showToast('Semua field harus diisi!', 'error');
+                    return;
+                }
+                
+                // Update student status
+                const student = appData.students.find(s => s.id === studentId);
+                if (student) {
+                    student.sklStatus = 'pending';
+                    loadStudentTable();
+                    document.getElementById('generateSklModal').style.display = 'none';
+                    showToast('SKL berhasil digenerate dan menunggu persetujuan');
+                }
+            });
+            
+            // Request SKL Events
+            document.getElementById('requestSklBtn').addEventListener('click', function() {
+                document.getElementById('requestSklModal').style.display = 'flex';
+                
+                // Fill student data
+                document.getElementById('requestName').textContent = appData.currentUser.name;
+                document.getElementById('requestNisn').textContent = appData.currentUser.nisn;
+                document.getElementById('requestClass').textContent = appData.currentUser.class;
+            });
+            
+            document.getElementById('closeRequestSklModal').addEventListener('click', function() {
+                document.getElementById('requestSklModal').style.display = 'none';
+            });
+            
+            document.getElementById('cancelRequestSkl').addEventListener('click', function() {
+                document.getElementById('requestSklModal').style.display = 'none';
+            });
+            
+            document.getElementById('submitRequestSkl').addEventListener('click', function() {
+                // Update student status
+                const student = appData.students.find(s => s.nisn === appData.currentUser.nisn);
+                if (student) {
+                    student.sklStatus = 'pending';
+                    updateSklStatus();
+                    document.getElementById('requestSklModal').style.display = 'none';
+                    showToast('Permohonan SKL berhasil diajukan');
+                }
+            });
+            
+            // View SKL Events
+            document.getElementById('viewSklBtn').addEventListener('click', function() {
+                document.getElementById('viewSklModal').style.display = 'flex';
+                
+                // Fill SKL data
+                const student = appData.students.find(s => s.nisn === appData.currentUser.nisn);
+                if (student) {
+                    document.getElementById('sklName').textContent = student.name;
+                    document.getElementById('sklNisn').textContent = student.nisn;
+                    document.getElementById('sklBirthdate').textContent = formatDate(student.birthdate);
+                    document.getElementById('sklParent').textContent = student.parentName;
+                    document.getElementById('sklExamNumber').textContent = `22-${student.nisn}-01`;
+                    document.getElementById('sklYear').textContent = '2023/2024';
+                    document.getElementById('sklDate').textContent = 'Indonesia, 20 Mei 2024';
+                    document.getElementById('sklPrincipal').textContent = 'Drs. Nanang Supriyatna, M.Pd';
+                }
+            });
+            
+            document.getElementById('closeViewSklModal').addEventListener('click', function() {
+                document.getElementById('viewSklModal').style.display = 'none';
+            });
+            
+            document.getElementById('printSklBtn').addEventListener('click', function() {
+                window.print();
+            });
+            
+            // Verification Events
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.verifyStudentBtn')) {
+                    const btn = e.target.closest('.verifyStudentBtn');
+                    const studentId = parseInt(btn.getAttribute('data-id'));
+                    const student = appData.students.find(s => s.id === studentId);
+                    
+                    if (student) {
+                        document.getElementById('verificationModal').style.display = 'flex';
+                        document.getElementById('verifyName').textContent = student.name;
+                        document.getElementById('verifyNisn').textContent = student.nisn;
+                        document.getElementById('verifyClass').textContent = student.class;
+                        document.getElementById('verifyBirthdate').textContent = formatDate(student.birthdate);
+                        document.getElementById('verifyParent').textContent = student.parentName;
+                        
+                        // Store the student ID in the approve/reject buttons
+                        document.getElementById('approveVerification').setAttribute('data-id', studentId);
+                        document.getElementById('rejectVerification').setAttribute('data-id', studentId);
+                    }
+                }
+            });
+            
+            document.getElementById('closeVerificationModal').addEventListener('click', function() {
+                document.getElementById('verificationModal').style.display = 'none';
+            });
+            
+            document.getElementById('approveVerification').addEventListener('click', function() {
+                const studentId = parseInt(this.getAttribute('data-id'));
+                const student = appData.students.find(s => s.id === studentId);
+                
+                if (student) {
+                    student.status = 'verified';
+                    loadVerificationTable();
+                    document.getElementById('verificationModal').style.display = 'none';
+                    showToast('Data siswa berhasil diverifikasi');
+                }
+            });
+            
+            document.getElementById('rejectVerification').addEventListener('click', function() {
+                const studentId = parseInt(this.getAttribute('data-id'));
+                const student = appData.students.find(s => s.id === studentId);
+                
+                if (student) {
+                    student.status = 'rejected';
+                    loadVerificationTable();
+                    document.getElementById('verificationModal').style.display = 'none';
+                    showToast('Data siswa ditolak', 'error');
+                }
+            });
+            
+            // Approval Events
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.approveStudentBtn')) {
+                    const btn = e.target.closest('.approveStudentBtn');
+                    const studentId = parseInt(btn.getAttribute('data-id'));
+                    const student = appData.students.find(s => s.id === studentId);
+                    
+                    if (student) {
+                        document.getElementById('approvalModal').style.display = 'flex';
+                        document.getElementById('approveName').textContent = student.name;
+                        document.getElementById('approveNisn').textContent = student.nisn;
+                        document.getElementById('approveClass').textContent = student.class;
+                        
+                        // Store the student ID in the approve/reject buttons
+                        document.getElementById('finalApproval').setAttribute('data-id', studentId);
+                        document.getElementById('rejectApproval').setAttribute('data-id', studentId);
+                    }
+                }
+            });
+            
+            document.getElementById('closeApprovalModal').addEventListener('click', function() {
+                document.getElementById('approvalModal').style.display = 'none';
+            });
+            
+            document.getElementById('finalApproval').addEventListener('click', function() {
+                const studentId = parseInt(this.getAttribute('data-id'));
+                const student = appData.students.find(s => s.id === studentId);
+                
+                if (student) {
+                    student.sklStatus = 'approved';
+                    loadApprovalTable();
+                    document.getElementById('approvalModal').style.display = 'none';
+                    showToast('SKL siswa berhasil disetujui');
+                }
+            });
+            
+            document.getElementById('rejectApproval').addEventListener('click', function() {
+                const studentId = parseInt(this.getAttribute('data-id'));
+                const student = appData.students.find(s => s.id === studentId);
+                
+                if (student) {
+                    student.sklStatus = 'none';
+                    loadApprovalTable();
+                    document.getElementById('approvalModal').style.display = 'none';
+                    showToast('SKL siswa ditolak', 'error');
+                }
+            });
+            
+            // Close modals when clicking outside
+            window.addEventListener('click', function(e) {
+                const modals = [
+                    { element: document.getElementById('addStudentModal'), open: false },
+                    { element: document.getElementById('generateSklModal'), open: false },
+                    { element: document.getElementById('requestSklModal'), open: false },
+                    { element: document.getElementById('viewSklModal'), open: false },
+                    { element: document.getElementById('verificationModal'), open: false },
+                    { element: document.getElementById('approvalModal'), open: false },
+                    { element: document.getElementById('importCsvModal'), open: false }
+                ];
+                
+                modals.forEach(modal => {
+                    if (e.target === modal.element) {
+                        modal.element.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
