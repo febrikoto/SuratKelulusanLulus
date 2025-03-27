@@ -104,24 +104,35 @@ export default function StudentDashboard() {
     }
   };
   
-  const downloadCertificate = () => {
+  // Fungsi untuk mengunduh SKL dengan atau tanpa nilai
+  const handleDownloadSKL = (withGrades: boolean) => {
     if (!certificateData) return;
     
-    generatePdf('certificate-container', `SKL_${certificateData.nisn}.pdf`)
-      .then(() => {
-        toast({
-          title: "Success",
-          description: "SKL berhasil diunduh",
+    // Update certificate data to show/hide grades
+    setCertificateData({...certificateData, showGrades: withGrades});
+    
+    const filename = withGrades 
+      ? `SKL_Dengan_Nilai_${certificateData.nisn}.pdf` 
+      : `SKL_Tanpa_Nilai_${certificateData.nisn}.pdf`;
+    
+    // Slight delay to ensure state update is applied
+    setTimeout(() => {
+      generatePdf('certificate-container', filename)
+        .then(() => {
+          toast({
+            title: "Success",
+            description: `SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil diunduh`,
+          });
+        })
+        .catch((error) => {
+          toast({
+            title: "Error",
+            description: "Gagal mengunduh SKL",
+            variant: "destructive",
+          });
+          console.error(error);
         });
-      })
-      .catch((error) => {
-        toast({
-          title: "Error",
-          description: "Gagal mengunduh SKL",
-          variant: "destructive",
-        });
-        console.error(error);
-      });
+    }, 100);
   };
   
   // Loading state or redirect if not authenticated
@@ -350,14 +361,23 @@ export default function StudentDashboard() {
                       </Button>
                     </div>
                     
-                    <div className="flex justify-center mt-4">
+                    <div className="flex flex-col sm:flex-row justify-center mt-4 space-y-2 sm:space-y-0 sm:space-x-4">
                       <Button 
-                        onClick={downloadCertificate}
+                        onClick={() => handleDownloadSKL(false)}
                         className="bg-green-600 hover:bg-green-700"
                         size="sm"
                       >
                         <Download className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="text-xs sm:text-sm">Unduh SKL</span>
+                        <span className="text-xs sm:text-sm">Unduh SKL Tanpa Nilai</span>
+                      </Button>
+                      
+                      <Button 
+                        onClick={() => handleDownloadSKL(true)}
+                        className="bg-green-600 hover:bg-green-700"
+                        size="sm"
+                      >
+                        <Download className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="text-xs sm:text-sm">Unduh SKL Dengan Nilai</span>
                       </Button>
                     </div>
                     
@@ -381,12 +401,12 @@ export default function StudentDashboard() {
                           </div>
                           <div className="flex justify-center mt-4 sm:mt-6">
                             <Button 
-                              onClick={downloadCertificate}
+                              onClick={() => handleDownloadSKL(showGradesInPopup)}
                               className="bg-green-600 hover:bg-green-700"
                               size="sm"
                             >
                               <Download className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                              <span className="text-xs sm:text-sm">Unduh SKL</span>
+                              <span className="text-xs sm:text-sm">Unduh SKL {showGradesInPopup ? 'Dengan Nilai' : 'Tanpa Nilai'}</span>
                             </Button>
                           </div>
                         </Dialog.Content>
