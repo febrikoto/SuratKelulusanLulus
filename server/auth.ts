@@ -7,7 +7,17 @@ import { User, loginSchema } from "@shared/schema";
 
 declare global {
   namespace Express {
-    interface User extends User {}
+    // Extended User interface with all properties from schema
+    interface User {
+      id: number;
+      username: string;
+      password: string;
+      fullName: string;
+      role: 'admin' | 'guru' | 'siswa';
+      studentId: number | null;
+      hasSeenWelcome: boolean;
+      createdAt: Date;
+    }
   }
 }
 

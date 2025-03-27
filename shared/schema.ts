@@ -82,10 +82,35 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true
 });
 
-export const insertSettingsSchema = createInsertSchema(settings).omit({
-  id: true,
-  updatedAt: true
-});
+// Customize insert schema for settings to make most fields optional except required ones
+export const insertSettingsSchema = createInsertSchema(settings)
+  .omit({
+    id: true,
+    updatedAt: true
+  })
+  .extend({
+    // Keep required fields
+    schoolName: z.string().min(1, "School name is required"),
+    schoolAddress: z.string().min(1, "School address is required"),
+    headmasterName: z.string().min(1, "Headmaster name is required"),
+    headmasterNip: z.string().min(1, "Headmaster NIP is required"),
+    academicYear: z.string().min(1, "Academic year is required"),
+    
+    // Make all other fields optional with proper defaults
+    schoolLogo: z.string().optional().default(""),
+    ministryLogo: z.string().optional().default(""),
+    headmasterSignature: z.string().optional().default(""),
+    schoolStamp: z.string().optional().default(""),
+    certHeader: z.string().optional().default("SURAT KETERANGAN LULUS"),
+    certFooter: z.string().optional().default("Surat ini berlaku sebagai bukti kelulusan sampai ijazah diterbitkan."),
+    certBeforeStudentData: z.string().optional().default("Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:"),
+    certAfterStudentData: z.string().optional().default("telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan."),
+    certNumberPrefix: z.string().optional().default(""),
+    graduationDate: z.string().optional().default(""),
+    graduationTime: z.string().optional().default(""),
+    cityName: z.string().optional().default(""),
+    provinceName: z.string().optional().default("")
+  });
 
 export const insertGradeSchema = createInsertSchema(grades).omit({
   id: true,

@@ -5,7 +5,7 @@ import csvParser from "csv-parser";
 import { Readable } from "stream";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertStudentSchema, verificationSchema, insertGradeSchema } from "@shared/schema";
+import { insertStudentSchema, verificationSchema, insertGradeSchema, insertSettingsSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const { requireAuth, requireRole } = setupAuth(app);
@@ -492,22 +492,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/settings", requireRole(["admin"]), async (req, res) => {
     try {
-      const savedSettings = await storage.saveSettings(req.body);
+      // Validasi input menggunakan schema Zod
+      const parsedData = insertSettingsSchema.safeParse(req.body);
+      
+      if (!parsedData.success) {
+        return res.status(400).json({ 
+          message: "Invalid settings data", 
+          errors: parsedData.error.format() 
+        });
+      }
+      
+      const savedSettings = await storage.saveSettings(parsedData.data);
       res.status(201).json(savedSettings);
     } catch (error) {
+      console.error("Save settings error:", error);
       res.status(500).json({ message: "Failed to save settings" });
     }
   });
 
   app.put("/api/settings", requireRole(["admin"]), async (req, res) => {
     try {
-      const updatedSettings = await storage.updateSettings(req.body);
+      // Validasi input menggunakan schema Zod
+      const parsedData = insertSettingsSchema.partial().safeParse(req.body);
+      
+      if (!parsedData.success) {
+        return res.status(400).json({ 
+          message: "Invalid settings data", 
+          errors: parsedData.error.format() 
+        });
+      }
+      
+      const updatedSettings = await storage.updateSettings(parsedData.data);
       if (!updatedSettings) {
         return res.status(404).json({ message: "Settings not found" });
       }
       
       res.json(updatedSettings);
     } catch (error) {
+      console.error("Update settings error:", error);
       res.status(500).json({ message: "Failed to update settings" });
     }
   });

@@ -161,10 +161,11 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
       queryClient.invalidateQueries({ queryKey: ['/api/settings'] });
       onClose();
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      console.error('Error saving settings:', error);
       toast({
         title: 'Gagal menyimpan pengaturan',
-        description: error.message,
+        description: error.message || 'Terjadi kesalahan saat menyimpan pengaturan sekolah. Periksa apakah semua data yang dimasukkan sudah benar.',
         variant: 'destructive',
       });
     },
