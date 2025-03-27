@@ -4,32 +4,54 @@ import { CertificateData } from "@shared/types";
 
 export async function generatePdf(elementId: string, filename: string): Promise<void> {
   try {
+    console.log(`Generating PDF for element with ID: ${elementId}`);
     const element = document.getElementById(elementId);
-    if (!element) throw new Error('Element not found');
+    if (!element) {
+      console.error(`Element with ID "${elementId}" not found`);
+      throw new Error(`Element with ID "${elementId}" not found`);
+    }
     
+    console.log('Creating canvas from HTML element...');
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
-      logging: false,
+      allowTaint: true,
+      logging: true,
+      onclone: (document, element) => {
+        // Fix any potential issues with the cloned document
+        const images = element.querySelectorAll('img');
+        images.forEach(img => {
+          if (img.src) {
+            img.crossOrigin = 'anonymous';
+          }
+        });
+      }
     });
     
+    console.log('Canvas created, converting to image data...');
     const imgData = canvas.toDataURL('image/png');
     
+    console.log('Creating PDF document...');
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4',
     });
     
-    const imgWidth = 210;
+    const imgWidth = 210; // A4 width in mm
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     
+    console.log('Adding image to PDF...');
     pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    pdf.save(filename);
     
+    console.log('Saving PDF...');
+    pdf.save(`${filename}.pdf`);
+    
+    console.log('PDF generated successfully');
     return Promise.resolve();
   } catch (error) {
     console.error('Error generating PDF:', error);
+    alert(`Terjadi kesalahan saat mengunduh PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return Promise.reject(error);
   }
 }

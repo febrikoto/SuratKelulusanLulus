@@ -13,11 +13,20 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
   const certificateRef = useRef<HTMLDivElement>(null);
 
   const handleDownload = async () => {
-    if (certificateRef.current) {
-      await generatePdf(
-        'certificate-container', 
-        `SKL_${data.fullName.replace(/\s+/g, '_')}_${data.nisn}`
-      );
+    try {
+      console.log('Download button clicked');
+      if (certificateRef.current) {
+        await generatePdf(
+          'certificate-container', 
+          `SKL_${data.fullName.replace(/\s+/g, '_')}_${data.nisn}`
+        );
+      } else {
+        console.error('Certificate reference is null');
+        alert('Tidak dapat menemukan elemen sertifikat untuk diunduh');
+      }
+    } catch (error) {
+      console.error('Error in handleDownload:', error);
+      alert('Terjadi kesalahan saat mengunduh sertifikat');
     }
   };
 
@@ -217,7 +226,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
           <div></div>
           <div className="text-center relative">
             <p>{data.cityName}, {formatDate(data.graduationDate)}</p>
-            <p>Kepala {data.schoolName}</p>
+            <p>Kepala,</p>
             
             <div className="h-28 flex items-end justify-center relative">
               {data.headmasterSignature ? (
