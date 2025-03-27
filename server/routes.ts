@@ -184,6 +184,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get student profile (for logged-in student)
+  app.get("/api/students/profile", requireRole(["siswa"]), async (req, res) => {
+    try {
+      const user = req.user as Express.User;
+      
+      if (!user.studentId) {
+        return res.status(404).json({ message: "No student profile linked to this account" });
+      }
+      
+      const student = await storage.getStudent(user.studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch student profile" });
+    }
+  });
+
   // Verification API
   app.post("/api/students/verify", requireRole(["guru"]), async (req, res) => {
     try {

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Student } from '@shared/schema';
-import { DashboardStats } from '@shared/types';
-import { Loader2, Search, Eye } from 'lucide-react';
+import { DashboardStats, UserInfo } from '@shared/types';
+import { Loader2, Search, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -14,17 +14,34 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import Header from '@/components/Header';
-import StudentDetailModal from '@/components/modals/StudentDetailModal';
-import VerificationModal from '@/components/modals/VerificationModal';
-import RejectionModal from '@/components/modals/RejectionModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import TeacherHeader from '@/components/TeacherHeader';
 
 export default function TeacherDashboard() {
+  const [user, setUser] = useState<UserInfo | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<number | undefined>(undefined);
   const [showStudentDetailModal, setShowStudentDetailModal] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [verificationNote, setVerificationNote] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Fetch user data
+  const { data: userData, isLoading: userLoading } = useQuery<UserInfo>({
+    queryKey: ['/api/user'],
+  });
+  
+  useEffect(() => {
+    if (userData) {
+      setUser(userData);
+    }
+  }, [userData]);
   
   // Fetch dashboard stats
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
@@ -61,9 +78,91 @@ export default function TeacherDashboard() {
     setShowRejectionModal(true);
   };
 
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await apiRequest('POST', '/api/logout');
+      queryClient.setQueryData(['/api/user'], null);
+      window.location.href = '/login';
+    } catch (error) {
+      toast({
+        title: "Logout failed",
+        description: "Failed to logout. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Verify student mutation
+  const verifyStudentMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedStudentId) return;
+      await apiRequest('POST', `/api/students/${selectedStudentId}/verify`, {
+        verificationNotes: verificationNote,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Student has been verified successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      setShowVerificationModal(false);
+      setVerificationNote('');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Reject student mutation
+  const rejectStudentMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedStudentId) return;
+      await apiRequest('POST', `/api/students/${selectedStudentId}/reject`, {
+        verificationNotes: rejectionReason,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Student has been rejected successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      setShowRejectionModal(false);
+      setRejectionReason('');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  if (!user) {
+    window.location.href = '/login';
+    return null;
+  }
+  
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
-      <Header />
+      <TeacherHeader user={user} onLogout={handleLogout} />
       
       <div>
         <div className="flex justify-between items-center mb-6">
@@ -218,25 +317,244 @@ export default function TeacherDashboard() {
         </Card>
       </div>
       
-      {/* Modals */}
-      <StudentDetailModal
-        isOpen={showStudentDetailModal}
-        onClose={() => setShowStudentDetailModal(false)}
-        studentId={selectedStudentId}
-      />
+      {/* Student Detail Modal */}
+      <Dialog open={showStudentDetailModal} onOpenChange={setShowStudentDetailModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Detail Siswa</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedStudentId && students ? (
+              <div>
+                {(() => {
+                  const student = students.find(s => s.id === selectedStudentId);
+                  if (!student) return <p>Siswa tidak ditemukan</p>;
+                  
+                  return (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm font-medium">NISN</p>
+                          <p className="text-sm">{student.nisn}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">NIS</p>
+                          <p className="text-sm">{student.nis}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Nama Lengkap</p>
+                          <p className="text-sm">{student.fullName}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Kelas</p>
+                          <p className="text-sm">{student.className}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Tempat Lahir</p>
+                          <p className="text-sm">{student.birthPlace}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Tanggal Lahir</p>
+                          <p className="text-sm">{new Date(student.birthDate).toLocaleDateString('id-ID')}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Nama Orang Tua</p>
+                          <p className="text-sm">{student.parentName}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Status SKL</p>
+                          <p className="text-sm capitalize">{student.status}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between mt-4">
+                        <Button 
+                          variant="outline"
+                          onClick={() => {
+                            setShowStudentDetailModal(false);
+                            openVerificationModal(student.id);
+                          }}
+                          className="w-1/2 mr-2"
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Verifikasi
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          onClick={() => {
+                            setShowStudentDetailModal(false);
+                            openRejectionModal(student.id);
+                          }}
+                          className="w-1/2 ml-2"
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Tolak
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="flex justify-center p-10">
+                <Loader2 className="h-10 w-10 animate-spin text-border" />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       
-      <VerificationModal
-        isOpen={showVerificationModal}
-        onClose={() => setShowVerificationModal(false)}
-        studentId={selectedStudentId}
-        mode="verify"
-      />
+      {/* Verification Modal */}
+      <Dialog open={showVerificationModal} onOpenChange={setShowVerificationModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Verifikasi Data Siswa</DialogTitle>
+            <DialogDescription>
+              Verifikasi akan memungkinkan siswa untuk mengunduh SKL mereka.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedStudentId && students ? (
+              <div>
+                {(() => {
+                  const student = students.find(s => s.id === selectedStudentId);
+                  if (!student) return <p>Siswa tidak ditemukan</p>;
+                  
+                  return (
+                    <div className="space-y-4">
+                      <div>
+                        <p className="font-medium">Nama: <span className="font-normal">{student.fullName}</span></p>
+                        <p className="font-medium">NISN: <span className="font-normal">{student.nisn}</span></p>
+                        <p className="font-medium">Kelas: <span className="font-normal">{student.className}</span></p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label htmlFor="verificationNote" className="text-sm font-medium">
+                          Catatan Verifikasi (Opsional)
+                        </label>
+                        <Input
+                          id="verificationNote"
+                          value={verificationNote}
+                          onChange={(e) => setVerificationNote(e.target.value)}
+                          placeholder="Catatan tambahan untuk verifikasi"
+                        />
+                      </div>
+                      
+                      <div className="flex justify-end space-x-2 pt-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowVerificationModal(false)}
+                        >
+                          Batal
+                        </Button>
+                        <Button
+                          onClick={() => verifyStudentMutation.mutate()}
+                          disabled={verifyStudentMutation.isPending}
+                          className="bg-green-500 hover:bg-green-600"
+                        >
+                          {verifyStudentMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Memproses...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Verifikasi
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="flex justify-center p-10">
+                <Loader2 className="h-10 w-10 animate-spin text-border" />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       
-      <RejectionModal
-        isOpen={showRejectionModal}
-        onClose={() => setShowRejectionModal(false)}
-        studentId={selectedStudentId}
-      />
+      {/* Rejection Modal */}
+      <Dialog open={showRejectionModal} onOpenChange={setShowRejectionModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Tolak Data Siswa</DialogTitle>
+            <DialogDescription>
+              Penolakan akan membutuhkan alasan yang jelas agar siswa dapat mengetahui masalahnya.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedStudentId && students ? (
+              <div>
+                {(() => {
+                  const student = students.find(s => s.id === selectedStudentId);
+                  if (!student) return <p>Siswa tidak ditemukan</p>;
+                  
+                  return (
+                    <div className="space-y-4">
+                      <div>
+                        <p className="font-medium">Nama: <span className="font-normal">{student.fullName}</span></p>
+                        <p className="font-medium">NISN: <span className="font-normal">{student.nisn}</span></p>
+                        <p className="font-medium">Kelas: <span className="font-normal">{student.className}</span></p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label htmlFor="rejectionReason" className="text-sm font-medium">
+                          Alasan Penolakan <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          id="rejectionReason"
+                          value={rejectionReason}
+                          onChange={(e) => setRejectionReason(e.target.value)}
+                          placeholder="Alasan penolakan data siswa"
+                          required
+                        />
+                        <p className="text-xs text-gray-500">
+                          Alasan ini akan ditampilkan kepada siswa
+                        </p>
+                      </div>
+                      
+                      <div className="flex justify-end space-x-2 pt-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowRejectionModal(false)}
+                        >
+                          Batal
+                        </Button>
+                        <Button
+                          onClick={() => rejectStudentMutation.mutate()}
+                          disabled={rejectStudentMutation.isPending || !rejectionReason}
+                          className="bg-red-500 hover:bg-red-600"
+                        >
+                          {rejectStudentMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Memproses...
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="mr-2 h-4 w-4" />
+                              Tolak
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="flex justify-center p-10">
+                <Loader2 className="h-10 w-10 animate-spin text-border" />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

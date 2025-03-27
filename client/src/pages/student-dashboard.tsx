@@ -1,31 +1,58 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/use-auth';
 import { Student } from '@shared/schema';
+import { UserInfo } from '@shared/types';
 import { generatePdf, prepareCertificateData } from '@/lib/utils.tsx';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import Header from '@/components/Header';
+import StudentHeader from '@/components/StudentHeader';
 import Certificate from '@/components/Certificate';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
 export default function StudentDashboard() {
-  const { user } = useAuth();
+  const [user, setUser] = useState<UserInfo | null>(null);
   const { toast } = useToast();
   const [certificateData, setCertificateData] = useState<any | null>(null);
   
-  const { data: student, isLoading } = useQuery<Student>({
-    queryKey: user?.studentId ? [`/api/students/${user.studentId}`] : ['no-student'],
-    enabled: !!user?.studentId,
+  // Fetch user data
+  const { data: userData, isLoading: userLoading } = useQuery<UserInfo>({
+    queryKey: ['/api/user'],
   });
+  
+  // Fetch student data
+  const { data: student, isLoading: studentLoading } = useQuery<Student>({
+    queryKey: ['/api/students/profile'],
+    enabled: !!userData?.studentId,
+  });
+  
+  useEffect(() => {
+    if (userData) {
+      setUser(userData);
+    }
+  }, [userData]);
   
   useEffect(() => {
     if (student && student.status === 'verified') {
       setCertificateData(prepareCertificateData(student));
     }
   }, [student]);
+  
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await apiRequest('POST', '/api/logout');
+      window.location.href = '/login';
+    } catch (error) {
+      toast({
+        title: "Logout failed",
+        description: "Failed to logout. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
   
   const downloadCertificate = () => {
     if (!certificateData) return;
@@ -46,10 +73,24 @@ export default function StudentDashboard() {
         console.error(error);
       });
   };
+  
+  // Loading state or redirect if not authenticated
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    window.location.href = '/login';
+    return null;
+  }
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
-      <Header />
+      <StudentHeader user={user} onLogout={handleLogout} />
       
       <div>
         <div className="flex justify-between items-center mb-6">
@@ -68,7 +109,7 @@ export default function StudentDashboard() {
                     </svg>
                   </div>
                   
-                  {isLoading ? (
+                  {studentLoading ? (
                     <div className="flex justify-center">
                       <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     </div>
@@ -205,7 +246,7 @@ export default function StudentDashboard() {
               </CardHeader>
               
               <CardContent>
-                {isLoading ? (
+                {studentLoading ? (
                   <div className="flex justify-center p-10">
                     <Loader2 className="h-10 w-10 animate-spin text-primary" />
                   </div>
