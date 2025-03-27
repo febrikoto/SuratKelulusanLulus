@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { motion } from 'framer-motion';
 import { 
   Form,
   FormControl,
@@ -64,6 +65,46 @@ export default function LoginPage() {
       <PublicHeader />
       
       <div className="flex flex-col items-center justify-center py-8">
+        {/* Logo sekolah dengan animasi */}
+        <motion.div 
+          className="mb-8 flex flex-col items-center"
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="w-40 h-40 bg-primary-50 rounded-full flex items-center justify-center shadow-lg mb-4 overflow-hidden">
+            <motion.div
+              className="relative w-32 h-32"
+              animate={{ 
+                rotateY: [0, 360],
+              }}
+              transition={{ 
+                duration: 3,
+                repeat: Infinity,
+                repeatType: "loop",
+                ease: "linear",
+                repeatDelay: 2
+              }}
+            >
+              <svg viewBox="0 0 100 100" className="w-full h-full">
+                <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="2" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="1" />
+                <text x="50" y="40" textAnchor="middle" className="text-primary-900 font-bold text-xs">SMKN 1</text>
+                <text x="50" y="55" textAnchor="middle" className="text-primary-900 font-bold text-xs">LUBUK</text>
+                <text x="50" y="70" textAnchor="middle" className="text-primary-900 font-bold text-xs">SIKAPING</text>
+              </svg>
+            </motion.div>
+          </div>
+          <motion.h1 
+            className="text-2xl font-bold text-center text-primary-800"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          >
+            Aplikasi Surat Keterangan Lulus
+          </motion.h1>
+        </motion.div>
+
         <Card className="w-full max-w-lg bg-card">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">Login ke Aplikasi SKL</CardTitle>
@@ -162,12 +203,14 @@ export default function LoginPage() {
           </CardContent>
           
           <CardFooter className="text-center text-sm text-muted-foreground">
-            <div className="w-full space-y-1">
-              <p>Untuk demo, gunakan kredensial berikut:</p>
-              <p><b>Admin:</b> username: admin, password: admin123</p>
-              <p><b>Guru:</b> username: guru1, password: guru123</p>
-              <p><b>Siswa:</b> username: siswa1, password: siswa123</p>
-            </div>
+            <motion.div 
+              className="w-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+            >
+              <p>© 2025 Aplikasi SKL - SMKN 1 Lubuk Sikaping</p>
+            </motion.div>
           </CardFooter>
         </Card>
       </div>
