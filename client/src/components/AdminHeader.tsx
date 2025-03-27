@@ -1,7 +1,13 @@
 import React from 'react';
-import { Link } from "wouter";
+import { LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-export const PublicHeader: React.FC = () => {
+interface AdminHeaderProps {
+  user: any;
+  onLogout: () => void;
+}
+
+export const AdminHeader: React.FC<AdminHeaderProps> = ({ user, onLogout }) => {
   return (
     <header className="mb-8 relative">
       <div className="text-center mb-4">
@@ -19,8 +25,27 @@ export const PublicHeader: React.FC = () => {
         <div className="text-sm md:text-base text-gray-500 dark:text-gray-400">Surat Keterangan Lulus</div>
         <div className="text-sm md:text-base font-medium text-primary mt-1">Tahun Ajaran 2024/2025</div>
       </div>
+      
+      {user && (
+        <div className="absolute top-0 right-0 flex items-center">
+          <div className="mr-4 text-right">
+            <div className="font-medium">{user.fullName}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400 capitalize">{user.role}</div>
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onLogout}
+            className="mr-3"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
+        </div>
+      )}
     </header>
   );
 };
 
-export default PublicHeader;
+export default AdminHeader;

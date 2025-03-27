@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/use-auth';
+import { useLocation } from 'wouter';
 import { DashboardStats } from '@shared/types';
 import { Student } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
@@ -15,7 +15,7 @@ import {
   PencilLine, 
   Eye, 
   Download, 
-  Loader2 
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,14 +35,44 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import Header from '@/components/Header';
-import AddStudentModal from '@/components/modals/AddStudentModal';
-import ImportCsvModal from '@/components/modals/ImportCsvModal';
-import StudentDetailModal from '@/components/modals/StudentDetailModal';
+import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/ui/dialog';
+import AdminHeader from '@/components/AdminHeader';
 import Certificate from '@/components/Certificate';
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const [user, setUser] = useState<any>(null);
+  const [, setLocation] = useLocation();
+  
+  // Fetch user data
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await apiRequest('GET', '/api/user');
+        const userData = await response.json();
+        if (userData && userData.role === 'admin') {
+          setUser(userData);
+        } else {
+          // Redirect if not admin
+          setLocation('/');
+        }
+      } catch (error) {
+        console.error('Failed to fetch user:', error);
+        setLocation('/');
+      }
+    };
+    
+    fetchUser();
+  }, [setLocation]);
+  
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await apiRequest('POST', '/api/logout');
+      setLocation('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -151,9 +181,17 @@ export default function AdminDashboard() {
     ? Array.from(new Set(students.map(student => student.className)))
     : [];
 
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
-      <Header />
+      <AdminHeader user={user} onLogout={handleLogout} />
       
       <div>
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
@@ -421,22 +459,150 @@ export default function AdminDashboard() {
         </Card>
       </div>
       
-      {/* Modals */}
-      <AddStudentModal
-        isOpen={showAddStudentModal}
-        onClose={() => setShowAddStudentModal(false)}
-      />
+      {/* Add Student Modal */}
+      <Dialog open={showAddStudentModal} onOpenChange={setShowAddStudentModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Tambah Siswa Baru</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-500">
+              Form tambah siswa akan ditampilkan di sini dalam aplikasi lengkap.
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowAddStudentModal(false)}
+              className="mr-2"
+            >
+              Batal
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowAddStudentModal(false);
+                toast({
+                  title: "Info",
+                  description: "Fitur tambah siswa akan diimplementasikan dalam aplikasi lengkap",
+                });
+              }}
+            >
+              Simpan
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       
-      <ImportCsvModal
-        isOpen={showImportCsvModal}
-        onClose={() => setShowImportCsvModal(false)}
-      />
+      {/* Import CSV Modal */}
+      <Dialog open={showImportCsvModal} onOpenChange={setShowImportCsvModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Import Data Siswa dari CSV</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-500">
+              Form import CSV akan ditampilkan di sini dalam aplikasi lengkap.
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowImportCsvModal(false)}
+              className="mr-2"
+            >
+              Batal
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowImportCsvModal(false);
+                toast({
+                  title: "Info",
+                  description: "Fitur import CSV akan diimplementasikan dalam aplikasi lengkap",
+                });
+              }}
+            >
+              Import
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       
-      <StudentDetailModal
-        isOpen={showStudentDetailModal}
-        onClose={() => setShowStudentDetailModal(false)}
-        studentId={selectedStudentId}
-      />
+      {/* Student Detail Modal */}
+      <Dialog open={showStudentDetailModal} onOpenChange={setShowStudentDetailModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Detail Siswa</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedStudentId && students ? (
+              <div>
+                {(() => {
+                  const student = students.find(s => s.id === selectedStudentId);
+                  if (!student) return <p>Siswa tidak ditemukan</p>;
+                  
+                  return (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm font-medium">NISN</p>
+                          <p className="text-sm">{student.nisn}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">NIS</p>
+                          <p className="text-sm">{student.nis}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Nama Lengkap</p>
+                          <p className="text-sm">{student.fullName}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Kelas</p>
+                          <p className="text-sm">{student.className}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Tempat Lahir</p>
+                          <p className="text-sm">{student.birthPlace}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Tanggal Lahir</p>
+                          <p className="text-sm">{new Date(student.birthDate).toLocaleDateString('id-ID')}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Nama Orang Tua</p>
+                          <p className="text-sm">{student.parentName}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Status SKL</p>
+                          <p className="text-sm capitalize">{student.status}</p>
+                        </div>
+                      </div>
+                      
+                      {student.status === 'verified' && (
+                        <div className="mt-4">
+                          <Button 
+                            onClick={() => {
+                              setShowStudentDetailModal(false);
+                              generateCertificate(student);
+                            }}
+                            className="w-full"
+                          >
+                            <Download className="mr-2 h-4 w-4" />
+                            Download SKL
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="flex justify-center p-10">
+                <Loader2 className="h-10 w-10 animate-spin text-border" />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       
       {/* Hidden certificate for PDF generation */}
       <div className="hidden">

@@ -1,5 +1,6 @@
 import React from 'react';
 import { CertificateData } from '@shared/types';
+import { formatDate } from '@/lib/utils.tsx';
 
 interface CertificateProps {
   data: CertificateData;
@@ -7,68 +8,70 @@ interface CertificateProps {
 
 export const Certificate: React.FC<CertificateProps> = ({ data }) => {
   return (
-    <div 
-      id="certificate-container" 
-      className="certificate mx-auto max-w-3xl p-8 mb-4"
-      style={{
-        border: '10px solid #5D5CDE',
-        padding: '20px',
-        position: 'relative',
-        backgroundColor: '#fff',
-        color: '#000'
-      }}
-    >
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold mb-1">SURAT KETERANGAN LULUS</h2>
-        <p className="text-lg">Nomor: {data.certNumber}</p>
+    <div id="certificate-container" className="relative p-8 border border-gray-300 bg-white mx-auto w-[210mm] min-h-[297mm] text-black">
+      {/* Header */}
+      <div className="mb-6 text-center">
+        <h2 className="text-xl font-semibold">PEMERINTAH DAERAH PROVINSI JAWA BARAT</h2>
+        <h2 className="text-xl font-semibold">DINAS PENDIDIKAN</h2>
+        <h1 className="text-2xl font-bold mt-2">SMA NEGERI 1 CONTOH</h1>
+        <p className="text-sm">Jl. Pendidikan No. 1 Kota Contoh, Telp. (022) 1234567</p>
+        <p className="text-sm">Website: www.sman1contoh.sch.id | Email: info@sman1contoh.sch.id</p>
       </div>
       
-      <p className="mb-4">Yang bertanda tangan di bawah ini, Kepala SMA Negeri 1 Contoh, menerangkan bahwa:</p>
+      {/* Divider */}
+      <div className="border-b-2 border-black mb-6"></div>
       
-      <div className="mb-6 space-y-2">
-        <div className="grid grid-cols-12">
-          <div className="col-span-3">Nama</div>
-          <div className="col-span-1">:</div>
-          <div className="col-span-8 font-semibold">{data.fullName.toUpperCase()}</div>
-        </div>
-        
-        <div className="grid grid-cols-12">
-          <div className="col-span-3">NISN</div>
-          <div className="col-span-1">:</div>
-          <div className="col-span-8">{data.nisn}</div>
-        </div>
-        
-        <div className="grid grid-cols-12">
-          <div className="col-span-3">Tempat, Tgl Lahir</div>
-          <div className="col-span-1">:</div>
-          <div className="col-span-8">{data.birthPlace}, {data.birthDate}</div>
-        </div>
-        
-        <div className="grid grid-cols-12">
-          <div className="col-span-3">Nama Orang Tua</div>
-          <div className="col-span-1">:</div>
-          <div className="col-span-8">{data.parentName}</div>
-        </div>
-        
-        <div className="grid grid-cols-12">
-          <div className="col-span-3">NIS</div>
-          <div className="col-span-1">:</div>
-          <div className="col-span-8">{data.nis}</div>
-        </div>
+      {/* Title */}
+      <div className="mb-6 text-center">
+        <h2 className="text-xl font-bold">SURAT KETERANGAN LULUS</h2>
+        <p className="text-base mt-1">No: {data.certNumber}</p>
       </div>
       
-      <p className="font-medium mb-4">Berdasarkan hasil rapat pleno kelulusan tanggal 2 Mei 2024, yang bersangkutan dinyatakan:</p>
-      
-      <div className="text-center mb-6">
-        <h3 className="text-2xl font-bold py-2 px-8 border-2 border-black inline-block">LULUS</h3>
+      {/* Content */}
+      <div className="mb-6">
+        <p className="mb-4">Yang bertanda tangan di bawah ini, Kepala SMA Negeri 1 Contoh, Kota Contoh, Provinsi Jawa Barat menerangkan bahwa:</p>
+        
+        <div className="grid grid-cols-[150px_10px_1fr] gap-y-2 mb-4">
+          <div>Nama Lengkap</div>
+          <div>:</div>
+          <div className="font-semibold">{data.fullName}</div>
+          
+          <div>Tempat, Tgl Lahir</div>
+          <div>:</div>
+          <div>{data.birthPlace}, {formatDate(data.birthDate)}</div>
+          
+          <div>NISN</div>
+          <div>:</div>
+          <div>{data.nisn}</div>
+          
+          <div>NIS</div>
+          <div>:</div>
+          <div>{data.nis}</div>
+          
+          <div>Nama Orang Tua</div>
+          <div>:</div>
+          <div>{data.parentName}</div>
+          
+          <div>Kelas</div>
+          <div>:</div>
+          <div>{data.className}</div>
+        </div>
+        
+        <p className="mb-4">Berdasarkan hasil rapat dengan dewan guru pada tanggal {formatDate(data.issueDate)}, dinyatakan <span className="font-bold">LULUS</span> dari SMA Negeri 1 Contoh tahun pelajaran 2023/2024.</p>
+        
+        <p>Surat keterangan ini berlaku sementara sampai dengan dikeluarkannya Ijazah asli.</p>
       </div>
       
-      <p className="mb-4">Surat keterangan ini dibuat sebagai pengumuman resmi kelulusan dari SMA Negeri 1 Contoh dan berlaku sampai dengan diterbitkannya ijazah.</p>
-      
-      <div className="flex justify-end mt-10">
+      {/* Signature */}
+      <div className="grid grid-cols-2 mt-8">
+        <div></div>
         <div className="text-center">
-          <p className="mb-20">Contoh, {data.issueDate}<br/>Kepala Sekolah,</p>
-          <p className="font-bold">{data.headmasterName}<br/>NIP. {data.headmasterNip}</p>
+          <p>Contoh, {formatDate(data.issueDate)}</p>
+          <p>Kepala SMA Negeri 1 Contoh</p>
+          <div className="h-20 flex items-end justify-center">
+            <p className="font-semibold underline">{data.headmasterName}</p>
+          </div>
+          <p>NIP. {data.headmasterNip}</p>
         </div>
       </div>
     </div>
