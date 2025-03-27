@@ -228,19 +228,9 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
             <p>{data.cityName}, {formatDate(data.graduationDate)}</p>
             <p>Kepala,</p>
             
-            <div className="h-28 flex items-end justify-center relative">
-              {data.headmasterSignature ? (
-                <img 
-                  src={data.headmasterSignature} 
-                  alt="Tanda Tangan Kepala Sekolah" 
-                  className="h-16 object-contain mb-2" 
-                />
-              ) : (
-                <p className="font-semibold underline">{data.headmasterName}</p>
-              )}
-              
-              {/* Digital Stamp */}
-              <div className="absolute -right-5 bottom-2 w-40 h-40 opacity-60">
+            <div className="h-28 flex flex-col items-center justify-end mb-5">
+              {/* Digital Stamp - Sekarang di bawah Kepala */}
+              <div className="w-40 h-40 opacity-60 mb-1">
                 {data.schoolStamp ? (
                   <img src={data.schoolStamp} alt="Stempel Sekolah" className="w-full h-full object-contain" />
                 ) : (
@@ -254,6 +244,17 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
                   </svg>
                 )}
               </div>
+              
+              {/* Signature now below stamp */}
+              {data.headmasterSignature ? (
+                <img 
+                  src={data.headmasterSignature} 
+                  alt="Tanda Tangan Kepala Sekolah" 
+                  className="h-16 object-contain mb-2" 
+                />
+              ) : (
+                <p className="font-semibold underline">{data.headmasterName}</p>
+              )}
             </div>
             <p className="font-bold">{data.headmasterName}</p>
             <p>NIP. {data.headmasterNip}</p>

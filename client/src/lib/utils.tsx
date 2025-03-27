@@ -11,47 +11,73 @@ export async function generatePdf(elementId: string, filename: string): Promise<
       throw new Error(`Element with ID "${elementId}" not found`);
     }
     
-    console.log('Creating canvas from HTML element...');
-    const canvas = await html2canvas(element, {
-      scale: 2,
+    // Pendekatan baru yang lebih sederhana - buat gambar saja dulu
+    console.log('Menggunakan pendekatan alternatif untuk PDF...');
+    
+    // Konfigurasi untuk html2canvas
+    const options = {
+      scale: 1.5, // Lebih kecil untuk menghindari masalah memori
       useCORS: true,
       allowTaint: true,
+      backgroundColor: '#FFFFFF',
       logging: true,
-      onclone: (document, element) => {
-        // Fix any potential issues with the cloned document
-        const images = element.querySelectorAll('img');
-        images.forEach(img => {
-          if (img.src) {
-            img.crossOrigin = 'anonymous';
-          }
-        });
+      removeContainer: true,
+      ignoreElements: (element: Element) => {
+        // Ignore any problematic elements
+        return element.tagName === 'IFRAME' || element.tagName === 'VIDEO';
       }
-    });
+    };
     
-    console.log('Canvas created, converting to image data...');
-    const imgData = canvas.toDataURL('image/png');
+    try {
+      // Coba dengan metode 1
+      const canvas = await html2canvas(element, options);
+      const imgData = canvas.toDataURL('image/jpeg', 0.8); // JPEG bukan PNG untuk file lebih kecil
+      
+      // Buat file PDF dengan ukuran A4
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+      
+      // Hitung rasio tinggi-lebar
+      const imgWidth = 210; // A4 width
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // Tambahkan gambar ke PDF
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      
+      // Simpan PDF
+      pdf.save(`${filename}.pdf`);
+      
+      console.log('PDF berhasil dibuat');
+      
+    } catch (canvasError) {
+      console.error('Metode 1 gagal, mencoba metode alternatif:', canvasError);
+      
+      // Jika metode 1 gagal, beritahu pengguna
+      alert('Maaf, terjadi masalah saat membuat PDF. Silakan gunakan screenshot untuk menyimpan sertifikat.');
+      
+      // Tetap berikan image jika memungkinkan
+      const dataUrl = await html2canvas(element, {
+        scale: 1,
+        useCORS: true,
+        logging: false
+      }).then(canvas => canvas.toDataURL('image/jpeg'));
+      
+      // Buat link untuk download image sebagai alternatif
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `${filename}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
     
-    console.log('Creating PDF document...');
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-    });
-    
-    const imgWidth = 210; // A4 width in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    
-    console.log('Adding image to PDF...');
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    
-    console.log('Saving PDF...');
-    pdf.save(`${filename}.pdf`);
-    
-    console.log('PDF generated successfully');
     return Promise.resolve();
   } catch (error) {
-    console.error('Error generating PDF:', error);
-    alert(`Terjadi kesalahan saat mengunduh PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('Error generating PDF (outer):', error);
+    alert('Terjadi kesalahan saat mengunduh sertifikat. Silakan coba lagi atau gunakan screenshot.');
     return Promise.reject(error);
   }
 }
