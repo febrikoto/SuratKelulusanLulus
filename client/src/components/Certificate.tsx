@@ -102,9 +102,8 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
                April 2024 tentang Kelulusan SMA/AMK/SLB Tahun Ajaran {data.academicYear}</li>
             <li className="mb-1">Ketuntasan dari seluruh program pembelajaran sesuai kurikulum yang berlaku, termasuk Ekstrakurikuler dan
                prestasi lainnya</li>
+            <li className="mb-1">Hasil Rapat Pleno Dewan Guru pada hari Senin, {data.graduationDate} {data.graduationTime && `Pukul ${data.graduationTime}`}.</li>
           </ol>
-          
-          <p className="mb-4">Hasil Rapat Pleno Dewan Guru pada hari Senin, {data.graduationDate}.</p>
           
           <p className="mb-4">{data.certBeforeStudentData || "Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:"}</p>
           
@@ -134,8 +133,10 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
             {data.certAfterStudentData || "telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan."}
           </p>
           
-          <div className="text-center border-2 border-black inline-block px-8 py-2 mx-auto my-6 block font-bold text-lg">
-            LULUS
+          <div className="flex justify-center w-full my-6">
+            <div className="text-center border-2 border-black px-12 py-2 font-bold text-xl">
+              LULUS
+            </div>
           </div>
           
           {/* Show grades if enabled */}

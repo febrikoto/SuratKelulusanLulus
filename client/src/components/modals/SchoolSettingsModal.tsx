@@ -43,7 +43,7 @@ const formSchema = z.object({
   schoolStamp: z.string().default(''),
   certHeader: z.string().default(''),
   certFooter: z.string().default(''),
-  certBeforeStudentData: z.string().default('Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:'),
+  certBeforeStudentData: z.string().default('Yang bertanda tangan di bawah ini, Kepala SMK Negeri 1 Lubuk Sikaping, menerangkan bahwa yang bersangkutan:'),
   certAfterStudentData: z.string().default('telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.'),
   certNumberPrefix: z.string().default(''),
   academicYear: z.string().min(5, { message: 'Tahun ajaran wajib diisi (contoh: 2024/2025)' }),
@@ -119,7 +119,7 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
         schoolStamp: settings.schoolStamp || '',
         certHeader: settings.certHeader || '',
         certFooter: settings.certFooter || '',
-        certBeforeStudentData: settings.certBeforeStudentData || 'Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:',
+        certBeforeStudentData: settings.certBeforeStudentData || 'Yang bertanda tangan di bawah ini, Kepala SMK Negeri 1 Lubuk Sikaping, menerangkan bahwa yang bersangkutan:',
         certAfterStudentData: settings.certAfterStudentData || 'telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.',
         certNumberPrefix: settings.certNumberPrefix || '',
         academicYear: settings.academicYear || '',
@@ -538,7 +538,7 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
                         <Input placeholder="Teks yang akan ditampilkan sebelum data siswa" {...field} />
                       </FormControl>
                       <FormDescription>
-                        Contoh: "Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:"
+                        Contoh: "Yang bertanda tangan di bawah ini, Kepala SMK Negeri 1 Lubuk Sikaping, menerangkan bahwa yang bersangkutan:"
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
