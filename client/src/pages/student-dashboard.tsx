@@ -69,6 +69,8 @@ export default function StudentDashboard() {
         // Update dengan pengaturan sekolah
         certData.schoolName = schoolSettings.schoolName || certData.schoolName;
         certData.schoolAddress = schoolSettings.schoolAddress || certData.schoolAddress;
+        certData.schoolEmail = schoolSettings.schoolEmail || certData.schoolEmail;
+        certData.schoolWebsite = schoolSettings.schoolWebsite || certData.schoolWebsite;
         certData.schoolLogo = schoolSettings.schoolLogo || certData.schoolLogo;
         certData.ministryLogo = schoolSettings.ministryLogo || certData.ministryLogo;
         certData.headmasterName = schoolSettings.headmasterName || certData.headmasterName;
@@ -82,6 +84,8 @@ export default function StudentDashboard() {
         certData.certNumberPrefix = schoolSettings.certNumberPrefix || certData.certNumberPrefix;
         certData.certBeforeStudentData = schoolSettings.certBeforeStudentData || certData.certBeforeStudentData;
         certData.certAfterStudentData = schoolSettings.certAfterStudentData || certData.certAfterStudentData;
+        certData.certRegulationText = schoolSettings.certRegulationText || certData.certRegulationText;
+        certData.certCriteriaText = schoolSettings.certCriteriaText || certData.certCriteriaText;
         certData.graduationDate = schoolSettings.graduationDate || certData.graduationDate;
         certData.graduationTime = schoolSettings.graduationTime || certData.graduationTime;
       }
