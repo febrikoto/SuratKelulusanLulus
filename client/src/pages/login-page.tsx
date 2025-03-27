@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Redirect, useLocation } from "wouter";
+import React, { useEffect } from 'react';
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,32 +7,44 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
-import PublicHeader from '@/components/PublicHeader';
-import { apiRequest } from '@/lib/queryClient';
+import { PublicHeader } from '@/components/PublicHeader';
+import { useAuth } from '@/hooks/use-auth';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { 
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from "@/components/ui/form";
+
+const loginFormSchema = z.object({
+  username: z.string().min(1, "Username harus diisi"),
+  password: z.string().min(1, "Password harus diisi"),
+  role: z.enum(["admin", "guru", "siswa"])
+});
+
+type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("admin");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    
-    if (!username || !password) {
-      setError("Username dan password harus diisi");
-      return;
+  const { user, loginMutation, isLoading } = useAuth();
+  
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginFormSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+      role: "admin"
     }
-    
-    try {
-      setIsLoading(true);
-      const response = await apiRequest("POST", "/api/login", { username, password, role });
-      const user = await response.json();
-      
-      // Redirect based on role
+  });
+
+  useEffect(() => {
+    // Redirect if user is logged in
+    if (user) {
       const redirectPath = user.role === 'admin' 
         ? '/admin' 
         : user.role === 'guru' 
@@ -40,11 +52,11 @@ export default function LoginPage() {
           : '/siswa';
           
       setLocation(redirectPath);
-    } catch (err: any) {
-      setError(err.message || "Login gagal. Silakan coba lagi.");
-    } finally {
-      setIsLoading(false);
     }
+  }, [user, setLocation]);
+
+  const onSubmit = (values: LoginFormValues) => {
+    loginMutation.mutate(values);
   };
 
   return (
@@ -61,67 +73,92 @@ export default function LoginPage() {
           </CardHeader>
           
           <CardContent className="space-y-4">
-            {error && (
+            {loginMutation.error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{loginMutation.error.message}</AlertDescription>
               </Alert>
             )}
             
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input 
-                  id="username" 
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Masukkan username" 
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Username</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Masukkan username" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Masukkan password" 
+                
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          placeholder="Masukkan password" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="role">Pilih Peran</Label>
-                <Select
-                  value={role}
-                  onValueChange={setRole}
+                
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pilih Peran</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih Peran" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="guru">Guru</SelectItem>
+                          <SelectItem value="siswa">Siswa</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={loginMutation.isPending || isLoading}
                 >
-                  <SelectTrigger id="role">
-                    <SelectValue placeholder="Pilih Peran" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="guru">Guru</SelectItem>
-                    <SelectItem value="siswa">Siswa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <Button 
-                type="submit" 
-                className="w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Logging in...
-                  </>
-                ) : (
-                  'Login'
-                )}
-              </Button>
-            </form>
+                  {loginMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Logging in...
+                    </>
+                  ) : (
+                    'Login'
+                  )}
+                </Button>
+              </form>
+            </Form>
           </CardContent>
           
           <CardFooter className="text-center text-sm text-muted-foreground">

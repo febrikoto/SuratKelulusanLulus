@@ -7,7 +7,7 @@ export const PublicHeader: React.FC = () => {
   return (
     <header className="flex justify-between items-center py-4 mb-6 border-b">
       <Link href="/">
-        <a className="text-2xl font-bold text-primary flex items-center">
+        <div className="text-2xl font-bold text-primary flex items-center cursor-pointer">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
@@ -21,16 +21,14 @@ export const PublicHeader: React.FC = () => {
             <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
           </svg>
           SKL Digital
-        </a>
+        </div>
       </Link>
 
-      <Link href="/auth">
-        <a>
-          <Button variant="outline" size="sm" className="flex items-center gap-1">
-            <LogIn className="h-4 w-4" />
-            <span>Masuk</span>
-          </Button>
-        </a>
+      <Link href="/login">
+        <Button variant="outline" size="sm" className="flex items-center gap-1 cursor-pointer">
+          <LogIn className="h-4 w-4" />
+          <span>Masuk</span>
+        </Button>
       </Link>
     </header>
   );
