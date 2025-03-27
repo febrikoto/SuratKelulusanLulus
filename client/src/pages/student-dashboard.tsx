@@ -101,22 +101,22 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-6xl">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-6xl">
       <StudentHeader user={user} onLogout={handleLogout} />
       
       <div>
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl md:text-2xl font-semibold">Dashboard Siswa</h2>
+        <div className="flex justify-between items-center mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-semibold">Dashboard Siswa</h2>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6">
           {/* Student Information */}
           <div className="md:col-span-4">
-            <Card className="mb-6">
-              <CardContent className="p-6">
-                <div className="text-center mb-4">
-                  <div className="mx-auto w-24 h-24 mb-4 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <Card className="mb-4 sm:mb-6">
+              <CardContent className="p-4 sm:p-6">
+                <div className="text-center mb-3 sm:mb-4">
+                  <div className="mx-auto w-16 h-16 sm:w-24 sm:h-24 mb-3 sm:mb-4 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
@@ -127,7 +127,7 @@ export default function StudentDashboard() {
                     </div>
                   ) : student ? (
                     <>
-                      <h3 className="text-lg font-semibold">{student.fullName}</h3>
+                      <h3 className="text-base sm:text-lg font-semibold">{student.fullName}</h3>
                       <p className="text-gray-500 dark:text-gray-400">NISN: {student.nisn}</p>
                     </>
                   ) : (
@@ -274,7 +274,7 @@ export default function StudentDashboard() {
                   </div>
                 ) : certificateData ? (
                   <>
-                    <div className="flex justify-center space-x-4 mb-6">
+                    <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4 mb-6">
                       <Button 
                         onClick={() => {
                           setCertificateData((prevData: CertificateData | null) => 
@@ -284,9 +284,10 @@ export default function StudentDashboard() {
                           setShowCertificatePopup(true);
                         }}
                         className="bg-primary hover:bg-primary/90"
+                        size="sm"
                       >
-                        <FileText className="mr-2 h-5 w-5" />
-                        Lihat SKL Tanpa Nilai
+                        <FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="text-xs sm:text-sm">Lihat SKL Tanpa Nilai</span>
                       </Button>
                       
                       <Button 
@@ -298,9 +299,10 @@ export default function StudentDashboard() {
                           setShowCertificatePopup(true);
                         }}
                         className="bg-blue-600 hover:bg-blue-700 text-white"
+                        size="sm"
                       >
-                        <FileText className="mr-2 h-5 w-5" />
-                        Lihat SKL Dengan Nilai
+                        <FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="text-xs sm:text-sm">Lihat SKL Dengan Nilai</span>
                       </Button>
                     </div>
                     
@@ -308,9 +310,10 @@ export default function StudentDashboard() {
                       <Button 
                         onClick={downloadCertificate}
                         className="bg-green-600 hover:bg-green-700"
+                        size="sm"
                       >
-                        <Download className="mr-2 h-5 w-5" />
-                        Unduh SKL
+                        <Download className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="text-xs sm:text-sm">Unduh SKL</span>
                       </Button>
                     </div>
                     
@@ -318,27 +321,28 @@ export default function StudentDashboard() {
                     <Dialog.Root open={showCertificatePopup} onOpenChange={setShowCertificatePopup}>
                       <Dialog.Portal>
                         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-                        <Dialog.Content className="fixed left-[50%] top-[50%] max-h-[85vh] w-[90vw] max-w-[900px] translate-x-[-50%] translate-y-[-50%] bg-white dark:bg-gray-900 rounded-lg p-4 shadow-lg z-50 overflow-y-auto">
-                          <div className="flex justify-between items-center mb-4">
-                            <Dialog.Title className="text-xl font-semibold">
+                        <Dialog.Content className="fixed left-[50%] top-[50%] max-h-[85vh] w-[90vw] max-w-[900px] translate-x-[-50%] translate-y-[-50%] bg-white dark:bg-gray-900 rounded-lg p-2 sm:p-4 shadow-lg z-50 overflow-y-auto" aria-describedby="certificate-popup-desc">
+                          <div className="flex justify-between items-center mb-2 sm:mb-4">
+                            <Dialog.Title className="text-lg sm:text-xl font-semibold">
                               {showGradesInPopup ? 'SKL Dengan Nilai' : 'SKL Tanpa Nilai'}
                             </Dialog.Title>
                             <Dialog.Close asChild>
-                              <button className="rounded-full h-8 w-8 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary hover:bg-gray-100 dark:hover:bg-gray-800">
-                                <X className="h-5 w-5" />
+                              <button className="rounded-full h-7 w-7 sm:h-8 sm:w-8 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary hover:bg-gray-100 dark:hover:bg-gray-800">
+                                <X className="h-4 w-4 sm:h-5 sm:w-5" />
                               </button>
                             </Dialog.Close>
                           </div>
                           <div className="overflow-y-auto max-h-[calc(85vh-100px)]">
                             <Certificate data={certificateData} />
                           </div>
-                          <div className="flex justify-center mt-6">
+                          <div className="flex justify-center mt-4 sm:mt-6">
                             <Button 
                               onClick={downloadCertificate}
                               className="bg-green-600 hover:bg-green-700"
+                              size="sm"
                             >
-                              <Download className="mr-2 h-5 w-5" />
-                              Unduh SKL
+                              <Download className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                              <span className="text-xs sm:text-sm">Unduh SKL</span>
                             </Button>
                           </div>
                         </Dialog.Content>
