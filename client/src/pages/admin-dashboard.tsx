@@ -77,8 +77,8 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [classFilter, setClassFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [classFilter, setClassFilter] = useState('all');
   
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showImportCsvModal, setShowImportCsvModal] = useState(false);
@@ -169,8 +169,8 @@ export default function AdminDashboard() {
           student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
           student.nisn.toLowerCase().includes(searchTerm.toLowerCase());
         
-        const matchesStatus = statusFilter === '' || student.status === statusFilter;
-        const matchesClass = classFilter === '' || student.className === classFilter;
+        const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
+        const matchesClass = classFilter === 'all' || student.className === classFilter;
         
         return matchesSearch && matchesStatus && matchesClass;
       })
@@ -326,7 +326,7 @@ export default function AdminDashboard() {
                     <SelectValue placeholder="Semua Kelas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Semua Kelas</SelectItem>
+                    <SelectItem value="all">Semua Kelas</SelectItem>
                     {uniqueClasses.map(className => (
                       <SelectItem key={className} value={className}>{className}</SelectItem>
                     ))}
@@ -343,7 +343,7 @@ export default function AdminDashboard() {
                     <SelectValue placeholder="Semua Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Semua Status</SelectItem>
+                    <SelectItem value="all">Semua Status</SelectItem>
                     <SelectItem value="verified">Terverifikasi</SelectItem>
                     <SelectItem value="pending">Menunggu Verifikasi</SelectItem>
                     <SelectItem value="rejected">Ditolak</SelectItem>
@@ -366,7 +366,7 @@ export default function AdminDashboard() {
               </div>
             ) : filteredStudents.length === 0 ? (
               <div className="text-center py-10 text-gray-500">
-                {searchTerm || statusFilter || classFilter 
+                {searchTerm || statusFilter !== 'all' || classFilter !== 'all' 
                   ? "Tidak ada data siswa yang sesuai dengan filter" 
                   : "Belum ada data siswa"}
               </div>
