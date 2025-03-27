@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
+import axios from 'axios';
 import { 
   Form,
   FormControl,
@@ -33,6 +34,8 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { user, loginMutation, isLoading } = useAuth();
+  const [schoolSettings, setSchoolSettings] = useState<any>(null);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
@@ -42,6 +45,22 @@ export default function LoginPage() {
       role: "admin"
     }
   });
+
+  useEffect(() => {
+    // Fetch school settings for logo
+    const fetchSettings = async () => {
+      try {
+        const response = await axios.get('/api/settings');
+        setSchoolSettings(response.data);
+      } catch (error) {
+        console.error('Failed to fetch school settings:', error);
+      } finally {
+        setIsLoadingSettings(false);
+      }
+    };
+    
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     // Redirect if user is logged in
@@ -86,13 +105,25 @@ export default function LoginPage() {
                 repeatDelay: 2
               }}
             >
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="2" />
-                <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="1" />
-                <text x="50" y="40" textAnchor="middle" className="text-primary-900 font-bold text-xs">SMKN 1</text>
-                <text x="50" y="55" textAnchor="middle" className="text-primary-900 font-bold text-xs">LUBUK</text>
-                <text x="50" y="70" textAnchor="middle" className="text-primary-900 font-bold text-xs">SIKAPING</text>
-              </svg>
+              {isLoadingSettings ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : schoolSettings?.schoolLogo ? (
+                <img 
+                  src={schoolSettings.schoolLogo} 
+                  alt={schoolSettings.schoolName || "Logo Sekolah"} 
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <svg viewBox="0 0 100 100" className="w-full h-full">
+                  <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="2" />
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="1" />
+                  <text x="50" y="40" textAnchor="middle" className="text-primary-900 font-bold text-xs">{schoolSettings?.schoolName?.split(' ')[0] || 'SMKN 1'}</text>
+                  <text x="50" y="55" textAnchor="middle" className="text-primary-900 font-bold text-xs">{schoolSettings?.schoolName?.split(' ')[1] || 'LUBUK'}</text>
+                  <text x="50" y="70" textAnchor="middle" className="text-primary-900 font-bold text-xs">{schoolSettings?.schoolName?.split(' ')[2] || 'SIKAPING'}</text>
+                </svg>
+              )}
             </motion.div>
           </div>
           <motion.h1 
@@ -101,8 +132,16 @@ export default function LoginPage() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.5 }}
           >
-            Aplikasi Surat Keterangan Lulus
+            {schoolSettings?.schoolName || "Aplikasi Surat Keterangan Lulus"}
           </motion.h1>
+          <motion.p
+            className="text-base text-center text-muted-foreground"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+          >
+            Sistem Pengelolaan SKL
+          </motion.p>
         </motion.div>
 
         <Card className="w-full max-w-lg bg-card">

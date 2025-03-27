@@ -455,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Settings API endpoints
-  app.get("/api/settings", requireAuth, async (req, res) => {
+  app.get("/api/settings", async (req, res) => {
     try {
       let settings = await storage.getSettings();
       if (!settings) {
