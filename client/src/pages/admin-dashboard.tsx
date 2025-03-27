@@ -20,7 +20,8 @@ import {
   Loader2,
   FileSpreadsheet,
   School,
-  Settings
+  Settings,
+  FileBadge
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +48,7 @@ import AddStudentModal from '@/components/modals/AddStudentModal';
 import GradesModal from '@/components/modals/GradesModal';
 import GradeImportModal from '@/components/modals/GradeImportModal';
 import SchoolSettingsModal from '@/components/modals/SchoolSettingsModal';
+import CertificateSettingsModal from '@/components/modals/CertificateSettingsModal';
 
 export default function AdminDashboard() {
   const { user: authUser, updateWelcomeStatus } = useAuth();
@@ -112,6 +114,7 @@ export default function AdminDashboard() {
   const [showGradeImportModal, setShowGradeImportModal] = useState(false);
   const [showGradeModal, setShowGradeModal] = useState(false);
   const [showSchoolSettingsModal, setShowSchoolSettingsModal] = useState(false);
+  const [showCertificateSettingsModal, setShowCertificateSettingsModal] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<number | undefined>(undefined);
   const [selectedStudentName, setSelectedStudentName] = useState<string | undefined>(undefined);
   const [previewCertificateData, setPreviewCertificateData] = useState<any | null>(null);
@@ -272,6 +275,14 @@ export default function AdminDashboard() {
             >
               <School className="mr-2 h-4 w-4" />
               Pengaturan Sekolah
+            </Button>
+            <Button 
+              onClick={() => setShowCertificateSettingsModal(true)}
+              variant="outline"
+              className="border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+            >
+              <FileBadge className="mr-2 h-4 w-4" />
+              Pengaturan SKL
             </Button>
           </div>
         </div>
@@ -642,6 +653,12 @@ export default function AdminDashboard() {
       <SchoolSettingsModal
         isOpen={showSchoolSettingsModal}
         onClose={() => setShowSchoolSettingsModal(false)}
+      />
+      
+      {/* Certificate Settings Modal */}
+      <CertificateSettingsModal
+        isOpen={showCertificateSettingsModal}
+        onClose={() => setShowCertificateSettingsModal(false)}
       />
       
       {/* Hidden certificate for PDF generation */}
