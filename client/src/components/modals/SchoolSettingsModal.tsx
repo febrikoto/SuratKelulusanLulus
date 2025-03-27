@@ -43,6 +43,8 @@ const formSchema = z.object({
   schoolStamp: z.string().default(''),
   certHeader: z.string().default(''),
   certFooter: z.string().default(''),
+  certBeforeStudentData: z.string().default('Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:'),
+  certAfterStudentData: z.string().default('telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.'),
   certNumberPrefix: z.string().default(''),
   academicYear: z.string().min(5, { message: 'Tahun ajaran wajib diisi (contoh: 2024/2025)' }),
   graduationDate: z.string().min(5, { message: 'Tanggal kelulusan wajib diisi' }),
@@ -92,6 +94,8 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
       schoolStamp: '',
       certHeader: '',
       certFooter: '',
+      certBeforeStudentData: '',
+      certAfterStudentData: '',
       certNumberPrefix: '',
       academicYear: '',
       graduationDate: '',
@@ -115,6 +119,8 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
         schoolStamp: settings.schoolStamp || '',
         certHeader: settings.certHeader || '',
         certFooter: settings.certFooter || '',
+        certBeforeStudentData: settings.certBeforeStudentData || 'Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:',
+        certAfterStudentData: settings.certAfterStudentData || 'telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.',
         certNumberPrefix: settings.certNumberPrefix || '',
         academicYear: settings.academicYear || '',
         graduationDate: settings.graduationDate || '',
@@ -516,6 +522,40 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
                       <FormControl>
                         <Input placeholder="Footer tambahan untuk sertifikat (opsional)" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="certBeforeStudentData"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Teks Sebelum Data Siswa</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Teks yang akan ditampilkan sebelum data siswa" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Contoh: "Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:"
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="certAfterStudentData"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Teks Setelah Data Siswa</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Teks yang akan ditampilkan setelah data siswa" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Contoh: "telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan."
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

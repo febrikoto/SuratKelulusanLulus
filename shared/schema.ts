@@ -8,22 +8,24 @@ export const userRoleEnum = pgEnum('user_role', ['admin', 'guru', 'siswa']);
 // Settings table for school and certificate data
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
-  schoolName: varchar("school_name", { length: 200 }).notNull(),
-  schoolAddress: text("school_address").notNull(),
-  schoolLogo: text("school_logo").notNull(),
-  ministryLogo: text("ministry_logo").notNull().default(""),
-  headmasterName: varchar("headmaster_name", { length: 100 }).notNull(),
-  headmasterNip: varchar("headmaster_nip", { length: 50 }).notNull(),
-  headmasterSignature: text("headmaster_signature").notNull().default(""),
-  schoolStamp: text("school_stamp").notNull().default(""),
-  certHeader: varchar("cert_header", { length: 200 }).notNull(),
-  certFooter: text("cert_footer").notNull(),
-  certNumberPrefix: varchar("cert_number_prefix", { length: 50 }).notNull().default(""),
-  academicYear: varchar("academic_year", { length: 20 }).notNull(),
-  graduationDate: varchar("graduation_date", { length: 30 }).notNull().default(""),
-  graduationTime: varchar("graduation_time", { length: 20 }).notNull().default(""),
-  cityName: varchar("city_name", { length: 100 }).notNull().default(""),
-  provinceName: varchar("province_name", { length: 100 }).notNull().default(""),
+  schoolName: varchar("school_name", { length: 200 }).notNull().default("SMA Negeri 1"),
+  schoolAddress: text("school_address").notNull().default("Jl. Pendidikan No. 1"),
+  schoolLogo: text("school_logo").default(""),
+  ministryLogo: text("ministry_logo").default(""),
+  headmasterName: varchar("headmaster_name", { length: 100 }).notNull().default("Drs. Kepala Sekolah"),
+  headmasterNip: varchar("headmaster_nip", { length: 50 }).notNull().default("19700101 199001 1 001"),
+  headmasterSignature: text("headmaster_signature").default(""),
+  schoolStamp: text("school_stamp").default(""),
+  certHeader: varchar("cert_header", { length: 200 }).notNull().default("SURAT KETERANGAN LULUS"),
+  certFooter: text("cert_footer").notNull().default("Surat ini berlaku sebagai bukti kelulusan sampai ijazah diterbitkan."),
+  certBeforeStudentData: text("cert_before_student_data").notNull().default("Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:"),
+  certAfterStudentData: text("cert_after_student_data").notNull().default("telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan."),
+  certNumberPrefix: varchar("cert_number_prefix", { length: 50 }).default(""),
+  academicYear: varchar("academic_year", { length: 20 }).notNull().default("2023/2024"),
+  graduationDate: varchar("graduation_date", { length: 30 }).default(""),
+  graduationTime: varchar("graduation_time", { length: 20 }).default(""),
+  cityName: varchar("city_name", { length: 100 }).default(""),
+  provinceName: varchar("province_name", { length: 100 }).default(""),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
@@ -52,6 +54,7 @@ export const users = pgTable("users", {
   fullName: varchar("full_name", { length: 100 }).notNull(),
   role: userRoleEnum("role").notNull().default("siswa"),
   studentId: integer("student_id").references(() => students.id),
+  hasSeenWelcome: boolean("has_seen_welcome").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -75,6 +78,7 @@ export const insertStudentSchema = createInsertSchema(students).omit({
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
+  hasSeenWelcome: true,
   createdAt: true
 });
 

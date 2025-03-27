@@ -471,6 +471,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           schoolStamp: "",
           certHeader: "SURAT KETERANGAN LULUS",
           certFooter: "Surat ini berlaku sebagai bukti kelulusan sampai ijazah diterbitkan.",
+          certBeforeStudentData: "Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:",
+          certAfterStudentData: "telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.",
           academicYear: "2023/2024",
           graduationDate: "2024-05-03",
           graduationTime: "10:00",
@@ -507,6 +509,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedSettings);
     } catch (error) {
       res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
+  // Welcome animation status endpoint
+  app.post("/api/user/welcome-status", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as Express.User;
+      const hasSeenWelcome = req.body.hasSeenWelcome === true;
+      
+      const updatedUser = await storage.updateUserWelcomeStatus(user.id, hasSeenWelcome);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({ success: true, hasSeenWelcome: updatedUser.hasSeenWelcome });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update welcome status" });
     }
   });
 

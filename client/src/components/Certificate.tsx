@@ -106,7 +106,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
           
           <p className="mb-4">Hasil Rapat Pleno Dewan Guru pada hari Senin, {data.graduationDate}.</p>
           
-          <p className="mb-4">Mengumumkan bahwa :</p>
+          <p className="mb-4">{data.certBeforeStudentData || "Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:"}</p>
           
           <div className="grid grid-cols-[150px_10px_1fr] gap-y-1 mb-6 ml-4">
             <div>Nama Siswa</div>
@@ -131,7 +131,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
           </div>
           
           <p className="mb-4">
-            dari {data.schoolName} {data.cityName}, Provinsi {data.provinceName} pada Tahun Ajaran {data.academicYear}, dinyatakan:
+            {data.certAfterStudentData || "telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan."}
           </p>
           
           <div className="text-center border-2 border-black inline-block px-8 py-2 mx-auto my-6 block font-bold text-lg">

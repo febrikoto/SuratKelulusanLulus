@@ -14,6 +14,8 @@ export interface CertificateData {
   className: string; // Kelas seperti XII
   certNumber: string;
   certNumberPrefix?: string; // Prefix untuk nomor surat SKL
+  certBeforeStudentData?: string; // Teks sebelum data siswa
+  certAfterStudentData?: string; // Teks setelah data siswa
   issueDate: string;
   graduationDate: string; // Tanggal kelulusan/rapat pleno
   graduationTime?: string; // Waktu kelulusan/rapat pleno
@@ -56,4 +58,5 @@ export interface UserInfo {
   fullName: string;
   role: 'admin' | 'guru' | 'siswa';
   studentId?: number;
+  hasSeenWelcome?: boolean;
 }

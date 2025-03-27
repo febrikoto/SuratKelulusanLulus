@@ -19,6 +19,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserWelcomeStatus(id: number, hasSeenWelcome: boolean): Promise<User | undefined>;
   
   // Student operations
   getStudent(id: number): Promise<Student | undefined>;
@@ -98,6 +99,15 @@ export class DatabaseStorage implements IStorage {
 
   async createUser(userData: InsertUser): Promise<User> {
     const result = await this.db.insert(users).values(userData).returning();
+    return result[0];
+  }
+
+  async updateUserWelcomeStatus(id: number, hasSeenWelcome: boolean): Promise<User | undefined> {
+    const result = await this.db.update(users)
+      .set({ hasSeenWelcome })
+      .where(eq(users.id, id))
+      .returning();
+    
     return result[0];
   }
 
@@ -329,10 +339,24 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...userData, 
       id,
+      hasSeenWelcome: false,
       createdAt: new Date() 
     };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUserWelcomeStatus(id: number, hasSeenWelcome: boolean): Promise<User | undefined> {
+    const user = await this.getUser(id);
+    if (!user) return undefined;
+    
+    const updatedUser: User = {
+      ...user,
+      hasSeenWelcome
+    };
+    
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
 
   async getStudent(id: number): Promise<Student | undefined> {

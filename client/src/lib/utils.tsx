@@ -78,6 +78,8 @@ export function prepareCertificateData(student: any, showGrades: boolean = false
     ...student,
     certNumber: generateCertificateNumber(student.id),
     certNumberPrefix: settings?.certNumberPrefix || "",
+    certBeforeStudentData: settings?.certBeforeStudentData || "Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:",
+    certAfterStudentData: settings?.certAfterStudentData || "telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.",
     issueDate: formatDate(today.toISOString()),
     graduationDate: settings?.graduationDate || "05 Mei 2025",
     graduationTime: settings?.graduationTime || "",

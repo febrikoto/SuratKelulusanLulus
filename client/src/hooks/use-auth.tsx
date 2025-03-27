@@ -15,6 +15,7 @@ type AuthContextType = {
   error: Error | null;
   loginMutation: UseMutationResult<UserInfo, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
+  updateWelcomeStatus: (hasSeenWelcome: boolean) => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -71,6 +72,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Function to update welcome status
+  const updateWelcomeStatus = async (hasSeenWelcome: boolean) => {
+    try {
+      await apiRequest("POST", "/api/user/welcome-status", { hasSeenWelcome });
+      
+      // Update the user data in the cache
+      if (user) {
+        queryClient.setQueryData(["/api/user"], {
+          ...user,
+          hasSeenWelcome
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update welcome status:", error);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -79,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error,
         loginMutation,
         logoutMutation,
+        updateWelcomeStatus
       }}
     >
       {children}

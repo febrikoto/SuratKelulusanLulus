@@ -5,7 +5,9 @@ import { DashboardStats } from '@shared/types';
 import { Student } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { prepareCertificateData, generatePdf } from '@/lib/utils.tsx';
+import WelcomeAnimation from '@/components/WelcomeAnimation';
 import { 
   PlusCircle, 
   Upload, 
@@ -47,8 +49,10 @@ import GradeImportModal from '@/components/modals/GradeImportModal';
 import SchoolSettingsModal from '@/components/modals/SchoolSettingsModal';
 
 export default function AdminDashboard() {
+  const { user: authUser, updateWelcomeStatus } = useAuth();
   const [user, setUser] = useState<any>(null);
   const [, setLocation] = useLocation();
+  const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
   
   // Fetch user data
   useEffect(() => {
@@ -58,6 +62,10 @@ export default function AdminDashboard() {
         const userData = await response.json();
         if (userData && userData.role === 'admin') {
           setUser(userData);
+          // Check if user should see welcome animation
+          if (userData && !userData.hasSeenWelcome) {
+            setShowWelcomeAnimation(true);
+          }
         } else {
           // Redirect if not admin
           setLocation('/');
@@ -78,6 +86,17 @@ export default function AdminDashboard() {
       setLocation('/');
     } catch (error) {
       console.error('Logout failed:', error);
+    }
+  };
+  
+  // Handle welcome animation close
+  const handleWelcomeClose = async () => {
+    try {
+      setShowWelcomeAnimation(false);
+      // Update welcome status in the database
+      await updateWelcomeStatus(true);
+    } catch (error) {
+      console.error('Failed to update welcome status:', error);
     }
   };
   const { toast } = useToast();
@@ -207,6 +226,9 @@ export default function AdminDashboard() {
   
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
+      {showWelcomeAnimation && user && (
+        <WelcomeAnimation user={user} onClose={handleWelcomeClose} />
+      )}
       <AdminHeader user={user} onLogout={handleLogout} />
       
       <div>

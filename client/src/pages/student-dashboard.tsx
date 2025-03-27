@@ -10,15 +10,19 @@ import { Separator } from '@/components/ui/separator';
 import StudentHeader from '@/components/StudentHeader';
 import { Certificate } from '@/components/Certificate';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/queryClient';
+import WelcomeAnimation from '@/components/WelcomeAnimation';
 import * as Dialog from '@radix-ui/react-dialog';
 
 export default function StudentDashboard() {
+  const { updateWelcomeStatus } = useAuth();
   const [user, setUser] = useState<UserInfo | null>(null);
   const { toast } = useToast();
   const [certificateData, setCertificateData] = useState<CertificateData | null>(null);
   const [showCertificatePopup, setShowCertificatePopup] = useState(false);
   const [showGradesInPopup, setShowGradesInPopup] = useState(false);
+  const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
   
   // Fetch user data
   const { data: userData, isLoading: userLoading } = useQuery<UserInfo>({
@@ -39,12 +43,49 @@ export default function StudentDashboard() {
   useEffect(() => {
     if (userData) {
       setUser(userData);
+      // Show welcome animation for first-time users
+      if (userData && !userData.hasSeenWelcome) {
+        setShowWelcomeAnimation(true);
+      }
     }
   }, [userData]);
   
+  // Handle welcome animation close
+  const handleWelcomeClose = async () => {
+    try {
+      setShowWelcomeAnimation(false);
+      // Update welcome status in the database
+      await updateWelcomeStatus(true);
+    } catch (error) {
+      console.error('Failed to update welcome status:', error);
+    }
+  };
+  
   useEffect(() => {
     if (student && student.status === 'verified') {
-      setCertificateData(prepareCertificateData(student, false, schoolSettings));
+      // Secara default tidak menunjukkan nilai
+      const certData = prepareCertificateData(student);
+      if (certData && schoolSettings) {
+        // Update dengan pengaturan sekolah
+        certData.schoolName = schoolSettings.schoolName || certData.schoolName;
+        certData.schoolAddress = schoolSettings.schoolAddress || certData.schoolAddress;
+        certData.schoolLogo = schoolSettings.schoolLogo || certData.schoolLogo;
+        certData.ministryLogo = schoolSettings.ministryLogo || certData.ministryLogo;
+        certData.headmasterName = schoolSettings.headmasterName || certData.headmasterName;
+        certData.headmasterNip = schoolSettings.headmasterNip || certData.headmasterNip;
+        certData.headmasterSignature = schoolSettings.headmasterSignature || certData.headmasterSignature;
+        certData.schoolStamp = schoolSettings.schoolStamp || certData.schoolStamp;
+        certData.cityName = schoolSettings.cityName || certData.cityName;
+        certData.provinceName = schoolSettings.provinceName || certData.provinceName;
+        certData.academicYear = schoolSettings.academicYear || certData.academicYear;
+        certData.showGrades = false;
+        certData.certNumberPrefix = schoolSettings.certNumberPrefix || certData.certNumberPrefix;
+        certData.certBeforeStudentData = schoolSettings.certBeforeStudentData || certData.certBeforeStudentData;
+        certData.certAfterStudentData = schoolSettings.certAfterStudentData || certData.certAfterStudentData;
+        certData.graduationDate = schoolSettings.graduationDate || certData.graduationDate;
+        certData.graduationTime = schoolSettings.graduationTime || certData.graduationTime;
+      }
+      setCertificateData(certData);
     }
   }, [student, schoolSettings]);
   
@@ -102,6 +143,9 @@ export default function StudentDashboard() {
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-6xl">
+      {showWelcomeAnimation && user && (
+        <WelcomeAnimation user={user} onClose={handleWelcomeClose} />
+      )}
       <StudentHeader user={user} onLogout={handleLogout} />
       
       <div>

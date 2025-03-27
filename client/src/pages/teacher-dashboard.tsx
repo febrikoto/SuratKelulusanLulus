@@ -16,12 +16,15 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/queryClient';
 import TeacherHeader from '@/components/TeacherHeader';
 import { Certificate } from '@/components/Certificate';
+import WelcomeAnimation from '@/components/WelcomeAnimation';
 import { prepareCertificateData, generatePdf } from '@/lib/utils';
 
 export default function TeacherDashboard(): React.JSX.Element {
+  const { user: authUser, updateWelcomeStatus } = useAuth();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<number | undefined>(undefined);
@@ -33,6 +36,7 @@ export default function TeacherDashboard(): React.JSX.Element {
   const [showCertificatePreview, setShowCertificatePreview] = useState(false);
   const [certificateData, setCertificateData] = useState<CertificateData | null>(null);
   const [showGrades, setShowGrades] = useState(false);
+  const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -45,8 +49,23 @@ export default function TeacherDashboard(): React.JSX.Element {
   useEffect(() => {
     if (userData) {
       setUser(userData);
+      // Show welcome animation for first-time users
+      if (userData && !userData.hasSeenWelcome) {
+        setShowWelcomeAnimation(true);
+      }
     }
   }, [userData]);
+  
+  // Handle welcome animation close
+  const handleWelcomeClose = async () => {
+    try {
+      setShowWelcomeAnimation(false);
+      // Update welcome status in the database
+      await updateWelcomeStatus(true);
+    } catch (error) {
+      console.error('Failed to update welcome status:', error);
+    }
+  };
   
   // Fetch dashboard stats
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
@@ -206,6 +225,9 @@ export default function TeacherDashboard(): React.JSX.Element {
   
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
+      {showWelcomeAnimation && user && (
+        <WelcomeAnimation user={user} onClose={handleWelcomeClose} />
+      )}
       <TeacherHeader user={user} onLogout={handleLogout} />
       
       <div>
