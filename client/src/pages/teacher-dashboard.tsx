@@ -129,7 +129,9 @@ export default function TeacherDashboard(): React.JSX.Element {
   const verifyStudentMutation = useMutation({
     mutationFn: async () => {
       if (!selectedStudentId) return;
-      await apiRequest('POST', `/api/students/${selectedStudentId}/verify`, {
+      await apiRequest('POST', `/api/students/verify`, {
+        studentId: selectedStudentId,
+        status: 'verified',
         verificationNotes: verificationNote,
       });
     },
@@ -156,7 +158,9 @@ export default function TeacherDashboard(): React.JSX.Element {
   const rejectStudentMutation = useMutation({
     mutationFn: async () => {
       if (!selectedStudentId) return;
-      await apiRequest('POST', `/api/students/${selectedStudentId}/reject`, {
+      await apiRequest('POST', `/api/students/verify`, {
+        studentId: selectedStudentId,
+        status: 'rejected',
         verificationNotes: rejectionReason,
       });
     },
