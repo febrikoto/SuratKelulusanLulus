@@ -1,4 +1,4 @@
-import { User, Student, InsertUser, InsertStudent, VerificationData, Settings, InsertSettings, students, users, settings } from "@shared/schema";
+import { User, Student, InsertUser, InsertStudent, VerificationData, Settings, InsertSettings, Grade, InsertGrade, students, users, settings, grades } from "@shared/schema";
 import { DashboardStats } from "@shared/types";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -35,6 +35,12 @@ export interface IStorage {
   getSettings(): Promise<Settings | undefined>;
   saveSettings(settings: InsertSettings): Promise<Settings>;
   updateSettings(data: Partial<InsertSettings>): Promise<Settings | undefined>;
+  
+  // Grades operations
+  getStudentGrades(studentId: number): Promise<Grade[]>;
+  saveGrade(grade: InsertGrade): Promise<Grade>;
+  saveGrades(grades: InsertGrade[]): Promise<Grade[]>;
+  deleteGrade(id: number): Promise<boolean>;
   
   // Dashboard operations
   getDashboardStats(): Promise<DashboardStats>;
@@ -198,6 +204,39 @@ export class DatabaseStorage implements IStorage {
     
     return result[0];
   }
+  
+  async getStudentGrades(studentId: number): Promise<Grade[]> {
+    return await this.db.select()
+      .from(grades)
+      .where(eq(grades.studentId, studentId))
+      .orderBy(grades.subjectName);
+  }
+  
+  async saveGrade(grade: InsertGrade): Promise<Grade> {
+    const result = await this.db.insert(grades)
+      .values(grade)
+      .returning();
+    
+    return result[0];
+  }
+  
+  async saveGrades(gradesData: InsertGrade[]): Promise<Grade[]> {
+    if (gradesData.length === 0) return [];
+    
+    const result = await this.db.insert(grades)
+      .values(gradesData)
+      .returning();
+    
+    return result;
+  }
+  
+  async deleteGrade(id: number): Promise<boolean> {
+    const result = await this.db.delete(grades)
+      .where(eq(grades.id, id))
+      .returning({ id: grades.id });
+    
+    return result.length > 0;
+  }
 
   async getDashboardStats(): Promise<DashboardStats> {
     const totalStudents = await this.db.select({ count: count() }).from(students);
@@ -239,15 +278,21 @@ export class DatabaseStorage implements IStorage {
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private students: Map<number, Student>;
+  private settings: Settings | undefined;
+  private grades: Map<number, Grade>;
   private userIdCounter: number;
   private studentIdCounter: number;
+  private gradeIdCounter: number;
   sessionStore: any;
 
   constructor() {
     this.users = new Map();
     this.students = new Map();
+    this.grades = new Map();
+    this.settings = undefined;
     this.userIdCounter = 1;
     this.studentIdCounter = 1;
+    this.gradeIdCounter = 1;
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // prune expired entries every 24h
     });
@@ -367,6 +412,67 @@ export class MemStorage implements IStorage {
     
     this.students.set(student.id, updatedStudent);
     return updatedStudent;
+  }
+
+  async getSettings(): Promise<Settings | undefined> {
+    return this.settings;
+  }
+  
+  async saveSettings(settingsData: InsertSettings): Promise<Settings> {
+    if (this.settings) {
+      return this.updateSettings(settingsData) as Promise<Settings>;
+    } else {
+      const settings: Settings = {
+        id: 1,
+        ...settingsData,
+        updatedAt: new Date()
+      };
+      this.settings = settings;
+      return settings;
+    }
+  }
+  
+  async updateSettings(data: Partial<InsertSettings>): Promise<Settings | undefined> {
+    if (!this.settings) return undefined;
+    
+    this.settings = {
+      ...this.settings,
+      ...data,
+      updatedAt: new Date()
+    };
+    
+    return this.settings;
+  }
+
+  async getStudentGrades(studentId: number): Promise<Grade[]> {
+    return Array.from(this.grades.values())
+      .filter(grade => grade.studentId === studentId)
+      .sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+  }
+  
+  async saveGrade(grade: InsertGrade): Promise<Grade> {
+    const id = this.gradeIdCounter++;
+    const newGrade: Grade = {
+      ...grade,
+      id,
+      createdAt: new Date()
+    };
+    
+    this.grades.set(id, newGrade);
+    return newGrade;
+  }
+  
+  async saveGrades(gradesData: InsertGrade[]): Promise<Grade[]> {
+    return Promise.all(gradesData.map(grade => this.saveGrade(grade)));
+  }
+  
+  async deleteGrade(id: number): Promise<boolean> {
+    const exists = this.grades.has(id);
+    if (exists) {
+      this.grades.delete(id);
+      return true;
+    }
+    return false;
   }
 
   async getDashboardStats(): Promise<DashboardStats> {

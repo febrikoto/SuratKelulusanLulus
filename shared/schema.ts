@@ -16,6 +16,9 @@ export const settings = pgTable("settings", {
   certHeader: varchar("cert_header", { length: 200 }).notNull(),
   certFooter: text("cert_footer").notNull(),
   academicYear: varchar("academic_year", { length: 20 }).notNull(),
+  graduationDate: varchar("graduation_date", { length: 30 }).notNull().default(""),
+  cityName: varchar("city_name", { length: 100 }).notNull().default(""),
+  provinceName: varchar("province_name", { length: 100 }).notNull().default(""),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
@@ -47,6 +50,15 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Student grades table
+export const grades = pgTable("grades", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull().references(() => students.id),
+  subjectName: varchar("subject_name", { length: 100 }).notNull(),
+  value: integer("value").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Define insert schemas
 export const insertStudentSchema = createInsertSchema(students).omit({
   id: true,
@@ -66,6 +78,11 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
   updatedAt: true
 });
 
+export const insertGradeSchema = createInsertSchema(grades).omit({
+  id: true,
+  createdAt: true
+});
+
 // Define types
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
 export type Student = typeof students.$inferSelect;
@@ -75,6 +92,9 @@ export type User = typeof users.$inferSelect;
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
+
+export type InsertGrade = z.infer<typeof insertGradeSchema>;
+export type Grade = typeof grades.$inferSelect;
 
 // Login schema
 export const loginSchema = z.object({

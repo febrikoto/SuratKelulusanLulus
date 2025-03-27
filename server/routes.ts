@@ -5,7 +5,7 @@ import csvParser from "csv-parser";
 import { Readable } from "stream";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertStudentSchema, verificationSchema } from "@shared/schema";
+import { insertStudentSchema, verificationSchema, insertGradeSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const { requireAuth, requireRole } = setupAuth(app);
@@ -236,6 +236,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(stats);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
+    }
+  });
+
+  // Grades API endpoints
+  app.get("/api/students/:id/grades", requireAuth, async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.id);
+      if (isNaN(studentId)) {
+        return res.status(400).json({ message: "Invalid student ID" });
+      }
+
+      const grades = await storage.getStudentGrades(studentId);
+      res.json(grades);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch student grades" });
+    }
+  });
+
+  app.post("/api/students/:id/grades", requireRole(["admin", "guru"]), async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.id);
+      if (isNaN(studentId)) {
+        return res.status(400).json({ message: "Invalid student ID" });
+      }
+
+      // Check if student exists
+      const student = await storage.getStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+
+      // Handle both single grade and multiple grades
+      if (Array.isArray(req.body)) {
+        // Multiple grades
+        const gradesData = req.body.map(grade => ({
+          ...grade,
+          studentId
+        }));
+
+        const validations = gradesData.map(grade => insertGradeSchema.safeParse(grade));
+        const invalidGrades = validations.filter(v => !v.success);
+
+        if (invalidGrades.length > 0) {
+          return res.status(400).json({
+            message: "Invalid grades data",
+            errors: invalidGrades.map(v => (v as any).error.errors)
+          });
+        }
+
+        const savedGrades = await storage.saveGrades(gradesData);
+        return res.status(201).json(savedGrades);
+      } else {
+        // Single grade
+        const gradeData = {
+          ...req.body,
+          studentId
+        };
+
+        const validation = insertGradeSchema.safeParse(gradeData);
+        if (!validation.success) {
+          return res.status(400).json({
+            message: "Invalid grade data",
+            errors: validation.error.errors
+          });
+        }
+
+        const savedGrade = await storage.saveGrade(gradeData);
+        return res.status(201).json(savedGrade);
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to save grades" });
+    }
+  });
+
+  app.delete("/api/grades/:id", requireRole(["admin", "guru"]), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid grade ID" });
+      }
+
+      const success = await storage.deleteGrade(id);
+      if (!success) {
+        return res.status(404).json({ message: "Grade not found" });
+      }
+
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete grade" });
+    }
+  });
+
+  // Settings API endpoints
+  app.get("/api/settings", requireAuth, async (req, res) => {
+    try {
+      const settings = await storage.getSettings();
+      if (!settings) {
+        return res.status(404).json({ message: "Settings not found" });
+      }
+      
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.post("/api/settings", requireRole(["admin"]), async (req, res) => {
+    try {
+      const savedSettings = await storage.saveSettings(req.body);
+      res.status(201).json(savedSettings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to save settings" });
+    }
+  });
+
+  app.put("/api/settings", requireRole(["admin"]), async (req, res) => {
+    try {
+      const updatedSettings = await storage.updateSettings(req.body);
+      if (!updatedSettings) {
+        return res.status(404).json({ message: "Settings not found" });
+      }
+      
+      res.json(updatedSettings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update settings" });
     }
   });
 
