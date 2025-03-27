@@ -134,7 +134,7 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md md:max-w-lg">
+      <DialogContent className="sm:max-w-md md:max-w-lg max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Pengaturan Data Sekolah</DialogTitle>
           <DialogDescription>
@@ -148,14 +148,14 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
           </div>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 py-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 py-4 max-h-[75vh] overflow-y-auto px-1">
               <div className="space-y-5">
-                <div className="flex items-center space-x-2 mb-2">
+                <div className="flex items-center space-x-2 mb-2 sticky top-0 bg-background z-10 py-2 border-b">
                   <School className="h-5 w-5 text-primary" />
                   <h3 className="text-md font-semibold">Informasi Sekolah</h3>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <FormField
                     control={form.control}
                     name="schoolName"
@@ -185,7 +185,7 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <FormField
                     control={form.control}
                     name="headmasterName"
@@ -216,13 +216,13 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
                 </div>
               </div>
               
-              <div className="space-y-5">
-                <div className="flex items-center space-x-2 mb-2">
+              <div className="space-y-5 mt-6">
+                <div className="flex items-center space-x-2 mb-2 sticky top-0 bg-background z-10 py-2 border-b">
                   <Calendar className="h-5 w-5 text-primary" />
                   <h3 className="text-md font-semibold">Informasi Kelulusan</h3>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <FormField
                     control={form.control}
                     name="academicYear"
@@ -252,7 +252,7 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <FormField
                     control={form.control}
                     name="cityName"
