@@ -457,9 +457,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Settings API endpoints
   app.get("/api/settings", requireAuth, async (req, res) => {
     try {
-      const settings = await storage.getSettings();
+      let settings = await storage.getSettings();
       if (!settings) {
-        return res.status(404).json({ message: "Settings not found" });
+        // Create default settings if none exists
+        const defaultSettings = {
+          schoolName: "SMA Negeri 1",
+          schoolAddress: "Jl. Pendidikan No. 1",
+          schoolLogo: "",
+          ministryLogo: "",
+          headmasterName: "Drs. Suparman, M.Pd.",
+          headmasterNip: "196501011990011001",
+          headmasterSignature: "",
+          schoolStamp: "",
+          certHeader: "SURAT KETERANGAN LULUS",
+          certFooter: "Surat ini berlaku sebagai bukti kelulusan sampai ijazah diterbitkan.",
+          academicYear: "2023/2024",
+          graduationDate: "2024-05-03",
+          graduationTime: "10:00",
+          cityName: "Jakarta",
+          provinceName: "DKI Jakarta",
+          certNumberPrefix: "SKL/2024"
+        };
+        
+        settings = await storage.saveSettings(defaultSettings);
       }
       
       res.json(settings);

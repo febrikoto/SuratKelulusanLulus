@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Student } from '@shared/schema';
 import { UserInfo, CertificateData } from '@shared/types';
 import { generatePdf, prepareCertificateData } from '@/lib/utils';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -11,11 +11,14 @@ import StudentHeader from '@/components/StudentHeader';
 import { Certificate } from '@/components/Certificate';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import * as Dialog from '@radix-ui/react-dialog';
 
 export default function StudentDashboard() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const { toast } = useToast();
   const [certificateData, setCertificateData] = useState<CertificateData | null>(null);
+  const [showCertificatePopup, setShowCertificatePopup] = useState(false);
+  const [showGradesInPopup, setShowGradesInPopup] = useState(false);
   
   // Fetch user data
   const { data: userData, isLoading: userLoading } = useQuery<UserInfo>({
@@ -41,9 +44,9 @@ export default function StudentDashboard() {
   
   useEffect(() => {
     if (student && student.status === 'verified') {
-      setCertificateData(prepareCertificateData(student, false));
+      setCertificateData(prepareCertificateData(student, false, schoolSettings));
     }
-  }, [student]);
+  }, [student, schoolSettings]);
   
   // Handle logout
   const handleLogout = async () => {
@@ -271,25 +274,33 @@ export default function StudentDashboard() {
                   </div>
                 ) : certificateData ? (
                   <>
-                    <div id="certificate-container">
-                      <Certificate data={certificateData} />
-                    </div>
-                    
-                    <div className="flex justify-center space-x-4 mt-6">
+                    <div className="flex justify-center space-x-4 mb-6">
                       <Button 
-                        onClick={() => setCertificateData((prevData: CertificateData | null) => prevData ? {...prevData, showGrades: false} : null)}
-                        variant={!certificateData.showGrades ? "default" : "outline"}
-                        className={!certificateData.showGrades ? "bg-primary hover:bg-primary/90" : ""}
+                        onClick={() => {
+                          setCertificateData((prevData: CertificateData | null) => 
+                            prevData ? {...prevData, showGrades: false} : null
+                          );
+                          setShowGradesInPopup(false);
+                          setShowCertificatePopup(true);
+                        }}
+                        className="bg-primary hover:bg-primary/90"
                       >
-                        SKL Tanpa Nilai
+                        <FileText className="mr-2 h-5 w-5" />
+                        Lihat SKL Tanpa Nilai
                       </Button>
                       
                       <Button 
-                        onClick={() => setCertificateData((prevData: CertificateData | null) => prevData ? {...prevData, showGrades: true} : null)}
-                        variant={certificateData.showGrades ? "default" : "outline"}
-                        className={certificateData.showGrades ? "bg-primary hover:bg-primary/90" : ""}
+                        onClick={() => {
+                          setCertificateData((prevData: CertificateData | null) => 
+                            prevData ? {...prevData, showGrades: true} : null
+                          );
+                          setShowGradesInPopup(true);
+                          setShowCertificatePopup(true);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
                       >
-                        SKL Dengan Nilai
+                        <FileText className="mr-2 h-5 w-5" />
+                        Lihat SKL Dengan Nilai
                       </Button>
                     </div>
                     
@@ -301,6 +312,44 @@ export default function StudentDashboard() {
                         <Download className="mr-2 h-5 w-5" />
                         Unduh SKL
                       </Button>
+                    </div>
+                    
+                    {/* Certificate Popup Dialog */}
+                    <Dialog.Root open={showCertificatePopup} onOpenChange={setShowCertificatePopup}>
+                      <Dialog.Portal>
+                        <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+                        <Dialog.Content className="fixed left-[50%] top-[50%] max-h-[85vh] w-[90vw] max-w-[900px] translate-x-[-50%] translate-y-[-50%] bg-white dark:bg-gray-900 rounded-lg p-4 shadow-lg z-50 overflow-y-auto">
+                          <div className="flex justify-between items-center mb-4">
+                            <Dialog.Title className="text-xl font-semibold">
+                              {showGradesInPopup ? 'SKL Dengan Nilai' : 'SKL Tanpa Nilai'}
+                            </Dialog.Title>
+                            <Dialog.Close asChild>
+                              <button className="rounded-full h-8 w-8 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary hover:bg-gray-100 dark:hover:bg-gray-800">
+                                <X className="h-5 w-5" />
+                              </button>
+                            </Dialog.Close>
+                          </div>
+                          <div className="overflow-y-auto max-h-[calc(85vh-100px)]">
+                            <Certificate data={certificateData} />
+                          </div>
+                          <div className="flex justify-center mt-6">
+                            <Button 
+                              onClick={downloadCertificate}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Download className="mr-2 h-5 w-5" />
+                              Unduh SKL
+                            </Button>
+                          </div>
+                        </Dialog.Content>
+                      </Dialog.Portal>
+                    </Dialog.Root>
+                    
+                    {/* Hidden certificate for download purposes */}
+                    <div className="hidden">
+                      <div id="certificate-container">
+                        <Certificate data={certificateData} />
+                      </div>
                     </div>
                   </>
                 ) : (
