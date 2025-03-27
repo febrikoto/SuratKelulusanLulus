@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Student } from '@shared/schema';
-import { UserInfo } from '@shared/types';
+import { UserInfo, CertificateData } from '@shared/types';
 import { generatePdf, prepareCertificateData } from '@/lib/utils.tsx';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { apiRequest } from '@/lib/queryClient';
 export default function StudentDashboard() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const { toast } = useToast();
-  const [certificateData, setCertificateData] = useState<any | null>(null);
+  const [certificateData, setCertificateData] = useState<CertificateData | null>(null);
   
   // Fetch user data
   const { data: userData, isLoading: userLoading } = useQuery<UserInfo>({
@@ -36,7 +36,7 @@ export default function StudentDashboard() {
   
   useEffect(() => {
     if (student && student.status === 'verified') {
-      setCertificateData(prepareCertificateData(student));
+      setCertificateData(prepareCertificateData(student, false));
     }
   }, [student]);
   
@@ -270,10 +270,28 @@ export default function StudentDashboard() {
                       <Certificate data={certificateData} />
                     </div>
                     
-                    <div className="flex justify-center mt-6">
+                    <div className="flex justify-center space-x-4 mt-6">
+                      <Button 
+                        onClick={() => setCertificateData((prevData: CertificateData | null) => prevData ? {...prevData, showGrades: false} : null)}
+                        variant={!certificateData.showGrades ? "default" : "outline"}
+                        className={!certificateData.showGrades ? "bg-primary hover:bg-primary/90" : ""}
+                      >
+                        SKL Tanpa Nilai
+                      </Button>
+                      
+                      <Button 
+                        onClick={() => setCertificateData((prevData: CertificateData | null) => prevData ? {...prevData, showGrades: true} : null)}
+                        variant={certificateData.showGrades ? "default" : "outline"}
+                        className={certificateData.showGrades ? "bg-primary hover:bg-primary/90" : ""}
+                      >
+                        SKL Dengan Nilai
+                      </Button>
+                    </div>
+                    
+                    <div className="flex justify-center mt-4">
                       <Button 
                         onClick={downloadCertificate}
-                        className="bg-primary hover:bg-primary/90"
+                        className="bg-green-600 hover:bg-green-700"
                       >
                         <Download className="mr-2 h-5 w-5" />
                         Unduh SKL

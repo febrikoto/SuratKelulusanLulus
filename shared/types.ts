@@ -1,3 +1,8 @@
+export interface SubjectGrade {
+  name: string;
+  value: number;
+}
+
 export interface CertificateData {
   id: number;
   nisn: string;
@@ -6,11 +11,21 @@ export interface CertificateData {
   birthPlace: string;
   birthDate: string;
   parentName: string;
-  className: string;
+  className: string; // Kelas seperti XII
   certNumber: string;
   issueDate: string;
+  graduationDate: string; // Tanggal kelulusan/rapat pleno
   headmasterName: string;
   headmasterNip: string;
+  schoolName: string;
+  schoolAddress: string;
+  cityName: string;
+  provinceName: string;
+  academicYear: string; // Tahun ajaran
+  showGrades?: boolean; // Apakah menampilkan nilai atau tidak
+  majorName?: string; // Jurusan (MIPA, IPS, dll)
+  grades?: SubjectGrade[]; // Nilai-nilai mata pelajaran
+  averageGrade?: number; // Nilai rata-rata
 }
 
 export type StudentStatus = 'pending' | 'verified' | 'rejected';

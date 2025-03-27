@@ -48,16 +48,48 @@ export function generateCertificateNumber(studentId: number): string {
   const date = new Date();
   const year = date.getFullYear();
   const formattedId = String(studentId).padStart(3, '0');
-  return `421/${formattedId}/SMA/${year}`;
+  return `800/128/SMAN1-DK/${year}`;
 }
 
-export function prepareCertificateData(student: any): CertificateData {
+export function prepareCertificateData(student: any, showGrades: boolean = false): CertificateData {
+  const today = new Date();
+  const grades = showGrades ? [
+    { name: "Pendidikan Agama dan Budi Pekerti", value: 87.52 },
+    { name: "Pendidikan Pancasila dan Kewarganegaraan", value: 90.40 },
+    { name: "Bahasa Indonesia", value: 85.04 },
+    { name: "Matematika", value: 87.92 },
+    { name: "Sejarah Indonesia", value: 87.52 },
+    { name: "Bahasa Inggris", value: 86.04 },
+    { name: "Seni Budaya", value: 89.28 },
+    { name: "Pendidikan Jasmani, Olah Raga, dan Kesehatan", value: 91.92 },
+    { name: "Prakarya dan Kewirausahaan", value: 91.20 },
+    { name: "Matematika Peminatan", value: 85.32 },
+    { name: "Biologi", value: 88.56 },
+    { name: "Fisika", value: 87.64 },
+    { name: "Kimia", value: 88.60 },
+    { name: "Sosiologi Peminatan", value: 89.04 }
+  ] : undefined;
+  
+  const averageGrade = grades 
+    ? Number((grades.reduce((sum, grade) => sum + grade.value, 0) / grades.length).toFixed(2)) 
+    : undefined;
+  
   return {
     ...student,
     certNumber: generateCertificateNumber(student.id),
-    issueDate: formatDate(new Date().toISOString()),
-    headmasterName: 'Dr. SLAMET RIYADI, M.Pd',
-    headmasterNip: '196601011990031001'
+    issueDate: formatDate(today.toISOString()),
+    graduationDate: "05 Mei 2025",
+    headmasterName: "Efriedi, S.Pd, MM",
+    headmasterNip: "196611011991031005",
+    schoolName: "SMA Negeri 1 Dua Koto",
+    schoolAddress: "Jl. Pendidikan No. 1",
+    cityName: "KAB. PASAMAN",
+    provinceName: "Sumatera Barat",
+    academicYear: "2024/2025",
+    majorName: "MIPA",
+    showGrades,
+    grades,
+    averageGrade
   };
 }
 
