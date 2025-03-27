@@ -13,12 +13,18 @@ export interface CertificateData {
   parentName: string;
   className: string; // Kelas seperti XII
   certNumber: string;
+  certNumberPrefix?: string; // Prefix untuk nomor surat SKL
   issueDate: string;
   graduationDate: string; // Tanggal kelulusan/rapat pleno
+  graduationTime?: string; // Waktu kelulusan/rapat pleno
   headmasterName: string;
   headmasterNip: string;
+  headmasterSignature?: string; // URL gambar tanda tangan kepala sekolah
   schoolName: string;
   schoolAddress: string;
+  schoolLogo?: string; // URL logo sekolah
+  schoolStamp?: string; // URL stempel sekolah
+  ministryLogo?: string; // URL logo kementerian
   cityName: string;
   provinceName: string;
   academicYear: string; // Tahun ajaran

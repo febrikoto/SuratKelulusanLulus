@@ -107,6 +107,11 @@ export default function AdminDashboard() {
     queryKey: ['/api/students'],
   });
   
+  // Fetch school settings
+  const { data: schoolSettings, isLoading: settingsLoading } = useQuery({
+    queryKey: ['/api/settings'],
+  });
+  
   // Delete student mutation
   const deleteStudentMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -141,7 +146,7 @@ export default function AdminDashboard() {
   };
   
   const generateCertificate = (student: Student) => {
-    const certificateData = prepareCertificateData(student);
+    const certificateData = prepareCertificateData(student, false, schoolSettings);
     setPreviewCertificateData(certificateData);
     
     // Use setTimeout to ensure the certificate is rendered before generating PDF

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -21,9 +21,10 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, School, Calendar } from 'lucide-react';
+import { Loader2, School, Calendar, Clock, FileImage, Upload, Clipboard } from 'lucide-react';
 
 interface SchoolSettingsModalProps {
   isOpen: boolean;
@@ -35,12 +36,17 @@ const formSchema = z.object({
   schoolName: z.string().min(3, { message: 'Nama sekolah wajib diisi (minimal 3 karakter)' }),
   schoolAddress: z.string().min(5, { message: 'Alamat sekolah wajib diisi (minimal 5 karakter)' }),
   schoolLogo: z.string().default(''),
+  ministryLogo: z.string().default(''),
   headmasterName: z.string().min(3, { message: 'Nama kepala sekolah wajib diisi' }),
   headmasterNip: z.string().min(5, { message: 'NIP kepala sekolah wajib diisi' }),
+  headmasterSignature: z.string().default(''),
+  schoolStamp: z.string().default(''),
   certHeader: z.string().default(''),
   certFooter: z.string().default(''),
+  certNumberPrefix: z.string().default(''),
   academicYear: z.string().min(5, { message: 'Tahun ajaran wajib diisi (contoh: 2024/2025)' }),
   graduationDate: z.string().min(5, { message: 'Tanggal kelulusan wajib diisi' }),
+  graduationTime: z.string().default(''),
   cityName: z.string().min(2, { message: 'Nama kota wajib diisi' }),
   provinceName: z.string().min(2, { message: 'Nama provinsi wajib diisi' }),
 });
@@ -66,6 +72,12 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
     enabled: isOpen, // Only fetch when modal is open
   });
   
+  // File upload references
+  const schoolLogoFileRef = useRef<HTMLInputElement>(null);
+  const ministryLogoFileRef = useRef<HTMLInputElement>(null);
+  const headmasterSignatureFileRef = useRef<HTMLInputElement>(null);
+  const schoolStampFileRef = useRef<HTMLInputElement>(null);
+  
   // Form hook
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -73,12 +85,17 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
       schoolName: '',
       schoolAddress: '',
       schoolLogo: '',
+      ministryLogo: '',
       headmasterName: '',
       headmasterNip: '',
+      headmasterSignature: '',
+      schoolStamp: '',
       certHeader: '',
       certFooter: '',
+      certNumberPrefix: '',
       academicYear: '',
       graduationDate: '',
+      graduationTime: '',
       cityName: '',
       provinceName: '',
     },
@@ -91,17 +108,36 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
         schoolName: settings.schoolName || '',
         schoolAddress: settings.schoolAddress || '',
         schoolLogo: settings.schoolLogo || '',
+        ministryLogo: settings.ministryLogo || '',
         headmasterName: settings.headmasterName || '',
         headmasterNip: settings.headmasterNip || '',
+        headmasterSignature: settings.headmasterSignature || '',
+        schoolStamp: settings.schoolStamp || '',
         certHeader: settings.certHeader || '',
         certFooter: settings.certFooter || '',
+        certNumberPrefix: settings.certNumberPrefix || '',
         academicYear: settings.academicYear || '',
         graduationDate: settings.graduationDate || '',
+        graduationTime: settings.graduationTime || '',
         cityName: settings.cityName || '',
         provinceName: settings.provinceName || '',
       });
     }
   }, [settings, form]);
+  
+  // Handle file uploads
+  const handleFileUpload = (ref: React.RefObject<HTMLInputElement>, fieldName: keyof FormValues) => {
+    if (ref.current?.files && ref.current.files.length > 0) {
+      const file = ref.current.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          form.setValue(fieldName, reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   
   // Save settings mutation
   const saveSettingsMutation = useMutation({
@@ -214,6 +250,148 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
                     )}
                   />
                 </div>
+                
+                {/* Logo sekolah upload */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="schoolLogo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Logo Sekolah</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            ref={schoolLogoFileRef}
+                            onChange={() => handleFileUpload(schoolLogoFileRef, 'schoolLogo')}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => schoolLogoFileRef.current?.click()}
+                            className="w-full"
+                          >
+                            <FileImage className="mr-2 h-4 w-4" />
+                            Pilih Logo Sekolah
+                          </Button>
+                        </div>
+                        {field.value && (
+                          <div className="mt-2 relative w-16 h-16 border rounded overflow-hidden">
+                            <img src={field.value} alt="Logo Sekolah" className="w-full h-full object-contain" />
+                          </div>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="ministryLogo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Logo Kementerian</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            ref={ministryLogoFileRef}
+                            onChange={() => handleFileUpload(ministryLogoFileRef, 'ministryLogo')}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => ministryLogoFileRef.current?.click()}
+                            className="w-full"
+                          >
+                            <FileImage className="mr-2 h-4 w-4" />
+                            Pilih Logo Kementerian
+                          </Button>
+                        </div>
+                        {field.value && (
+                          <div className="mt-2 relative w-16 h-16 border rounded overflow-hidden">
+                            <img src={field.value} alt="Logo Kementerian" className="w-full h-full object-contain" />
+                          </div>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                {/* Tanda tangan kepsek dan stempel sekolah upload */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="headmasterSignature"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tanda Tangan Kepala Sekolah</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            ref={headmasterSignatureFileRef}
+                            onChange={() => handleFileUpload(headmasterSignatureFileRef, 'headmasterSignature')}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => headmasterSignatureFileRef.current?.click()}
+                            className="w-full"
+                          >
+                            <Upload className="mr-2 h-4 w-4" />
+                            Pilih Tanda Tangan
+                          </Button>
+                        </div>
+                        {field.value && (
+                          <div className="mt-2 relative w-24 h-16 border rounded overflow-hidden">
+                            <img src={field.value} alt="Tanda Tangan" className="w-full h-full object-contain" />
+                          </div>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="schoolStamp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stempel Sekolah</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            ref={schoolStampFileRef}
+                            onChange={() => handleFileUpload(schoolStampFileRef, 'schoolStamp')}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => schoolStampFileRef.current?.click()}
+                            className="w-full"
+                          >
+                            <FileImage className="mr-2 h-4 w-4" />
+                            Pilih Stempel
+                          </Button>
+                        </div>
+                        {field.value && (
+                          <div className="mt-2 relative w-16 h-16 border rounded overflow-hidden">
+                            <img src={field.value} alt="Stempel Sekolah" className="w-full h-full object-contain" />
+                          </div>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
               
               <div className="space-y-5 mt-6">
@@ -237,19 +415,35 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="graduationDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tanggal Kelulusan</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="graduationDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tanggal Kelulusan</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="graduationTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Waktu Kelulusan</FormLabel>
+                          <FormControl>
+                            <Input type="time" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-1 gap-4">
@@ -281,6 +475,23 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
                     )}
                   />
                 </div>
+                
+                <FormField
+                  control={form.control}
+                  name="certNumberPrefix"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prefiks Nomor Sertifikat</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Contoh: SKL/2024/" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Prefiks untuk nomor sertifikat. Akan ditambahkan sebelum nomor urut siswa.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 
                 <FormField
                   control={form.control}

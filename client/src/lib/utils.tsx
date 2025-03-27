@@ -51,7 +51,7 @@ export function generateCertificateNumber(studentId: number): string {
   return `800/128/SMAN1-DK/${year}`;
 }
 
-export function prepareCertificateData(student: any, showGrades: boolean = false): CertificateData {
+export function prepareCertificateData(student: any, showGrades: boolean = false, settings?: any): CertificateData {
   const today = new Date();
   const grades = showGrades ? [
     { name: "Pendidikan Agama dan Budi Pekerti", value: 87.52 },
@@ -77,15 +77,21 @@ export function prepareCertificateData(student: any, showGrades: boolean = false
   return {
     ...student,
     certNumber: generateCertificateNumber(student.id),
+    certNumberPrefix: settings?.certNumberPrefix || "",
     issueDate: formatDate(today.toISOString()),
-    graduationDate: "05 Mei 2025",
-    headmasterName: "Efriedi, S.Pd, MM",
-    headmasterNip: "196611011991031005",
-    schoolName: "SMA Negeri 1 Dua Koto",
-    schoolAddress: "Jl. Pendidikan No. 1",
-    cityName: "KAB. PASAMAN",
-    provinceName: "Sumatera Barat",
-    academicYear: "2024/2025",
+    graduationDate: settings?.graduationDate || "05 Mei 2025",
+    graduationTime: settings?.graduationTime || "",
+    headmasterName: settings?.headmasterName || "Efriedi, S.Pd, MM",
+    headmasterNip: settings?.headmasterNip || "196611011991031005",
+    headmasterSignature: settings?.headmasterSignature || "",
+    schoolName: settings?.schoolName || "SMA Negeri 1 Dua Koto",
+    schoolAddress: settings?.schoolAddress || "Jl. Pendidikan No. 1",
+    schoolLogo: settings?.schoolLogo || "",
+    schoolStamp: settings?.schoolStamp || "",
+    ministryLogo: settings?.ministryLogo || "",
+    cityName: settings?.cityName || "KAB. PASAMAN",
+    provinceName: settings?.provinceName || "Sumatera Barat",
+    academicYear: settings?.academicYear || "2024/2025",
     majorName: "MIPA",
     showGrades,
     grades,

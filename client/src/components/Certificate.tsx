@@ -44,10 +44,14 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
         {/* Header dengan logo dan kop surat */}
         <div className="flex justify-between items-center mb-2">
           <div className="w-20 h-20">
-            <svg viewBox="0 0 100 100" className="w-full h-full">
-              <circle cx="50" cy="50" r="48" fill="#f0f0f0" stroke="#333" strokeWidth="1" />
-              <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#333">LOGO PROVINSI</text>
-            </svg>
+            {data.ministryLogo ? (
+              <img src={data.ministryLogo} alt="Logo Kementerian" className="w-full h-full object-contain" />
+            ) : (
+              <svg viewBox="0 0 100 100" className="w-full h-full">
+                <circle cx="50" cy="50" r="48" fill="#f0f0f0" stroke="#333" strokeWidth="1" />
+                <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#333">LOGO KEMENTERIAN</text>
+              </svg>
+            )}
           </div>
           <div className="text-center">
             <p className="font-bold">PEMERINTAH PROVINSI {data.provinceName.toUpperCase()}</p>
@@ -60,10 +64,14 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
             </div>
           </div>
           <div className="w-20 h-20">
-            <svg viewBox="0 0 100 100" className="w-full h-full">
-              <circle cx="50" cy="50" r="48" fill="#f0f0f0" stroke="#333" strokeWidth="1" />
-              <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#333">LOGO SEKOLAH</text>
-            </svg>
+            {data.schoolLogo ? (
+              <img src={data.schoolLogo} alt="Logo Sekolah" className="w-full h-full object-contain" />
+            ) : (
+              <svg viewBox="0 0 100 100" className="w-full h-full">
+                <circle cx="50" cy="50" r="48" fill="#f0f0f0" stroke="#333" strokeWidth="1" />
+                <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#333">LOGO SEKOLAH</text>
+              </svg>
+            )}
           </div>
         </div>
       
@@ -72,7 +80,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
         {/* Title */}
         <div className="mb-6 text-center">
           <h2 className="text-xl font-bold">SURAT KETERANGAN</h2>
-          <p className="text-base">No. Surat: {data.certNumber}</p>
+          <p className="text-base">No. Surat: {data.certNumberPrefix ? `${data.certNumberPrefix}${data.certNumber}` : data.certNumber}</p>
         </div>
       
         {/* Content */}
@@ -207,25 +215,37 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
         <div className="grid grid-cols-2 mt-12">
           <div></div>
           <div className="text-center relative">
-            <p>{data.cityName}, {data.graduationDate}</p>
+            <p>{data.cityName}, {data.graduationDate} {data.graduationTime && `Pukul ${data.graduationTime}`}</p>
             <p>Kepala {data.schoolName}</p>
             
             {/* Digital Stamp */}
-            <div className="absolute -right-5 -top-5 w-32 h-32 opacity-40">
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                <circle cx="50" cy="50" r="48" fill="none" stroke="#4444DD" strokeWidth="2" />
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#4444DD" strokeWidth="1" />
-                <text x="50" y="35" textAnchor="middle" fill="#4444DD" fontSize="6">PEMERINTAH PROVINSI</text>
-                <text x="50" y="45" textAnchor="middle" fill="#4444DD" fontSize="6">SUMATERA BARAT</text>
-                <text x="50" y="55" textAnchor="middle" fill="#4444DD" fontSize="6">SMA NEGERI 1</text>
-                <text x="50" y="65" textAnchor="middle" fill="#4444DD" fontSize="6">DUA KOTO</text>
-                <text x="50" y="75" textAnchor="middle" fill="#4444DD" fontSize="6">KABUPATEN PASAMAN</text>
-              </svg>
+            <div className="absolute -right-5 -top-5 w-32 h-32 opacity-50">
+              {data.schoolStamp ? (
+                <img src={data.schoolStamp} alt="Stempel Sekolah" className="w-full h-full object-contain" />
+              ) : (
+                <svg viewBox="0 0 100 100" className="w-full h-full">
+                  <circle cx="50" cy="50" r="48" fill="none" stroke="#4444DD" strokeWidth="2" />
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#4444DD" strokeWidth="1" />
+                  <text x="50" y="35" textAnchor="middle" fill="#4444DD" fontSize="6">PEMERINTAH PROVINSI</text>
+                  <text x="50" y="45" textAnchor="middle" fill="#4444DD" fontSize="6">{data.provinceName.toUpperCase()}</text>
+                  <text x="50" y="55" textAnchor="middle" fill="#4444DD" fontSize="6">{data.schoolName.toUpperCase()}</text>
+                  <text x="50" y="65" textAnchor="middle" fill="#4444DD" fontSize="6">{data.cityName.toUpperCase()}</text>
+                </svg>
+              )}
             </div>
             
             <div className="h-28 flex items-end justify-center">
-              <p className="font-semibold underline">{data.headmasterName}</p>
+              {data.headmasterSignature ? (
+                <img 
+                  src={data.headmasterSignature} 
+                  alt="Tanda Tangan Kepala Sekolah" 
+                  className="h-16 object-contain mb-2" 
+                />
+              ) : (
+                <p className="font-semibold underline">{data.headmasterName}</p>
+              )}
             </div>
+            <p>{data.headmasterName}</p>
             <p>NIP. {data.headmasterNip}</p>
           </div>
         </div>

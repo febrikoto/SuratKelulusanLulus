@@ -28,6 +28,11 @@ export default function StudentDashboard() {
     enabled: !!userData?.studentId,
   });
   
+  // Fetch school settings
+  const { data: schoolSettings, isLoading: settingsLoading } = useQuery({
+    queryKey: ['/api/settings'],
+  });
+  
   useEffect(() => {
     if (userData) {
       setUser(userData);

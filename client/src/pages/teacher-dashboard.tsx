@@ -58,6 +58,11 @@ export default function TeacherDashboard(): React.JSX.Element {
     queryKey: ['/api/students'],
   });
   
+  // Fetch school settings
+  const { data: schoolSettings, isLoading: settingsLoading } = useQuery({
+    queryKey: ['/api/settings'],
+  });
+  
   const pendingStudents = students
     ? students.filter(student => student.status === 'pending')
     : [];
@@ -84,7 +89,7 @@ export default function TeacherDashboard(): React.JSX.Element {
   };
   
   const openCertificatePreview = (student: Student) => {
-    const certData = prepareCertificateData(student, showGrades);
+    const certData = prepareCertificateData(student, showGrades, schoolSettings);
     setCertificateData(certData);
     setShowCertificatePreview(true);
   };
@@ -624,7 +629,13 @@ export default function TeacherDashboard(): React.JSX.Element {
                 
                 <div className="flex justify-center space-x-4 mt-6">
                   <Button 
-                    onClick={() => setCertificateData((prevData: CertificateData | null) => prevData ? {...prevData, showGrades: false} : null)}
+                    onClick={() => {
+                      const student = students?.find(s => s.id === certificateData.id);
+                      if (student) {
+                        const newCertData = prepareCertificateData(student, false, schoolSettings);
+                        setCertificateData(newCertData);
+                      }
+                    }}
                     variant={!certificateData.showGrades ? "default" : "outline"}
                     className={!certificateData.showGrades ? "bg-primary hover:bg-primary/90" : ""}
                   >
@@ -632,7 +643,13 @@ export default function TeacherDashboard(): React.JSX.Element {
                   </Button>
                   
                   <Button 
-                    onClick={() => setCertificateData((prevData: CertificateData | null) => prevData ? {...prevData, showGrades: true} : null)}
+                    onClick={() => {
+                      const student = students?.find(s => s.id === certificateData.id);
+                      if (student) {
+                        const newCertData = prepareCertificateData(student, true, schoolSettings);
+                        setCertificateData(newCertData);
+                      }
+                    }}
                     variant={certificateData.showGrades ? "default" : "outline"}
                     className={certificateData.showGrades ? "bg-primary hover:bg-primary/90" : ""}
                   >
