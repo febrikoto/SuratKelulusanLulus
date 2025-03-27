@@ -250,21 +250,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const grades = await storage.getStudentGrades(studentId);
       res.json(grades);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch student grades" });
+      res.status(500).json({ message: "Gagal mengambil nilai siswa" });
     }
   });
 
+  // New general endpoint for adding grades
+  app.post("/api/grades", requireRole(["admin"]), async (req, res) => {
+    try {
+      const { studentId, subjectName, value } = req.body;
+      
+      if (!studentId || !subjectName || value === undefined) {
+        return res.status(400).json({ message: "Data nilai tidak lengkap" });
+      }
+      
+      // Check if student exists
+      const student = await storage.getStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Siswa tidak ditemukan" });
+      }
+      
+      const gradeData = {
+        studentId,
+        subjectName,
+        value
+      };
+      
+      const validation = insertGradeSchema.safeParse(gradeData);
+      if (!validation.success) {
+        return res.status(400).json({
+          message: "Data nilai tidak valid",
+          errors: validation.error.errors
+        });
+      }
+      
+      const savedGrade = await storage.saveGrade(gradeData);
+      return res.status(201).json(savedGrade);
+    } catch (error) {
+      console.error("Error saving grade:", error);
+      res.status(500).json({ message: "Gagal menyimpan nilai" });
+    }
+  });
+
+  // Legacy endpoint for backward compatibility
   app.post("/api/students/:id/grades", requireRole(["admin"]), async (req, res) => {
     try {
       const studentId = parseInt(req.params.id);
       if (isNaN(studentId)) {
-        return res.status(400).json({ message: "Invalid student ID" });
+        return res.status(400).json({ message: "ID siswa tidak valid" });
       }
 
       // Check if student exists
       const student = await storage.getStudent(studentId);
       if (!student) {
-        return res.status(404).json({ message: "Student not found" });
+        return res.status(404).json({ message: "Siswa tidak ditemukan" });
       }
 
       // Handle both single grade and multiple grades
@@ -280,7 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (invalidGrades.length > 0) {
           return res.status(400).json({
-            message: "Invalid grades data",
+            message: "Data nilai tidak valid",
             errors: invalidGrades.map(v => (v as any).error.errors)
           });
         }
@@ -297,7 +335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const validation = insertGradeSchema.safeParse(gradeData);
         if (!validation.success) {
           return res.status(400).json({
-            message: "Invalid grade data",
+            message: "Data nilai tidak valid",
             errors: validation.error.errors
           });
         }
@@ -306,7 +344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(201).json(savedGrade);
       }
     } catch (error) {
-      res.status(500).json({ message: "Failed to save grades" });
+      res.status(500).json({ message: "Gagal menyimpan nilai" });
     }
   });
 
@@ -314,17 +352,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid grade ID" });
+        return res.status(400).json({ message: "ID nilai tidak valid" });
       }
 
       const success = await storage.deleteGrade(id);
       if (!success) {
-        return res.status(404).json({ message: "Grade not found" });
+        return res.status(404).json({ message: "Nilai tidak ditemukan" });
       }
 
       res.status(204).end();
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete grade" });
+      res.status(500).json({ message: "Gagal menghapus nilai" });
     }
   });
   
@@ -334,7 +372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gradesData = req.body;
       
       if (!Array.isArray(gradesData) || gradesData.length === 0) {
-        return res.status(400).json({ message: "Invalid grades data format" });
+        return res.status(400).json({ message: "Format data nilai tidak valid" });
       }
       
       let successCount = 0;
@@ -374,11 +412,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json({
         success: successCount,
         errors: errorCount,
-        message: `Successfully imported ${successCount} grades, with ${errorCount} errors.`
+        message: `Berhasil mengimpor ${successCount} nilai, dengan ${errorCount} error.`
       });
     } catch (error) {
       console.error("Failed to import grades:", error);
-      res.status(500).json({ message: "Failed to import grades" });
+      res.status(500).json({ message: "Gagal mengimpor nilai" });
     }
   });
 
