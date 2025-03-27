@@ -89,7 +89,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
         {/* Title */}
         <div className="mb-6 text-center">
           <h2 className="text-xl font-bold">SURAT KETERANGAN</h2>
-          <p className="text-base">No. Surat: {data.certNumberPrefix ? `${data.certNumberPrefix}${data.certNumber}` : data.certNumber}</p>
+          <p className="text-base">No. Surat: {data.certNumberPrefix || data.certNumber}</p>
         </div>
       
         {/* Content */}
