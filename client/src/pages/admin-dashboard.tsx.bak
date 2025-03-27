@@ -409,6 +409,25 @@ export default function AdminDashboard() {
                             >
                               <Eye className="h-4 w-4 text-blue-600" />
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => toast({
+                                description: "Edit feature would be implemented in a real app"
+                              })}
+                              title="Edit"
+                            >
+                              <PencilLine className="h-4 w-4 text-indigo-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteStudent(student.id)}
+                              title="Delete"
+                              disabled={deleteStudentMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
                             {student.status === 'verified' && (
                               <Button
                                 variant="ghost"
@@ -419,20 +438,22 @@ export default function AdminDashboard() {
                                 <Download className="h-4 w-4 text-green-600" />
                               </Button>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteStudent(student.id)}
-                              title="Hapus"
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+            )}
+            
+            {/* Pagination - would be implemented in a real application */}
+            {filteredStudents.length > 0 && (
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Menampilkan {filteredStudents.length} siswa
+                </div>
+                {/* Pagination UI would go here */}
               </div>
             )}
           </CardContent>
@@ -557,7 +578,7 @@ export default function AdminDashboard() {
       </Dialog>
       
       {/* Hidden certificate for PDF generation */}
-      <div className="hidden" id="certificate-container">
+      <div className="hidden">
         {previewCertificateData && (
           <Certificate data={previewCertificateData} />
         )}
