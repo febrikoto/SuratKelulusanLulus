@@ -3,13 +3,15 @@ import { Redirect, Route } from "wouter";
 import { AuthContext } from "@/hooks/use-auth";
 import { useContext } from "react";
 
+type ComponentType = () => React.JSX.Element;
+
 export function ProtectedRoute({
   path,
   component: Component,
   allowedRoles = [],
 }: {
   path: string;
-  component: () => React.JSX.Element;
+  component: ComponentType;
   allowedRoles?: string[];
 }) {
   const authContext = useContext(AuthContext);
@@ -23,9 +25,11 @@ export function ProtectedRoute({
   if (isLoading) {
     return (
       <Route path={path}>
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        {() => (
+          <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        )}
       </Route>
     );
   }
@@ -33,7 +37,7 @@ export function ProtectedRoute({
   if (!user) {
     return (
       <Route path={path}>
-        <Redirect to="/login" />
+        {() => <Redirect to="/login" />}
       </Route>
     );
   }
@@ -48,10 +52,11 @@ export function ProtectedRoute({
     
     return (
       <Route path={path}>
-        <Redirect to={redirectPath} />
+        {() => <Redirect to={redirectPath} />}
       </Route>
     );
   }
 
-  return <Route path={path} component={Component} />
+  // Component is guaranteed to be a function that returns a JSX element
+  return <Route path={path}>{() => <Component />}</Route>
 }

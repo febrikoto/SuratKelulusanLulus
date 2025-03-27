@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import TeacherHeader from '@/components/TeacherHeader';
 
-export default function TeacherDashboard() {
+export default function TeacherDashboard(): React.JSX.Element {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<number | undefined>(undefined);
@@ -83,7 +83,8 @@ export default function TeacherDashboard() {
     try {
       await apiRequest('POST', '/api/logout');
       queryClient.setQueryData(['/api/user'], null);
-      window.location.href = '/login';
+      // Use React-friendly navigation instead of direct window location
+      setUser(null);
     } catch (error) {
       toast({
         title: "Logout failed",
@@ -156,8 +157,11 @@ export default function TeacherDashboard() {
   }
   
   if (!user) {
-    window.location.href = '/login';
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Redirecting to login...</p>
+      </div>
+    );
   }
   
   return (

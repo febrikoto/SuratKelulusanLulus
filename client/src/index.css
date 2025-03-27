@@ -11,3 +11,24 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+/* Certificate styling */
+.certificate {
+  border: 10px solid #5D5CDE;
+  padding: 20px;
+  position: relative;
+  background-color: #fff;
+  color: #000;
+  box-sizing: border-box;
+}
+
+.certificate::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  right: 5px;
+  bottom: 5px;
+  border: 2px solid #5D5CDE;
+  pointer-events: none;
+}

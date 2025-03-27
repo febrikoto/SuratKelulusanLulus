@@ -44,7 +44,8 @@ export default function StudentDashboard() {
   const handleLogout = async () => {
     try {
       await apiRequest('POST', '/api/logout');
-      window.location.href = '/login';
+      // Use React-friendly navigation instead of direct window location
+      setUser(null);
     } catch (error) {
       toast({
         title: "Logout failed",
@@ -84,8 +85,11 @@ export default function StudentDashboard() {
   }
 
   if (!user) {
-    window.location.href = '/login';
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Redirecting to login...</p>
+      </div>
+    );
   }
 
   return (
