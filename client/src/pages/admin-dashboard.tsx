@@ -16,7 +16,9 @@ import {
   Eye, 
   Download, 
   Loader2,
-  FileSpreadsheet
+  FileSpreadsheet,
+  School,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +44,7 @@ import { Certificate } from '@/components/Certificate';
 import AddStudentModal from '@/components/modals/AddStudentModal';
 import GradesModal from '@/components/modals/GradesModal';
 import GradeImportModal from '@/components/modals/GradeImportModal';
+import SchoolSettingsModal from '@/components/modals/SchoolSettingsModal';
 
 export default function AdminDashboard() {
   const [user, setUser] = useState<any>(null);
@@ -89,6 +92,7 @@ export default function AdminDashboard() {
   const [showStudentDetailModal, setShowStudentDetailModal] = useState(false);
   const [showGradeImportModal, setShowGradeImportModal] = useState(false);
   const [showGradeModal, setShowGradeModal] = useState(false);
+  const [showSchoolSettingsModal, setShowSchoolSettingsModal] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<number | undefined>(undefined);
   const [selectedStudentName, setSelectedStudentName] = useState<string | undefined>(undefined);
   const [previewCertificateData, setPreviewCertificateData] = useState<any | null>(null);
@@ -233,6 +237,14 @@ export default function AdminDashboard() {
             >
               <FileText className="mr-2 h-4 w-4" />
               Generate Semua SKL
+            </Button>
+            <Button 
+              onClick={() => setShowSchoolSettingsModal(true)}
+              variant="outline"
+              className="border-purple-500 text-purple-600 hover:bg-purple-50 hover:text-purple-700"
+            >
+              <School className="mr-2 h-4 w-4" />
+              Pengaturan Sekolah
             </Button>
           </div>
         </div>
@@ -597,6 +609,12 @@ export default function AdminDashboard() {
       <GradeImportModal
         isOpen={showGradeImportModal}
         onClose={() => setShowGradeImportModal(false)}
+      />
+      
+      {/* School Settings Modal */}
+      <SchoolSettingsModal
+        isOpen={showSchoolSettingsModal}
+        onClose={() => setShowSchoolSettingsModal(false)}
       />
       
       {/* Hidden certificate for PDF generation */}

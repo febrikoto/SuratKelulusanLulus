@@ -228,52 +228,73 @@ const GradeImportModal: React.FC<GradeImportModalProps> = ({
   
   // Function to generate and download template Excel file
   const generateExcelTemplate = () => {
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new();
-    
-    // Define data structure with sample data (fallback if API fails)
-    const sampleData = templateData?.sample || [
-      { nisn: '1234567890', subjectName: 'Matematika', value: 85 },
-      { nisn: '1234567890', subjectName: 'Bahasa Indonesia', value: 90 },
-      { nisn: '0987654321', subjectName: 'Matematika', value: 75 },
-      { nisn: '0987654321', subjectName: 'Bahasa Indonesia', value: 88 },
-    ];
-    
-    // Create worksheet from data
-    const ws = XLSX.utils.json_to_sheet(sampleData);
-    
-    // Add column width information and formatting
-    const wscols = [
-      {wch: 15}, // NISN
-      {wch: 30}, // Nama Mata Pelajaran
-      {wch: 10}, // Nilai
-    ];
-    
-    // Set column widths
-    ws['!cols'] = wscols;
-    
-    // Add header style
-    // Note: XLSX doesn't support direct cell styling in this version, 
-    // but we can add a brief instructions row at the top
-    XLSX.utils.sheet_add_aoa(ws, [
-      ['==== PETUNJUK PENGISIAN TEMPLATE NILAI ===='],
-      ['1. Jangan mengubah format kolom yang sudah ada'],
-      ['2. Kolom NISN harus terisi dengan NISN siswa yang terdaftar'],
-      ['3. Nilai harus berupa angka antara 0-100'],
-      ['4. Satu siswa dapat memiliki beberapa nilai mata pelajaran'],
-      ['']
-    ], { origin: 'A1' });
-    
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, "Template Nilai");
-    
-    // Generate and download the Excel file
-    XLSX.writeFile(wb, "template_nilai.xlsx");
-    
-    toast({
-      title: 'Template Excel berhasil dibuat',
-      description: 'Silahkan isi template sesuai format yang disediakan',
-    });
+    try {
+      // Create empty workbook
+      const wb = XLSX.utils.book_new();
+      
+      // First create a worksheet with instructions
+      const instructionData = [
+        ['PETUNJUK PENGISIAN TEMPLATE NILAI'],
+        [''],
+        ['1. Jangan mengubah format kolom yang sudah ada'],
+        ['2. Kolom NISN harus terisi dengan NISN siswa yang terdaftar'],
+        ['3. Nilai harus berupa angka antara 0-100'],
+        ['4. Satu siswa dapat memiliki beberapa nilai mata pelajaran'],
+        [''],
+        ['FORMAT DATA:'],
+        [''],
+        ['nisn', 'subjectName', 'value'],
+      ];
+      
+      const instructionWs = XLSX.utils.aoa_to_sheet(instructionData);
+      XLSX.utils.book_append_sheet(wb, instructionWs, "Petunjuk");
+      
+      // Define sample data structure
+      const sampleData = templateData?.sample || [
+        { nisn: '1234567890', subjectName: 'Matematika', value: 85 },
+        { nisn: '1234567890', subjectName: 'Bahasa Indonesia', value: 90 },
+        { nisn: '0987654321', subjectName: 'Matematika', value: 75 },
+        { nisn: '0987654321', subjectName: 'Bahasa Indonesia', value: 88 },
+      ];
+      
+      // Create data worksheet
+      const dataWs = XLSX.utils.json_to_sheet(sampleData);
+      
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, dataWs, "Data Nilai");
+      
+      // Export the workbook to a file and download it
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      
+      // Create a Blob from the array
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      
+      // Create download link and trigger download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'template_nilai.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 0);
+      
+      toast({
+        title: 'Template Excel berhasil dibuat',
+        description: 'Silahkan isi template sesuai format yang disediakan',
+      });
+    } catch (error) {
+      console.error('Error generating Excel template:', error);
+      toast({
+        title: 'Gagal membuat template',
+        description: 'Terjadi kesalahan saat membuat template Excel',
+        variant: 'destructive'
+      });
+    }
   };
 
   return (
