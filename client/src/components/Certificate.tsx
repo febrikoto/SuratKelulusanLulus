@@ -228,7 +228,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
             <p>{data.cityName}, {formatDate(data.graduationDate)}</p>
             <p>Kepala,</p>
             
-            <div className="h-28 flex items-end justify-center relative">
+            <div className="h-28 flex items-end justify-center">
               {data.headmasterSignature ? (
                 <img 
                   src={data.headmasterSignature} 
@@ -238,23 +238,24 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
               ) : (
                 <p className="font-semibold underline">{data.headmasterName}</p>
               )}
-              
-              {/* Digital Stamp */}
-              <div className="absolute -right-5 bottom-2 w-40 h-40 opacity-60">
-                {data.schoolStamp ? (
-                  <img src={data.schoolStamp} alt="Stempel Sekolah" className="w-full h-full object-contain" />
-                ) : (
-                  <svg viewBox="0 0 100 100" className="w-full h-full">
-                    <circle cx="50" cy="50" r="48" fill="none" stroke="#4444DD" strokeWidth="2" />
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="#4444DD" strokeWidth="1" />
-                    <text x="50" y="35" textAnchor="middle" fill="#4444DD" fontSize="6">PEMERINTAH PROVINSI</text>
-                    <text x="50" y="45" textAnchor="middle" fill="#4444DD" fontSize="6">{data.provinceName.toUpperCase()}</text>
-                    <text x="50" y="55" textAnchor="middle" fill="#4444DD" fontSize="6">{data.schoolName.toUpperCase()}</text>
-                    <text x="50" y="65" textAnchor="middle" fill="#4444DD" fontSize="6">{data.cityName.toUpperCase()}</text>
-                  </svg>
-                )}
-              </div>
             </div>
+            
+            {/* Digital Stamp - Sekarang di atas nama kepala sekolah */}
+            <div className="w-40 h-40 opacity-60 mx-auto -mt-2 mb-2">
+              {data.schoolStamp ? (
+                <img src={data.schoolStamp} alt="Stempel Sekolah" className="w-full h-full object-contain" />
+              ) : (
+                <svg viewBox="0 0 100 100" className="w-full h-full">
+                  <circle cx="50" cy="50" r="48" fill="none" stroke="#4444DD" strokeWidth="2" />
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#4444DD" strokeWidth="1" />
+                  <text x="50" y="35" textAnchor="middle" fill="#4444DD" fontSize="6">PEMERINTAH PROVINSI</text>
+                  <text x="50" y="45" textAnchor="middle" fill="#4444DD" fontSize="6">{data.provinceName.toUpperCase()}</text>
+                  <text x="50" y="55" textAnchor="middle" fill="#4444DD" fontSize="6">{data.schoolName.toUpperCase()}</text>
+                  <text x="50" y="65" textAnchor="middle" fill="#4444DD" fontSize="6">{data.cityName.toUpperCase()}</text>
+                </svg>
+              )}
+            </div>
+            
             <p className="font-bold">{data.headmasterName}</p>
             <p>NIP. {data.headmasterNip}</p>
           </div>
