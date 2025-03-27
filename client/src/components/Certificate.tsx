@@ -95,14 +95,11 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
         {/* Content */}
         <div className="mb-6 text-justify leading-relaxed">
           <p className="mb-4">
-            Berdasarkan Peraturan Menteri Pendidikan, Kebudayaan, Riset, dan Teknologi Nomor 21 Tahun 2022 tentang
-            Standar Penilaian Pendidikan pada Pendidikan Anak Usia Dini, Jenjang Pendidikan Dasar, dan Jenjang Pendidikan
-            Menengah.
+            {data.certRegulationText || "Berdasarkan Peraturan Menteri Pendidikan, Kebudayaan, Riset, dan Teknologi Nomor 21 Tahun 2022 tentang Standar Penilaian Pendidikan pada Pendidikan Anak Usia Dini, Jenjang Pendidikan Dasar, dan Jenjang Pendidikan Menengah."}
           </p>
           
           <p className="mb-4">
-            Kepala {data.schoolName} berdasarkan ketentuan yang berlaku mempertimbangan kelulusan peserta didik
-            pada Tahun Pelajaran {data.academicYear}, diantaranya sebagai berikut:
+            {data.certCriteriaText || `Kepala ${data.schoolName} berdasarkan ketentuan yang berlaku mempertimbangan kelulusan peserta didik pada Tahun Pelajaran ${data.academicYear}, diantaranya sebagai berikut:`}
           </p>
           
           <ol className="list-decimal list-inside mb-4 pl-4">

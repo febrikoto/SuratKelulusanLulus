@@ -16,6 +16,8 @@ export interface CertificateData {
   certNumberPrefix?: string; // Prefix untuk nomor surat SKL
   certBeforeStudentData?: string; // Teks sebelum data siswa
   certAfterStudentData?: string; // Teks setelah data siswa
+  certRegulationText?: string; // Teks peraturan/regulasi kelulusan
+  certCriteriaText?: string; // Teks kriteria kelulusan
   issueDate: string;
   graduationDate: string; // Tanggal kelulusan/rapat pleno
   graduationTime?: string; // Waktu kelulusan/rapat pleno

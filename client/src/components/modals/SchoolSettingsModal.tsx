@@ -46,6 +46,8 @@ const formSchema = z.object({
   certBeforeStudentData: z.string().default('Yang bertanda tangan di bawah ini, Kepala SMK Negeri 1 Lubuk Sikaping, menerangkan bahwa yang bersangkutan:'),
   certAfterStudentData: z.string().default('telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.'),
   certNumberPrefix: z.string().default(''),
+  certRegulationText: z.string().default(''),
+  certCriteriaText: z.string().default(''),
   academicYear: z.string().min(5, { message: 'Tahun ajaran wajib diisi (contoh: 2024/2025)' }),
   graduationDate: z.string().min(5, { message: 'Tanggal kelulusan wajib diisi' }),
   graduationTime: z.string().default(''),
@@ -97,6 +99,8 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
       certBeforeStudentData: '',
       certAfterStudentData: '',
       certNumberPrefix: '',
+      certRegulationText: '',
+      certCriteriaText: '',
       academicYear: '',
       graduationDate: '',
       graduationTime: '',
@@ -122,6 +126,8 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
         certBeforeStudentData: settings.certBeforeStudentData || 'Yang bertanda tangan di bawah ini, Kepala SMK Negeri 1 Lubuk Sikaping, menerangkan bahwa yang bersangkutan:',
         certAfterStudentData: settings.certAfterStudentData || 'telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.',
         certNumberPrefix: settings.certNumberPrefix || '',
+        certRegulationText: settings.certRegulationText || '',
+        certCriteriaText: settings.certCriteriaText || '',
         academicYear: settings.academicYear || '',
         graduationDate: settings.graduationDate || '',
         graduationTime: settings.graduationTime || '',
@@ -556,6 +562,48 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
                       </FormControl>
                       <FormDescription>
                         Contoh: "telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan."
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="certRegulationText"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Teks Peraturan/Regulasi</FormLabel>
+                      <FormControl>
+                        <textarea 
+                          placeholder="Peraturan atau regulasi yang menjadi dasar kelulusan" 
+                          className="flex h-[80px] min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Contoh: "Berdasarkan Peraturan Menteri Pendidikan, Kebudayaan, Riset, dan Teknologi Nomor 21 Tahun 2022..."
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="certCriteriaText"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Teks Kriteria Kelulusan</FormLabel>
+                      <FormControl>
+                        <textarea 
+                          placeholder="Kriteria dan ketentuan kelulusan" 
+                          className="flex h-[80px] min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Contoh: "Kepala SMKN 1 LUBUK SIKAPING berdasarkan ketentuan yang berlaku mempertimbangan kelulusan peserta didik pada Tahun Pelajaran 2024/2025, diantaranya sebagai berikut: ..."
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
