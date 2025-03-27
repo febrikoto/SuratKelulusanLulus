@@ -14,9 +14,9 @@ function App() {
       <Switch>
         <Route path="/" component={LoginPage} />
         <Route path="/login" component={LoginPage} />
-        <Route path="/admin" component={AdminDashboard} />
-        <Route path="/guru" component={TeacherDashboard} />
-        <Route path="/siswa" component={StudentDashboard} />
+        <ProtectedRoute path="/admin" component={AdminDashboard} />
+        <ProtectedRoute path="/guru" component={TeacherDashboard} />
+        <ProtectedRoute path="/siswa" component={StudentDashboard} />
         <Route component={NotFound} />
       </Switch>
       <Toaster />
