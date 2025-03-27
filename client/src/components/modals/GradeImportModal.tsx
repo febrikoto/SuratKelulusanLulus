@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
@@ -13,7 +13,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { UploadCloud, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { 
+  UploadCloud, 
+  AlertCircle, 
+  CheckCircle, 
+  Loader2, 
+  FileDown, 
+  HelpCircle,
+  Info
+} from 'lucide-react';
 
 interface GradeImportModalProps {
   isOpen: boolean;
@@ -204,6 +212,70 @@ const GradeImportModal: React.FC<GradeImportModalProps> = ({
     onClose();
   };
   
+  // Function to fetch template data from API and generate Excel file
+  const { data: templateData } = useQuery({
+    queryKey: ['/api/grades/template'],
+    queryFn: async () => {
+      const response = await fetch('/api/grades/template');
+      if (!response.ok) {
+        throw new Error('Failed to fetch template data');
+      }
+      return response.json();
+    },
+    enabled: isOpen, // Only fetch when modal is open
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
+  });
+  
+  // Function to generate and download template Excel file
+  const generateExcelTemplate = () => {
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    
+    // Define data structure with sample data (fallback if API fails)
+    const sampleData = templateData?.sample || [
+      { nisn: '1234567890', subjectName: 'Matematika', value: 85 },
+      { nisn: '1234567890', subjectName: 'Bahasa Indonesia', value: 90 },
+      { nisn: '0987654321', subjectName: 'Matematika', value: 75 },
+      { nisn: '0987654321', subjectName: 'Bahasa Indonesia', value: 88 },
+    ];
+    
+    // Create worksheet from data
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    
+    // Add column width information and formatting
+    const wscols = [
+      {wch: 15}, // NISN
+      {wch: 30}, // Nama Mata Pelajaran
+      {wch: 10}, // Nilai
+    ];
+    
+    // Set column widths
+    ws['!cols'] = wscols;
+    
+    // Add header style
+    // Note: XLSX doesn't support direct cell styling in this version, 
+    // but we can add a brief instructions row at the top
+    XLSX.utils.sheet_add_aoa(ws, [
+      ['==== PETUNJUK PENGISIAN TEMPLATE NILAI ===='],
+      ['1. Jangan mengubah format kolom yang sudah ada'],
+      ['2. Kolom NISN harus terisi dengan NISN siswa yang terdaftar'],
+      ['3. Nilai harus berupa angka antara 0-100'],
+      ['4. Satu siswa dapat memiliki beberapa nilai mata pelajaran'],
+      ['']
+    ], { origin: 'A1' });
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Template Nilai");
+    
+    // Generate and download the Excel file
+    XLSX.writeFile(wb, "template_nilai.xlsx");
+    
+    toast({
+      title: 'Template Excel berhasil dibuat',
+      description: 'Silahkan isi template sesuai format yang disediakan',
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
       <DialogContent className="sm:max-w-md">
@@ -215,6 +287,29 @@ const GradeImportModal: React.FC<GradeImportModalProps> = ({
         </DialogHeader>
         
         <div className="space-y-4 py-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 mb-3">
+            <div className="flex items-start space-x-3">
+              <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+              <div className="flex-1 text-sm text-blue-700 dark:text-blue-300">
+                <p className="font-semibold mb-1">Format Import Nilai Excel</p>
+                <p className="text-xs">1. NISN: Nomor Induk Siswa Nasional yang terdaftar</p>
+                <p className="text-xs">2. SubjectName: Nama mata pelajaran</p>
+                <p className="text-xs">3. Value: Nilai dalam bentuk angka (0-100)</p>
+                <div className="flex justify-end mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={generateExcelTemplate}
+                    className="flex items-center bg-white dark:bg-gray-800"
+                  >
+                    <FileDown className="h-4 w-4 mr-1" />
+                    <span>Download Template</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {!file && (
             <div 
               className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${

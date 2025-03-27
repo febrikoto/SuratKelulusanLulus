@@ -366,6 +366,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Generate Excel template for grade import
+  app.get("/api/grades/template", requireAuth, async (req, res) => {
+    try {
+      // We'll send a simple JSON response with sample data structure
+      // The actual Excel template will be generated on the client side
+      res.status(200).json({
+        message: "Template structure for grades import",
+        sample: [
+          { nisn: "1234567890", subjectName: "Matematika", value: 85 },
+          { nisn: "1234567890", subjectName: "Bahasa Indonesia", value: 90 },
+          { nisn: "0987654321", subjectName: "Matematika", value: 78 },
+          { nisn: "0987654321", subjectName: "Bahasa Indonesia", value: 82 }
+        ]
+      });
+    } catch (error) {
+      console.error("Error generating template:", error);
+      res.status(500).json({ message: "Gagal membuat template" });
+    }
+  });
+
   // Bulk import grades from Excel
   app.post("/api/grades/import", requireRole(["admin"]), async (req, res) => {
     try {
@@ -377,6 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let successCount = 0;
       let errorCount = 0;
+      let errors = [];
       
       // Process each grade entry
       for (const gradeEntry of gradesData) {
@@ -384,6 +405,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!nisn || !subjectName || value === undefined) {
           errorCount++;
+          errors.push({
+            nisn: nisn || 'N/A',
+            error: 'Data tidak lengkap'
+          });
           continue;
         }
         
@@ -392,6 +417,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const student = await storage.getStudentByNisn(nisn);
           if (!student) {
             errorCount++;
+            errors.push({
+              nisn,
+              error: 'Siswa dengan NISN ini tidak ditemukan'
+            });
             continue;
           }
           
@@ -406,12 +435,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (error) {
           console.error(`Error processing grade for NISN ${nisn}:`, error);
           errorCount++;
+          errors.push({
+            nisn,
+            error: 'Terjadi kesalahan saat menyimpan nilai'
+          });
         }
       }
       
       res.status(200).json({
         success: successCount,
         errors: errorCount,
+        errorDetails: errors,
         message: `Berhasil mengimpor ${successCount} nilai, dengan ${errorCount} error.`
       });
     } catch (error) {
