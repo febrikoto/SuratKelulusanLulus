@@ -93,10 +93,9 @@ export function formatDate(dateString: string): string {
 }
 
 export function generateCertificateNumber(studentId: number): string {
-  const date = new Date();
-  const year = date.getFullYear();
+  // Hanya menggunakan nomor urut siswa yang diformat
   const formattedId = String(studentId).padStart(3, '0');
-  return `800/128/SMAN1-DK/${year}`;
+  return formattedId;
 }
 
 export function prepareCertificateData(student: any, showGrades: boolean = false, settings?: any): CertificateData {

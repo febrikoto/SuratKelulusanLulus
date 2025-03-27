@@ -232,6 +232,34 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
                       </FormItem>
                     )}
                   />
+                  
+                  <FormField
+                    control={form.control}
+                    name="schoolEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Sekolah</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Email sekolah" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="schoolWebsite"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Website Sekolah</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Website sekolah" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
                 
                 <div className="grid grid-cols-1 gap-4">

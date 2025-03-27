@@ -10,6 +10,8 @@ export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
   schoolName: varchar("school_name", { length: 200 }).notNull().default("SMA Negeri 1"),
   schoolAddress: text("school_address").notNull().default("Jl. Pendidikan No. 1"),
+  schoolEmail: varchar("school_email", { length: 100 }).default(""),
+  schoolWebsite: varchar("school_website", { length: 100 }).default(""),
   schoolLogo: text("school_logo").default(""),
   ministryLogo: text("ministry_logo").default(""),
   headmasterName: varchar("headmaster_name", { length: 100 }).notNull().default("Drs. Kepala Sekolah"),
@@ -99,6 +101,8 @@ export const insertSettingsSchema = createInsertSchema(settings)
     academicYear: z.string().min(1, "Academic year is required"),
     
     // Make all other fields optional with proper defaults
+    schoolEmail: z.string().optional().default(""),
+    schoolWebsite: z.string().optional().default(""),
     schoolLogo: z.string().optional().default(""),
     ministryLogo: z.string().optional().default(""),
     headmasterSignature: z.string().optional().default(""),

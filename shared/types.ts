@@ -26,6 +26,8 @@ export interface CertificateData {
   headmasterSignature?: string; // URL gambar tanda tangan kepala sekolah
   schoolName: string;
   schoolAddress: string;
+  schoolEmail?: string; // Email sekolah
+  schoolWebsite?: string; // Website sekolah
   schoolLogo?: string; // URL logo sekolah
   schoolStamp?: string; // URL stempel sekolah
   ministryLogo?: string; // URL logo kementerian

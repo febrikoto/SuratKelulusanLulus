@@ -68,8 +68,8 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
             <p className="font-bold text-xl">{data.schoolName.toUpperCase()}</p>
             <p className="text-sm">Jalan: {data.schoolAddress}</p>
             <div className="flex justify-center items-center gap-2 text-sm">
-              <p>E-mail: sman1duakoto@gmail.com</p>
-              <p>Website: https://www.sman1duakoto.sch.id</p>
+              <p>E-mail: {data.schoolEmail || "sman1duakoto@gmail.com"}</p>
+              <p>Website: {data.schoolWebsite || "https://www.sman1duakoto.sch.id"}</p>
             </div>
           </div>
           <div className="w-20 h-20">
@@ -102,7 +102,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
             {data.certCriteriaText || `Kepala ${data.schoolName} berdasarkan ketentuan yang berlaku mempertimbangan kelulusan peserta didik pada Tahun Pelajaran ${data.academicYear}, diantaranya sebagai berikut:`}
           </p>
           
-          <ol className="list-decimal list-inside mb-4 pl-4">
+          <ol className="list-decimal mb-4 pl-8 text-left">
             <li className="mb-1">Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.</li>
             <li className="mb-1">Surat Kepala Dinas Pendidikan Provinsi {data.provinceName} Nomor : 400.14.4.3/1107/PSMA/DISDIK-2024 tanggal 18
                April 2024 tentang Kelulusan SMA/AMK/SLB Tahun Ajaran {data.academicYear}</li>
