@@ -165,66 +165,84 @@ export default function StudentDashboard() {
     
     // Slight delay to ensure state update is applied
     setTimeout(() => {
-      // Start tracking progress, update steps
-      const handleProgress = (step: string, progress: number) => {
-        setLoadingStep(step);
-        setLoadingProgress(progress);
-        
-        // Find step index
-        if (progress <= 30) {
-          setCurrentStep(0);
-          updatedSteps[0].status = 'loading' as LoadingStepStatus;
-        } else if (progress <= 60) {
-          setCurrentStep(1);
-          updatedSteps[0].status = 'success' as LoadingStepStatus;
-          updatedSteps[1].status = 'loading' as LoadingStepStatus;
-        } else if (progress <= 90) {
-          setCurrentStep(2);
-          updatedSteps[0].status = 'success' as LoadingStepStatus;
-          updatedSteps[1].status = 'success' as LoadingStepStatus;
-          updatedSteps[2].status = 'loading' as LoadingStepStatus;
-        } else {
-          setCurrentStep(3);
-          updatedSteps[0].status = 'success' as LoadingStepStatus;
-          updatedSteps[1].status = 'success' as LoadingStepStatus;
-          updatedSteps[2].status = 'success' as LoadingStepStatus;
-          updatedSteps[3].status = 'loading' as LoadingStepStatus;
+      try {
+        // Start tracking progress, update steps
+        const handleProgress = (step: string, progress: number) => {
+          setLoadingStep(step);
+          setLoadingProgress(progress);
           
-          if (progress === 100) {
-            updatedSteps[3].status = 'success' as LoadingStepStatus;
+          // Find step index
+          if (progress <= 30) {
+            setCurrentStep(0);
+            updatedSteps[0].status = 'loading' as LoadingStepStatus;
+          } else if (progress <= 60) {
+            setCurrentStep(1);
+            updatedSteps[0].status = 'success' as LoadingStepStatus;
+            updatedSteps[1].status = 'loading' as LoadingStepStatus;
+          } else if (progress <= 90) {
+            setCurrentStep(2);
+            updatedSteps[0].status = 'success' as LoadingStepStatus;
+            updatedSteps[1].status = 'success' as LoadingStepStatus;
+            updatedSteps[2].status = 'loading' as LoadingStepStatus;
+          } else {
+            setCurrentStep(3);
+            updatedSteps[0].status = 'success' as LoadingStepStatus;
+            updatedSteps[1].status = 'success' as LoadingStepStatus;
+            updatedSteps[2].status = 'success' as LoadingStepStatus;
+            updatedSteps[3].status = 'loading' as LoadingStepStatus;
+            
+            if (progress === 100) {
+              updatedSteps[3].status = 'success' as LoadingStepStatus;
+            }
           }
-        }
-      };
-      
-      generatePdf('certificate-container', filename, handleProgress)
-        .then(() => {
-          // Wait a moment to show the success state
-          setTimeout(() => {
-            // Hide loading dialog
-            setShowLoadingDialog(false);
+        };
+        
+        // Panggil generatePdf dengan 3 parameter (termasuk callback handleProgress)
+        generatePdf('certificate-container', filename, handleProgress)
+          .then(() => {
+            // Wait a moment to show the success state
+            setTimeout(() => {
+              // Hide loading dialog
+              setShowLoadingDialog(false);
+              
+              toast({
+                title: "Success",
+                description: `SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil diunduh`,
+              });
+            }, 1000);
+          })
+          .catch((error) => {
+            // Show error in dialog
+            setLoadingError("Terjadi kesalahan saat mengunduh SKL. Silakan coba lagi.");
+            
+            // Mark current step as error
+            if (currentStep < updatedSteps.length) {
+              updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
+            }
             
             toast({
-              title: "Success",
-              description: `SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil diunduh`,
+              title: "Error",
+              description: "Gagal mengunduh SKL",
+              variant: "destructive",
             });
-          }, 1000);
-        })
-        .catch((error) => {
-          // Show error in dialog
-          setLoadingError("Terjadi kesalahan saat mengunduh SKL. Silakan coba lagi.");
-          
-          // Mark current step as error
-          if (currentStep < updatedSteps.length) {
-            updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
-          }
-          
-          toast({
-            title: "Error",
-            description: "Gagal mengunduh SKL",
-            variant: "destructive",
+            console.error(error);
           });
-          console.error(error);
+      } catch (error) {
+        // Show error in dialog
+        console.error("Error dalam proses mengunduh:", error);
+        setLoadingError("Terjadi kesalahan saat memproses SKL. Silakan coba lagi.");
+        
+        // Mark current step as error
+        if (currentStep < updatedSteps.length) {
+          updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
+        }
+        
+        toast({
+          title: "Error",
+          description: "Gagal memproses SKL",
+          variant: "destructive",
         });
+      }
     }, 100);
   };
   
@@ -489,7 +507,7 @@ export default function StudentDashboard() {
                               </button>
                             </Dialog.Close>
                           </div>
-                          <div className="overflow-y-auto max-h-[calc(85vh-100px)]">
+                          <div id="certificate-popup-container" className="overflow-y-auto max-h-[calc(85vh-100px)]">
                             <Certificate data={certificateData} />
                           </div>
                           <div className="flex justify-center mt-4 sm:mt-6">
