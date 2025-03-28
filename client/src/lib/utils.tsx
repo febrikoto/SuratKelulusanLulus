@@ -10,8 +10,13 @@ export async function generatePdf(
   filename: string, 
   onProgress?: ((step: string, progress: number) => void) | undefined
 ): Promise<void> {
+  // Variables untuk menyimpan referensi elemen yang di-clone
   let clone: HTMLElement | null = null;
   let altClone: HTMLElement | null = null;
+  
+  // Pastikan ukuran umum A4 dalam pixel dengan DPI standar (96 dpi)
+  const A4Width: number = 794; // ~ 210mm (8.27 inches × 96dpi)
+  const A4Height: number = 1123; // ~ 297mm (11.69 inches × 96dpi)
   
   try {
     // Report initial progress
@@ -69,14 +74,20 @@ export async function generatePdf(
       allowTaint: true,
       backgroundColor: '#FFFFFF',
       logging: true,
-      width: 793, // A4 width in px at 96 DPI (minus 1px for safety)
-      height: 1122, // A4 height in px at 96 DPI (minus 1px for safety)
-      windowWidth: 793,
-      windowHeight: 1122,
+      width: A4Width, 
+      height: A4Height,
+      windowWidth: A4Width,
+      windowHeight: A4Height,
       scrollX: 0,
       scrollY: 0,
       x: 0,
       y: 0,
+      foreignObjectRendering: false, // Mungkin membantu dengan masalah rendering
+      onclone: (clonedDoc: Document) => {
+        // Log tinggi dokumen cloned untuk verifikasi
+        console.log('Cloned document height: ', clonedDoc.documentElement.scrollHeight);
+        return clonedDoc;
+      },
       ignoreElements: (element: Element) => {
         return element.tagName === 'IFRAME' || element.tagName === 'VIDEO';
       }
@@ -103,23 +114,45 @@ export async function generatePdf(
         unit: 'mm',
         format: 'a4',
         compress: true,
-        hotfixes: ['px_scaling']
+        hotfixes: ['px_scaling', 'c2d_text_baseline']
       });
       
       // A4 dimensions
       const a4Width = 210;  // width in mm
       const a4Height = 297; // height in mm
       
-      // Sesuaikan ukuran gambar agar cocok dengan halaman A4 penuh
-      const imgWidth = a4Width;
-      // Hitung tinggi proporsional dan pastikan selalu mengisi halaman A4 penuh
-      const imgHeight = a4Height;
-      
       // Progress: Persiapan PDF
+      onProgress && onProgress('Mengukur dan mengatur dokumen', 75);
+      
+      // Hitung rasio aspek canvas
+      const canvasRatio = canvas.width / canvas.height;
+      // Hitung rasio aspek A4
+      const a4Ratio = a4Width / a4Height;
+      
+      // Sesuaikan dimensi gambar
+      let imgWidth = a4Width;
+      let imgHeight = a4Height;
+      
+      // Jika rasio aspek berbeda, sesuaikan dimensi
+      if (Math.abs(canvasRatio - a4Ratio) > 0.01) {
+        console.log('Aspect ratio adjustment needed:', canvasRatio, a4Ratio);
+        if (canvasRatio > a4Ratio) {
+          // Canvas lebih lebar, sesuaikan tinggi
+          imgHeight = a4Width / canvasRatio;
+        } else {
+          // Canvas lebih tinggi, sesuaikan lebar
+          imgWidth = a4Height * canvasRatio;
+        }
+      }
+      
+      // Progress: Menyesuaikan gambar
       onProgress && onProgress('Memasukkan gambar ke PDF', 80);
       
-      // Tambahkan gambar ke PDF
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      // Tambahkan gambar ke PDF (centered if needed)
+      const xOffset = (a4Width - imgWidth) / 2;
+      const yOffset = (a4Height - imgHeight) / 2;
+      
+      pdf.addImage(imgData, 'JPEG', xOffset, yOffset, imgWidth, imgHeight);
       
       // Progress: Siap untuk save
       onProgress && onProgress('Menyimpan file PDF', 90);
@@ -141,15 +174,21 @@ export async function generatePdf(
         // Coba dengan pengaturan yang lebih sederhana
         onProgress && onProgress('Mencoba metode alternatif dengan pengaturan berbeda', 60);
         
-        // Opsi yang lebih sederhana
+        // Opsi yang lebih sederhana untuk metode alternatif
         const simpleOptions = {
           scale: 1.5,
           useCORS: true,
-          allowTaint: true,
+          allowTaint: true, 
           logging: false,
           backgroundColor: '#FFFFFF',
-          width: 794,  // A4 width in px at 96 DPI
-          height: 1123  // A4 height in px at 96 DPI
+          width: A4Width,
+          height: A4Height,
+          onclone: (doc: Document) => {
+            console.log('Alt cloned document height: ', doc.documentElement.scrollHeight);
+            const allElements = doc.querySelectorAll('*');
+            console.log('Total elements in alt clone: ', allElements.length);
+            return doc;
+          }
         };
         
         // Buat clone baru untuk metode alternatif
@@ -196,11 +235,20 @@ export async function generatePdf(
       }
     } finally {
       // Clean up all clones
-      if (clone && clone.parentElement) {
-        document.body.removeChild(clone);
+      try {
+        if (clone && clone.parentElement) {
+          document.body.removeChild(clone);
+        }
+      } catch (err) {
+        console.error('Error removing clone in finally:', err);
       }
-      if (altClone && altClone.parentElement) {
-        document.body.removeChild(altClone);
+      
+      try {
+        if (altClone && altClone.parentElement) {
+          document.body.removeChild(altClone);
+        }
+      } catch (err) {
+        console.error('Error removing altClone in finally:', err);
       }
     }
     
@@ -210,11 +258,20 @@ export async function generatePdf(
     onProgress && onProgress('Terjadi kesalahan saat membuat sertifikat', 100);
     
     // Make sure to clean up any clones that might be left
-    if (clone && clone.parentElement) {
-      document.body.removeChild(clone);
+    try {
+      if (clone && clone.parentElement) {
+        document.body.removeChild(clone);
+      }
+    } catch (err) {
+      console.error('Error removing clone:', err);
     }
-    if (altClone && altClone.parentElement) {
-      document.body.removeChild(altClone);
+    
+    try {
+      if (altClone && altClone.parentElement) {
+        document.body.removeChild(altClone);
+      }
+    } catch (err) {
+      console.error('Error removing altClone:', err);
     }
     
     return Promise.reject(error);
@@ -237,7 +294,7 @@ export function generateCertificateNumber(studentId: number): string {
   return formattedId;
 }
 
-export function prepareCertificateData(student: any, showGrades: boolean = false, settings?: any): CertificateData {
+export function prepareCertificateData(student: Record<string, any>, showGrades: boolean = false, settings?: Record<string, any>): CertificateData {
   const today = new Date();
   const grades = showGrades ? [
     { name: "Pendidikan Agama dan Budi Pekerti", value: 87.52 },

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Student, Settings } from '@shared/schema';
 import { UserInfo, CertificateData } from '@shared/types';
-import { generatePdf, prepareCertificateData } from '@/lib/utils';
+import { generatePdf, prepareCertificateData, formatDate } from '@/lib/utils';
 
 // Define a local type for the progress callback
 type ProgressCallback = (step: string, progress: number) => void;
@@ -541,25 +541,162 @@ export default function StudentDashboard() {
                       </Dialog.Portal>
                     </Dialog.Root>
                     
-                    {/* Elemen untuk download PDF - gunakan visibility:hidden daripada display:none */}
-                    <div className="absolute opacity-0 pointer-events-none" style={{
-                      position: 'absolute',
-                      left: '-9999px',
-                      width: '210mm',
-                      height: '297mm',
-                      visibility: 'visible',
-                      backgroundColor: 'white',
-                      padding: '0',
-                      zIndex: '-1000',
-                      overflow: 'hidden'
-                    }}>
-                      <div id="certificate-download-container" className="certificate-container-wrapper bg-white" style={{
-                        width: '210mm', 
+                    {/* Elemen untuk download PDF - menggunakan optimized positioning */}
+                    <div 
+                      id="certificate-download-container"
+                      className="absolute opacity-0 pointer-events-none" 
+                      style={{
+                        position: 'fixed',
+                        left: '-9999px', 
+                        top: '0',
+                        width: '210mm',
                         height: '297mm',
+                        margin: '0',
+                        padding: '0',
+                        boxSizing: 'border-box',
+                        overflow: 'hidden',
+                        border: 'none',
+                        zIndex: '-1000',
                         backgroundColor: 'white',
-                        position: 'relative'
+                        display: 'block',
+                        visibility: 'visible',
+                      }}
+                    >
+                      <div style={{
+                        width: '210mm',
+                        height: '297mm',
+                        padding: '8px', 
+                        boxSizing: 'border-box',
+                        backgroundColor: 'white',
+                        position: 'relative',
+                        transform: 'none',
+                        transformOrigin: 'top left',
+                        border: '1px solid #ddd'
                       }}>
-                        <Certificate data={{...certificateData, showGrades: certificateData.showGrades}} showDownloadButton={false} />
+                        {/* Certificate tanpa styling transformasi */}
+                        <div className="relative p-8 bg-white text-black">
+                          {/* Header dengan logo dan kop surat */}
+                          <div className="flex justify-between items-center mb-2">
+                            <div className="w-20 h-20">
+                              {certificateData.ministryLogo ? (
+                                <img src={certificateData.ministryLogo} alt="Logo Kementerian" className="w-full h-full object-contain" />
+                              ) : (
+                                <svg viewBox="0 0 100 100" className="w-full h-full">
+                                  <circle cx="50" cy="50" r="48" fill="#f0f0f0" stroke="#333" strokeWidth="1" />
+                                  <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#333">LOGO KEMENTERIAN</text>
+                                </svg>
+                              )}
+                            </div>
+                            <div className="text-center">
+                              <p className="font-bold">PEMERINTAH PROVINSI {certificateData.provinceName.toUpperCase()}</p>
+                              <p className="font-bold">DINAS PENDIDIKAN</p>
+                              <p className="font-bold text-xl">{certificateData.schoolName.toUpperCase()}</p>
+                              <p className="text-sm">Jalan: {certificateData.schoolAddress}</p>
+                              <div className="flex justify-center items-center gap-2 text-sm">
+                                <p>E-mail: {certificateData.schoolEmail || "sman1duakoto@gmail.com"}</p>
+                                <p>Website: {certificateData.schoolWebsite || "https://www.sman1duakoto.sch.id"}</p>
+                              </div>
+                            </div>
+                            <div className="w-20 h-20">
+                              {certificateData.schoolLogo ? (
+                                <img src={certificateData.schoolLogo} alt="Logo Sekolah" className="w-full h-full object-contain" />
+                              ) : (
+                                <svg viewBox="0 0 100 100" className="w-full h-full">
+                                  <circle cx="50" cy="50" r="48" fill="#f0f0f0" stroke="#333" strokeWidth="1" />
+                                  <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#333">LOGO SEKOLAH</text>
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="border-b-2 border-black mb-4"></div>
+                          
+                          {/* Title */}
+                          <div className="mb-6 text-center">
+                            <h2 className="text-xl font-bold">SURAT KETERANGAN</h2>
+                            <p className="text-base">No. Surat: {certificateData.certNumberPrefix || certificateData.certNumber}</p>
+                          </div>
+                          
+                          {/* Isi certificate disederhanakan secara langsung */}
+                          {/* ... Isi lengkap certificate ... */}
+                          <div className="mb-6 text-justify leading-relaxed">
+                            <p className="mb-2">
+                              {certificateData.certBeforeStudentData || "Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:"}
+                            </p>
+                            
+                            <div className="grid grid-cols-[150px_10px_1fr] gap-y-1 mb-6 ml-4">
+                              <div>Nama Siswa</div>
+                              <div>:</div>
+                              <div className="font-semibold">{certificateData.fullName}</div>
+                              
+                              <div>Tempat, Tanggal Lahir</div>
+                              <div>:</div>
+                              <div>{certificateData.birthPlace}, {certificateData.birthDate}</div>
+                              
+                              <div>NIS / NISN</div>
+                              <div>:</div>
+                              <div>{certificateData.nis} / {certificateData.nisn}</div>
+                              
+                              <div>Jurusan</div>
+                              <div>:</div>
+                              <div>{certificateData.majorName || "MIPA"}</div>
+                              
+                              <div>Orang Tua / Wali</div>
+                              <div>:</div>
+                              <div>{certificateData.parentName}</div>
+                            </div>
+                            
+                            <p className="mb-4">
+                              {certificateData.certAfterStudentData || "telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan."}
+                            </p>
+                            
+                            <div className="flex justify-center w-full my-6">
+                              <div className="text-center border-2 border-black px-12 py-2 font-bold text-xl">
+                                LULUS
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Tanda tangan dan footer */}
+                          <div className="grid grid-cols-2 mt-12">
+                            <div></div>
+                            <div className="text-center relative">
+                              <p>{certificateData.cityName}, {certificateData.issueDate}</p>
+                              <p>Kepala,</p>
+                              
+                              <div className="h-28 flex items-end justify-center relative">
+                                {certificateData.headmasterSignature ? (
+                                  <img 
+                                    src={certificateData.headmasterSignature} 
+                                    alt="Tanda Tangan Kepala Sekolah" 
+                                    className="h-20 object-contain mb-2 z-10 relative" 
+                                  />
+                                ) : (
+                                  <p className="font-semibold underline">{certificateData.headmasterName}</p>
+                                )}
+                                
+                                {/* Digital Stamp */}
+                                <div className="absolute -right-5 bottom-2 w-40 h-40 opacity-60">
+                                  {certificateData.schoolStamp ? (
+                                    <img src={certificateData.schoolStamp} alt="Stempel Sekolah" className="w-full h-full object-contain" />
+                                  ) : (
+                                    <svg viewBox="0 0 100 100" className="w-full h-full">
+                                      <circle cx="50" cy="50" r="48" fill="none" stroke="#4444DD" strokeWidth="2" />
+                                      <circle cx="50" cy="50" r="40" fill="none" stroke="#4444DD" strokeWidth="1" />
+                                      <text x="50" y="35" textAnchor="middle" fill="#4444DD" fontSize="6">PEMERINTAH PROVINSI</text>
+                                      <text x="50" y="45" textAnchor="middle" fill="#4444DD" fontSize="6">{certificateData.provinceName.toUpperCase()}</text>
+                                      <text x="50" y="55" textAnchor="middle" fill="#4444DD" fontSize="6">{certificateData.schoolName.toUpperCase()}</text>
+                                      <text x="50" y="65" textAnchor="middle" fill="#4444DD" fontSize="6">{certificateData.cityName.toUpperCase()}</text>
+                                    </svg>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <p className="font-bold">{certificateData.headmasterName}</p>
+                              <p>NIP. {certificateData.headmasterNip}</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </>

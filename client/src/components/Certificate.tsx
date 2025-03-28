@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { CertificateData, SubjectGrade } from '@shared/types';
-import { formatDate, generatePdf } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Download, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
