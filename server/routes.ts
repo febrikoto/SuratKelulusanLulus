@@ -5,7 +5,7 @@ import csvParser from "csv-parser";
 import { Readable } from "stream";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertStudentSchema, verificationSchema, insertGradeSchema, insertSettingsSchema } from "@shared/schema";
+import { insertStudentSchema, verificationSchema, insertGradeSchema, insertSettingsSchema, insertSubjectSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const { requireAuth, requireRole } = setupAuth(app);
@@ -383,6 +383,186 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating template:", error);
       res.status(500).json({ message: "Gagal membuat template" });
+    }
+  });
+  
+  // Subjects API endpoints
+  app.get("/api/subjects", requireAuth, async (req, res) => {
+    try {
+      const { major, group } = req.query;
+      const query: { major?: string; group?: string } = {};
+      
+      if (major) query.major = major as string;
+      if (group) query.group = group as string;
+      
+      const subjects = await storage.getSubjects(query);
+      res.json(subjects);
+    } catch (error) {
+      console.error("Error fetching subjects:", error);
+      res.status(500).json({ message: "Gagal mengambil data mata pelajaran" });
+    }
+  });
+  
+  app.get("/api/subjects/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID mata pelajaran tidak valid" });
+      }
+      
+      const subject = await storage.getSubject(id);
+      if (!subject) {
+        return res.status(404).json({ message: "Mata pelajaran tidak ditemukan" });
+      }
+      
+      res.json(subject);
+    } catch (error) {
+      console.error("Error fetching subject:", error);
+      res.status(500).json({ message: "Gagal mengambil data mata pelajaran" });
+    }
+  });
+  
+  app.post("/api/subjects", requireRole(["admin"]), async (req, res) => {
+    try {
+      const validation = insertSubjectSchema.safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Data mata pelajaran tidak valid", 
+          errors: validation.error.errors 
+        });
+      }
+      
+      // Check if subject with the same code already exists
+      const existingSubject = await storage.getSubjectByCode(req.body.code);
+      if (existingSubject) {
+        return res.status(409).json({ message: "Mata pelajaran dengan kode ini sudah ada" });
+      }
+      
+      const newSubject = await storage.createSubject(req.body);
+      res.status(201).json(newSubject);
+    } catch (error) {
+      console.error("Error creating subject:", error);
+      res.status(500).json({ message: "Gagal membuat mata pelajaran" });
+    }
+  });
+  
+  app.put("/api/subjects/:id", requireRole(["admin"]), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID mata pelajaran tidak valid" });
+      }
+      
+      const validation = insertSubjectSchema.partial().safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Data mata pelajaran tidak valid", 
+          errors: validation.error.errors 
+        });
+      }
+      
+      // If we're updating the code, check if it already exists
+      if (req.body.code) {
+        const existingSubject = await storage.getSubjectByCode(req.body.code);
+        if (existingSubject && existingSubject.id !== id) {
+          return res.status(409).json({ message: "Mata pelajaran dengan kode ini sudah ada" });
+        }
+      }
+      
+      const updatedSubject = await storage.updateSubject(id, req.body);
+      if (!updatedSubject) {
+        return res.status(404).json({ message: "Mata pelajaran tidak ditemukan" });
+      }
+      
+      res.json(updatedSubject);
+    } catch (error) {
+      console.error("Error updating subject:", error);
+      res.status(500).json({ message: "Gagal memperbarui mata pelajaran" });
+    }
+  });
+  
+  app.delete("/api/subjects/:id", requireRole(["admin"]), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID mata pelajaran tidak valid" });
+      }
+      
+      const success = await storage.deleteSubject(id);
+      if (!success) {
+        return res.status(404).json({ message: "Mata pelajaran tidak ditemukan" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting subject:", error);
+      res.status(500).json({ message: "Gagal menghapus mata pelajaran" });
+    }
+  });
+  
+  // Bulk import subjects from Excel/CSV
+  app.post("/api/subjects/import", requireRole(["admin"]), upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Tidak ada file yang diunggah" });
+      }
+      
+      if (req.file.mimetype !== 'text/csv') {
+        return res.status(400).json({ message: "Hanya file CSV yang diperbolehkan" });
+      }
+      
+      const results: any[] = [];
+      const errors: any[] = [];
+      
+      // Parse CSV file
+      const stream = Readable.from(req.file.buffer.toString());
+      
+      stream
+        .pipe(csvParser())
+        .on('data', async (data) => {
+          try {
+            // Map CSV columns to subject schema
+            const subjectData = {
+              code: data.code,
+              name: data.name,
+              group: data.group,
+              credits: parseInt(data.credits),
+              major: data.major || 'semua',
+              status: data.status || 'aktif'
+            };
+            
+            const validation = insertSubjectSchema.safeParse(subjectData);
+            
+            if (!validation.success) {
+              errors.push({ data, errors: validation.error.errors });
+              return;
+            }
+            
+            // Check if subject already exists
+            const existingSubject = await storage.getSubjectByCode(subjectData.code);
+            if (existingSubject) {
+              errors.push({ data, error: "Mata pelajaran dengan kode ini sudah ada" });
+              return;
+            }
+            
+            const newSubject = await storage.createSubject(subjectData);
+            results.push(newSubject);
+          } catch (error) {
+            errors.push({ data, error: "Gagal memproses baris" });
+          }
+        })
+        .on('end', () => {
+          res.json({
+            success: true,
+            imported: results.length,
+            errors: errors.length > 0 ? errors : null
+          });
+        });
+    } catch (error) {
+      console.error("Failed to import subjects:", error);
+      res.status(500).json({ message: "Gagal mengimpor mata pelajaran" });
     }
   });
 

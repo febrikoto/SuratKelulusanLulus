@@ -155,3 +155,25 @@ export const verificationSchema = z.object({
 });
 
 export type VerificationData = z.infer<typeof verificationSchema>;
+
+// Subjects table
+export const subjects = pgTable("subjects", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 20 }).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  group: varchar("group", { length: 20 }).notNull(), // Kelompok (A, B, C)
+  credits: integer("credits").notNull(), // No Urut
+  major: varchar("major", { length: 50 }).default("semua"), // Jurusan (semua, MIPA, IPS, dll)
+  status: varchar("status", { length: 20 }).notNull().default("aktif"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Define insert schema for subjects
+export const insertSubjectSchema = createInsertSchema(subjects).omit({
+  id: true,
+  createdAt: true
+});
+
+// Define types for subjects
+export type InsertSubject = z.infer<typeof insertSubjectSchema>;
+export type Subject = typeof subjects.$inferSelect;

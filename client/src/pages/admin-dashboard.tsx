@@ -21,7 +21,8 @@ import {
   FileSpreadsheet,
   School,
   Settings,
-  FileBadge
+  FileBadge,
+  BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -283,6 +284,14 @@ export default function AdminDashboard() {
             >
               <FileBadge className="mr-2 h-4 w-4" />
               Pengaturan SKL
+            </Button>
+            <Button 
+              onClick={() => setLocation('/subjects')}
+              variant="outline"
+              className="border-teal-500 text-teal-600 hover:bg-teal-50 hover:text-teal-700"
+            >
+              <BookOpen className="mr-2 h-4 w-4" />
+              Mata Pelajaran
             </Button>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { User, Student, InsertUser, InsertStudent, VerificationData, Settings, InsertSettings, Grade, InsertGrade, students, users, settings, grades } from "@shared/schema";
+import { User, Student, InsertUser, InsertStudent, VerificationData, Settings, InsertSettings, Grade, InsertGrade, Subject, InsertSubject, students, users, settings, grades, subjects } from "@shared/schema";
 import { DashboardStats } from "@shared/types";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -42,6 +42,14 @@ export interface IStorage {
   saveGrade(grade: InsertGrade): Promise<Grade>;
   saveGrades(grades: InsertGrade[]): Promise<Grade[]>;
   deleteGrade(id: number): Promise<boolean>;
+  
+  // Subject operations
+  getSubjects(query?: { major?: string; group?: string }): Promise<Subject[]>;
+  getSubject(id: number): Promise<Subject | undefined>;
+  getSubjectByCode(code: string): Promise<Subject | undefined>;
+  createSubject(subject: InsertSubject): Promise<Subject>;
+  updateSubject(id: number, data: Partial<InsertSubject>): Promise<Subject | undefined>;
+  deleteSubject(id: number): Promise<boolean>;
   
   // Dashboard operations
   getDashboardStats(): Promise<DashboardStats>;
@@ -247,6 +255,60 @@ export class DatabaseStorage implements IStorage {
     
     return result.length > 0;
   }
+  
+  // Subject operations implementation
+  async getSubjects(query?: { major?: string; group?: string }): Promise<Subject[]> {
+    let query_builder = this.db.select().from(subjects);
+    
+    if (query) {
+      if (query.major && query.group) {
+        query_builder = query_builder.where(
+          and(
+            eq(subjects.major, query.major),
+            eq(subjects.group, query.group)
+          )
+        );
+      } else if (query.major) {
+        query_builder = query_builder.where(eq(subjects.major, query.major));
+      } else if (query.group) {
+        query_builder = query_builder.where(eq(subjects.group, query.group));
+      }
+    }
+    
+    return await query_builder;
+  }
+  
+  async getSubject(id: number): Promise<Subject | undefined> {
+    const result = await this.db.select().from(subjects).where(eq(subjects.id, id));
+    return result[0];
+  }
+  
+  async getSubjectByCode(code: string): Promise<Subject | undefined> {
+    const result = await this.db.select().from(subjects).where(eq(subjects.code, code));
+    return result[0];
+  }
+  
+  async createSubject(subjectData: InsertSubject): Promise<Subject> {
+    const result = await this.db.insert(subjects).values(subjectData).returning();
+    return result[0];
+  }
+  
+  async updateSubject(id: number, data: Partial<InsertSubject>): Promise<Subject | undefined> {
+    const result = await this.db.update(subjects)
+      .set(data)
+      .where(eq(subjects.id, id))
+      .returning();
+    
+    return result[0];
+  }
+  
+  async deleteSubject(id: number): Promise<boolean> {
+    const result = await this.db.delete(subjects)
+      .where(eq(subjects.id, id))
+      .returning({ id: subjects.id });
+    
+    return result.length > 0;
+  }
 
   async getDashboardStats(): Promise<DashboardStats> {
     const totalStudents = await this.db.select({ count: count() }).from(students);
@@ -290,19 +352,23 @@ export class MemStorage implements IStorage {
   private students: Map<number, Student>;
   private settings: Settings | undefined;
   private grades: Map<number, Grade>;
+  private subjects: Map<number, Subject>;
   private userIdCounter: number;
   private studentIdCounter: number;
   private gradeIdCounter: number;
+  private subjectIdCounter: number;
   sessionStore: any;
 
   constructor() {
     this.users = new Map();
     this.students = new Map();
     this.grades = new Map();
+    this.subjects = new Map();
     this.settings = undefined;
     this.userIdCounter = 1;
     this.studentIdCounter = 1;
     this.gradeIdCounter = 1;
+    this.subjectIdCounter = 1;
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // prune expired entries every 24h
     });
@@ -521,6 +587,67 @@ export class MemStorage implements IStorage {
     const hashedBuf = Buffer.from(hashed, "hex");
     const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
     return timingSafeEqual(hashedBuf, suppliedBuf);
+  }
+  
+  // Subject operations implementation
+  async getSubjects(query?: { major?: string; group?: string }): Promise<Subject[]> {
+    let subjects = Array.from(this.subjects.values());
+    
+    if (query) {
+      if (query.major) {
+        subjects = subjects.filter(subject => subject.major === query.major);
+      }
+      
+      if (query.group) {
+        subjects = subjects.filter(subject => subject.group === query.group);
+      }
+    }
+    
+    return subjects;
+  }
+  
+  async getSubject(id: number): Promise<Subject | undefined> {
+    return this.subjects.get(id);
+  }
+  
+  async getSubjectByCode(code: string): Promise<Subject | undefined> {
+    return Array.from(this.subjects.values()).find(
+      (subject) => subject.code === code
+    );
+  }
+  
+  async createSubject(subjectData: InsertSubject): Promise<Subject> {
+    const id = this.subjectIdCounter++;
+    const subject: Subject = { 
+      ...subjectData, 
+      id,
+      createdAt: new Date()
+    };
+    
+    this.subjects.set(id, subject);
+    return subject;
+  }
+  
+  async updateSubject(id: number, data: Partial<InsertSubject>): Promise<Subject | undefined> {
+    const subject = await this.getSubject(id);
+    if (!subject) return undefined;
+    
+    const updatedSubject: Subject = { 
+      ...subject, 
+      ...data 
+    };
+    
+    this.subjects.set(id, updatedSubject);
+    return updatedSubject;
+  }
+  
+  async deleteSubject(id: number): Promise<boolean> {
+    const exists = this.subjects.has(id);
+    if (exists) {
+      this.subjects.delete(id);
+      return true;
+    }
+    return false;
   }
 }
 
