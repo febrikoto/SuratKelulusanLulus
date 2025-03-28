@@ -10,13 +10,13 @@ import { Download, Loader2, FileText, X, LayoutDashboard, GraduationCap, BookTex
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import StudentHeader from '@/components/StudentHeader';
+import { StudentHeader } from '@/components/StudentHeader';
 import { Certificate } from '@/components/Certificate';
-import CertificateLoading from '@/components/CertificateLoading';
+import { CertificateLoading } from '@/components/CertificateLoading';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/queryClient';
-import WelcomeAnimation from '@/components/WelcomeAnimation';
+import { WelcomeAnimation } from '@/components/WelcomeAnimation';
 import * as Dialog from '@radix-ui/react-dialog';
 import { AnimatedTabs, AnimatedTabsList, AnimatedTabsTrigger, AnimatedTabsContent } from '@/components/ui/animated-tabs';
 
@@ -324,12 +324,152 @@ export default function StudentDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6">
               {/* Student Information */}
               <div className="md:col-span-4">
-                {/* Student card content... */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Informasi Siswa</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {studentLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      </div>
+                    ) : student ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <GraduationCap className="h-6 w-6 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium">{student.fullName}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              NISN: {student.nisn} | NIS: {student.nis}
+                            </p>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        <div className="grid grid-cols-1 gap-3">
+                          <div>
+                            <p className="text-sm font-medium">Kelas</p>
+                            <p className="text-sm text-muted-foreground">{student.className}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Tempat, Tanggal Lahir</p>
+                            <p className="text-sm text-muted-foreground">
+                              {student.birthPlace}, {new Date(student.birthDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Nama Orang Tua</p>
+                            <p className="text-sm text-muted-foreground">{student.parentName}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Status Verifikasi</p>
+                            <div className="flex items-center mt-1">
+                              {student.status === 'verified' ? (
+                                <span className="px-2 py-1 text-xs rounded-full bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400">
+                                  Terverifikasi
+                                </span>
+                              ) : student.status === 'rejected' ? (
+                                <span className="px-2 py-1 text-xs rounded-full bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                                  Ditolak
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 text-xs rounded-full bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400">
+                                  Menunggu Verifikasi
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p>Tidak ada data siswa.</p>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
               
               {/* Certificate Preview */}
               <div className="md:col-span-8">
-                {/* Certificate content... */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Surat Keterangan Lulus</CardTitle>
+                    <CardContent className="p-0">
+                      {student?.status === 'verified' ? (
+                        <div className="space-y-4 pt-4">
+                          <p className="text-sm text-muted-foreground">
+                            Anda telah dinyatakan <span className="font-medium text-green-600 dark:text-green-400">LULUS</span>. 
+                            Silahkan unduh Surat Keterangan Lulus (SKL) sebagai bukti kelulusan.
+                          </p>
+                          
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <Button 
+                              variant="default" 
+                              className="bg-primary"
+                              onClick={() => {
+                                setShowGradesInPopup(false);
+                                setShowCertificatePopup(true);
+                              }}
+                            >
+                              <FileText className="mr-2 h-4 w-4" />
+                              Lihat SKL Tanpa Nilai
+                            </Button>
+                            <Button 
+                              variant="default"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => {
+                                setShowGradesInPopup(true);
+                                setShowCertificatePopup(true);
+                              }}
+                            >
+                              <FileText className="mr-2 h-4 w-4" />
+                              Lihat SKL Dengan Nilai
+                            </Button>
+                          </div>
+                          
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => handleDownloadSKL(false, false)}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              Unduh SKL Tanpa Nilai
+                            </Button>
+                            <Button 
+                              variant="outline"
+                              onClick={() => handleDownloadSKL(true, false)}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              Unduh SKL Dengan Nilai
+                            </Button>
+                          </div>
+                        </div>
+                      ) : student?.status === 'rejected' ? (
+                        <div className="bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-200 p-4 rounded-md mt-4">
+                          <p className="flex items-center">
+                            <X className="h-5 w-5 mr-2" />
+                            Maaf, status kelulusan Anda ditolak.
+                          </p>
+                          <p className="mt-2 text-sm">
+                            Alasan: {student.verificationNotes || "Tidak ada keterangan."}
+                          </p>
+                          <p className="mt-2 text-sm">
+                            Silahkan hubungi administrator untuk informasi lebih lanjut.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-yellow-50 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200 p-4 rounded-md mt-4">
+                          <p>Status kelulusan Anda masih dalam proses verifikasi.</p>
+                          <p className="mt-2 text-sm">
+                            Silahkan periksa kembali nanti untuk melihat status kelulusan Anda.
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </CardHeader>
+                </Card>
               </div>
             </div>
           </AnimatedTabsContent>
