@@ -1,338 +1,23 @@
-import { useEffect, useState } from 'react';
-import ReactDOM from 'react-dom';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Student, Settings } from '@shared/schema';
-import { UserInfo, CertificateData, SubjectGrade } from '@shared/types';
-import html2canvas from 'html2canvas';
+import { UserInfo, CertificateData } from '@shared/types';
+import { generatePdf, prepareCertificateData } from '@/lib/utils';
+
+// Define a local type for the progress callback
+type ProgressCallback = (step: string, progress: number) => void;
 import { Download, Loader2, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { StudentHeader } from '@/components/StudentHeader';
+import StudentHeader from '@/components/StudentHeader';
 import { Certificate } from '@/components/Certificate';
-import { PrintCertificate } from '@/components/PrintCertificate';
-import { CertificateLoading } from '@/components/CertificateLoading';
+import CertificateLoading from '@/components/CertificateLoading';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/queryClient';
-import { WelcomeAnimation } from '@/components/WelcomeAnimation';
+import WelcomeAnimation from '@/components/WelcomeAnimation';
 import * as Dialog from '@radix-ui/react-dialog';
-
-// Define a local type for the progress callback
-type ProgressCallback = (step: string, progress: number) => void;
-
-// Format tanggal untuk lokal Indonesia
-function formatDate(dateString: string): string {
-  if (!dateString) return '';
-  
-  const options: Intl.DateTimeFormatOptions = {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  };
-  
-  try {
-    return new Date(dateString).toLocaleDateString('id-ID', options);
-  } catch (e) {
-    console.error('Error formatting date:', e);
-    return dateString;
-  }
-}
-
-// Mempersiapkan data sertifikat dari data siswa
-function prepareCertificateData(student: Record<string, any>, showGrades: boolean = false, settings?: Record<string, any>): CertificateData {
-  const today = new Date();
-  const grades = showGrades ? [
-    { name: "Pendidikan Agama dan Budi Pekerti", value: 87.52 },
-    { name: "Pendidikan Pancasila dan Kewarganegaraan", value: 90.40 },
-    { name: "Bahasa Indonesia", value: 85.04 },
-    { name: "Matematika", value: 87.92 },
-    { name: "Sejarah Indonesia", value: 87.52 },
-    { name: "Bahasa Inggris", value: 86.04 },
-    { name: "Seni Budaya", value: 89.28 },
-    { name: "Pendidikan Jasmani, Olah Raga, dan Kesehatan", value: 91.92 },
-    { name: "Prakarya dan Kewirausahaan", value: 91.20 },
-    { name: "Matematika Peminatan", value: 85.32 },
-    { name: "Biologi", value: 88.56 },
-    { name: "Fisika", value: 87.64 },
-    { name: "Kimia", value: 88.60 },
-    { name: "Sosiologi Peminatan", value: 89.04 }
-  ] : undefined;
-  
-  const averageGrade = grades 
-    ? Number((grades.reduce((sum, grade) => sum + grade.value, 0) / grades.length).toFixed(2)) 
-    : undefined;
-  
-  // Menghasilkan nomor sertifikat
-  const generateCertificateNumber = (studentId: number): string => {
-    // Hanya menggunakan nomor urut siswa yang diformat
-    const formattedId = String(studentId).padStart(3, '0');
-    return formattedId;
-  };
-  
-  return {
-    id: student.id,
-    nisn: student.nisn,
-    nis: student.nis,
-    fullName: student.fullName,
-    birthPlace: student.birthPlace,
-    birthDate: student.birthDate,
-    parentName: student.parentName,
-    className: student.className,
-    certNumber: generateCertificateNumber(student.id),
-    certNumberPrefix: settings?.certNumberPrefix || "",
-    certBeforeStudentData: settings?.certBeforeStudentData || "Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:",
-    certAfterStudentData: settings?.certAfterStudentData || "telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.",
-    certRegulationText: settings?.certRegulationText || "",
-    certCriteriaText: settings?.certCriteriaText || "",
-    issueDate: formatDate(today.toISOString()),
-    graduationDate: settings?.graduationDate || "05 Mei 2025",
-    graduationTime: settings?.graduationTime || "",
-    headmasterName: settings?.headmasterName || "Efriedi, S.Pd, MM",
-    headmasterNip: settings?.headmasterNip || "196611011991031005",
-    headmasterSignature: settings?.headmasterSignature || "",
-    schoolName: settings?.schoolName || "SMA Negeri 1 Dua Koto",
-    schoolAddress: settings?.schoolAddress || "Jl. Pendidikan No. 1",
-    schoolEmail: settings?.schoolEmail || "",
-    schoolWebsite: settings?.schoolWebsite || "",
-    schoolLogo: settings?.schoolLogo || "",
-    schoolStamp: settings?.schoolStamp || "",
-    ministryLogo: settings?.ministryLogo || "",
-    cityName: settings?.cityName || "KAB. PASAMAN",
-    provinceName: settings?.provinceName || "Sumatera Barat",
-    academicYear: settings?.academicYear || "2024/2025",
-    majorName: "MIPA",
-    showGrades,
-    grades,
-    averageGrade
-  };
-}
-
-// Fungsi untuk menghasilkan PNG dari element
-async function generatePdf(
-  elementId: string, 
-  filename: string, 
-  onProgress?: ((step: string, progress: number) => void) | undefined
-): Promise<void> {
-  // Deklarasikan variabel printWindow di luar try untuk akses di catch block
-  let printWindow: Window | null = null;
-  
-  try {
-    // Report initial progress
-    onProgress && onProgress('Memulai proses', 5);
-    
-    console.log(`Generating image for element with ID: ${elementId}`);
-    
-    // Ambil dan simpan elemen container
-    const wrapper = document.getElementById('certificate-container-wrapper');
-    if (wrapper) {
-      // Tampilkan container selama proses
-      wrapper.style.opacity = '1';
-      wrapper.style.zIndex = '9999';
-    }
-    
-    onProgress && onProgress('Menyiapkan halaman sertifikat', 20);
-    
-    // Ambil elemen certificate
-    const element = document.getElementById(elementId);
-    if (!element) {
-      // Kembalikan container ke status tersembunyi jika error
-      if (wrapper) {
-        wrapper.style.opacity = '0';
-        wrapper.style.zIndex = '-100';
-      }
-      throw new Error(`Element with ID "${elementId}" not found`);
-    }
-    
-    // Tunggu sebentar agar konten terrender dengan sempurna
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Buka jendela cetak
-    printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      // Kembalikan wrapper ke status tersembunyi
-      if (wrapper) {
-        wrapper.style.opacity = '0';
-        wrapper.style.zIndex = '-100';
-      }
-      throw new Error('Tidak dapat membuka jendela cetak');
-    }
-    
-    // Siapkan dokumen cetak dengan ukuran F4
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Cetak Sertifikat</title>
-        <style>
-          @page {
-            size: 215.9mm 330.2mm; /* Ukuran F4 */
-            margin: 0;
-          }
-          body {
-            margin: 0;
-            padding: 0;
-            background-color: white;
-            overflow-x: hidden;
-          }
-          .container {
-            width: 215.9mm; /* Lebar F4 */
-            margin: 0 auto;
-            padding: 0;
-            background-color: white;
-            position: relative;
-            padding-bottom: 40px;
-          }
-          @media print {
-            body {
-              width: 215.9mm; /* Lebar F4 */
-            }
-          }
-          /* Ensure tables have proper styling */
-          table {
-            border-collapse: collapse;
-            width: 100%;
-          }
-          table td, table th {
-            border: 1px solid #ddd;
-            padding: 8px;
-          }
-          /* Extra padding at the bottom to ensure content is visible */
-          .padding-bottom {
-            padding-bottom: 60px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container padding-bottom" id="print-container">
-        </div>
-        <script>
-          // Akan diisi dengan kode gambar
-        </script>
-      </body>
-      </html>
-    `);
-    
-    // Salin style dari halaman utama ke halaman cetak
-    const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
-    // Sudah diperiksa printWindow tidak null di atas
-    if (printWindow && printWindow.document && printWindow.document.head) {
-      styles.forEach(style => {
-        // Pastikan printWindow tidak null lagi di sini untuk TypeScript
-        if (printWindow && printWindow.document && printWindow.document.head) {
-          printWindow.document.head.appendChild(style.cloneNode(true));
-        }
-      });
-    }
-
-    // Salin isi certificate ke container cetak
-    if (!printWindow || !printWindow.document) {
-      throw new Error('Jendela cetak tidak tersedia');
-    }
-    
-    const container = printWindow.document.getElementById('print-container');
-    if (container) {
-      container.innerHTML = element.innerHTML;
-    }
-    
-    onProgress && onProgress('Membuat gambar sertifikat', 50);
-    
-    // Tunggu sebentar agar dom printWindow selesai dimuat
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Fokus dan ambil content
-    printWindow.focus();
-    const contentElement = printWindow.document.getElementById('print-container');
-    
-    if (!contentElement) {
-      printWindow.close();
-      throw new Error('Tidak dapat menemukan kontainer cetak');
-    }
-    
-    // Tunggu sebentar agar konten dirender sepenuhnya
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Ukur elemen yang sebenarnya
-    const actualHeight = contentElement.scrollHeight;
-    const actualWidth = contentElement.scrollWidth;
-    
-    console.log(`Actual element dimensions: ${actualWidth}x${actualHeight}`);
-    
-    // Ambil screenshot dengan html2canvas dengan ukuran yang lebih besar
-    const canvas = await html2canvas(contentElement, {
-      scale: 2.5, // Tingkatkan scale untuk kualitas yang lebih baik
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#FFFFFF',
-      height: Math.max(1300, actualHeight), // Pastikan cukup tinggi untuk semua konten
-      windowHeight: Math.max(1300, actualHeight),
-      logging: true,
-      onclone: (doc) => {
-        console.log('Document cloned for rendering');
-        return doc;
-      }
-    });
-    
-    // Dapatkan data gambar
-    onProgress && onProgress('Menyimpan gambar sertifikat', 80);
-    const imgData = canvas.toDataURL('image/png', 1.0);
-    
-    // Tutup jendela cetak jika ada
-    if (printWindow) {
-      printWindow.close();
-    }
-    
-    // Kembalikan container ke status tersembunyi
-    if (wrapper) {
-      wrapper.style.opacity = '0';
-      wrapper.style.zIndex = '-100';
-    }
-    
-    // Buat link download
-    const a = document.createElement('a');
-    a.href = imgData;
-    a.download = filename;
-    document.body.appendChild(a);
-    
-    // Klik link untuk mulai download
-    a.click();
-    
-    // Bersihkan
-    setTimeout(() => {
-      document.body.removeChild(a);
-    }, 100);
-    
-    // Berhasil
-    onProgress && onProgress('Berhasil membuat sertifikat', 100);
-    console.log('Sertifikat berhasil dibuat sebagai PNG');
-    
-    return Promise.resolve();
-  } catch (error) {
-    console.error('Error generating certificate:', error);
-    onProgress && onProgress('Terjadi kesalahan saat membuat sertifikat', 100);
-    
-    // Tutup printWindow jika ada
-    if (printWindow) {
-      try {
-        printWindow.close();
-      } catch (e) {
-        console.error('Error closing print window:', e);
-      }
-    }
-    
-    // Kembalikan container ke status tersembunyi jika terjadi error
-    const wrapper = document.getElementById('certificate-container-wrapper');
-    if (wrapper) {
-      wrapper.style.opacity = '0';
-      wrapper.style.zIndex = '-100';
-    }
-    
-    // Beri pesan error ke konsol untuk debugging
-    console.error('Detail error:', error);
-    
-    return Promise.reject(error);
-  }
-}
 
 export default function StudentDashboard() {
   const { updateWelcomeStatus } = useAuth();
@@ -362,11 +47,11 @@ export default function StudentDashboard() {
       status: 'pending' as LoadingStepStatus,
     },
     {
-      label: 'Mengoptimasi kualitas gambar',
+      label: 'Mengoptimasi dan mengonversi',
       status: 'pending' as LoadingStepStatus,
     },
     {
-      label: 'Menyimpan file PNG',
+      label: 'Menyimpan file sertifikat',
       status: 'pending' as LoadingStepStatus,
     }
   ];
@@ -459,123 +144,120 @@ export default function StudentDashboard() {
   const handleDownloadSKL = (withGrades: boolean) => {
     if (!certificateData) return;
     
-    // Perbarui state sertifikat dengan nilai atau tanpa nilai
-    setCertificateData(prevState => {
-      // Buat salinan data sertifikat dengan showGrades yang benar
-      const updatedData = { ...prevState, showGrades: withGrades };
-      
-      console.log("Mengunduh SKL dengan nilai:", withGrades);
-      console.log("Status showGrades diset ke:", updatedData.showGrades);
-      
-      // Buat filename berdasarkan jenis SKL
-      const filename = withGrades 
-        ? `SKL_Dengan_Nilai_${updatedData.nisn}.png` 
-        : `SKL_Tanpa_Nilai_${updatedData.nisn}.png`;
+    // Update certificate data to show/hide grades
+    setCertificateData({...certificateData, showGrades: withGrades});
     
-      // Reset the loading dialog state
-      setLoadingProgress(0);
-      setCurrentStep(0);
-      setLoadingError(null);
-      setLoadingStep('');
+    const filename = withGrades 
+      ? `SKL_Dengan_Nilai_${certificateData.nisn}.pdf` 
+      : `SKL_Tanpa_Nilai_${certificateData.nisn}.pdf`;
       
-      // Update steps to pending
-      const updatedSteps = loadingSteps.map(step => ({
-        ...step,
-        status: 'pending' as LoadingStepStatus
-      }));
-      
-      // Show loading dialog
-      setShowLoadingDialog(true);
-      
-      // Slight delay to ensure state update is applied
-      setTimeout(() => {
-        try {
-          // Verifikasi bahwa DOM telah diperbarui dengan nilai yang benar
-          const container = document.getElementById('certificate-download-container');
-          const gradeAttribute = container?.querySelector('[data-show-grades]')?.getAttribute('data-show-grades');
-          console.log("Atribut data-show-grades:", gradeAttribute);
-            
-          // Start tracking progress, update steps
-          const handleProgress = (step: string, progress: number) => {
-            setLoadingStep(step);
-            setLoadingProgress(progress);
-            
-            // Find step index
-            if (progress <= 30) {
-              setCurrentStep(0);
-              updatedSteps[0].status = 'loading' as LoadingStepStatus;
-            } else if (progress <= 60) {
-              setCurrentStep(1);
-              updatedSteps[0].status = 'success' as LoadingStepStatus;
-              updatedSteps[1].status = 'loading' as LoadingStepStatus;
-            } else if (progress <= 90) {
-              setCurrentStep(2);
-              updatedSteps[0].status = 'success' as LoadingStepStatus;
-              updatedSteps[1].status = 'success' as LoadingStepStatus;
-              updatedSteps[2].status = 'loading' as LoadingStepStatus;
-            } else {
-              setCurrentStep(3);
-              updatedSteps[0].status = 'success' as LoadingStepStatus;
-              updatedSteps[1].status = 'success' as LoadingStepStatus;
-              updatedSteps[2].status = 'success' as LoadingStepStatus;
-              updatedSteps[3].status = 'loading' as LoadingStepStatus;
-              
-              if (progress === 100) {
-                updatedSteps[3].status = 'success' as LoadingStepStatus;
-              }
-            }
-          };
+    // Verifikasi elemen yang akan digunakan untuk PDF
+    console.log("Memeriksa elemen untuk PDF...");
+    setTimeout(() => {
+      const container = document.getElementById('certificate-download-container');
+      console.log("Container exists:", !!container);
+      if (container) {
+        console.log("Container dimensions:", container.offsetWidth, "x", container.offsetHeight);
+        console.log("Container visibility:", window.getComputedStyle(container.parentElement as Element).display);
+      }
+    }, 50);
+    
+    // Reset the loading dialog state
+    setLoadingProgress(0);
+    setCurrentStep(0);
+    setLoadingError(null);
+    setLoadingStep('');
+    
+    // Update steps to pending
+    const updatedSteps = loadingSteps.map(step => ({
+      ...step,
+      status: 'pending' as LoadingStepStatus
+    }));
+    
+    // Show loading dialog
+    setShowLoadingDialog(true);
+    
+    // Slight delay to ensure state update is applied
+    setTimeout(() => {
+      try {
+        // Start tracking progress, update steps
+        const handleProgress = (step: string, progress: number) => {
+          setLoadingStep(step);
+          setLoadingProgress(progress);
           
-          // Panggil generatePdf dengan container ID yang benar
-          generatePdf('certificate-download-container', filename, handleProgress)
-            .then(() => {
-              // Wait a moment to show the success state
-              setTimeout(() => {
-                // Hide loading dialog
-                setShowLoadingDialog(false);
-                
-                toast({
-                  title: "Success",
-                  description: `SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil diunduh`,
-                });
-              }, 1000);
-            })
-            .catch((error: any) => {
-              // Show error in dialog
-              setLoadingError("Terjadi kesalahan saat mengunduh SKL. Silakan coba lagi.");
-              
-              // Mark current step as error
-              if (currentStep < updatedSteps.length) {
-                updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
-              }
+          // Find step index
+          if (progress <= 30) {
+            setCurrentStep(0);
+            updatedSteps[0].status = 'loading' as LoadingStepStatus;
+          } else if (progress <= 60) {
+            setCurrentStep(1);
+            updatedSteps[0].status = 'success' as LoadingStepStatus;
+            updatedSteps[1].status = 'loading' as LoadingStepStatus;
+          } else if (progress <= 90) {
+            setCurrentStep(2);
+            updatedSteps[0].status = 'success' as LoadingStepStatus;
+            updatedSteps[1].status = 'success' as LoadingStepStatus;
+            updatedSteps[2].status = 'loading' as LoadingStepStatus;
+          } else {
+            setCurrentStep(3);
+            updatedSteps[0].status = 'success' as LoadingStepStatus;
+            updatedSteps[1].status = 'success' as LoadingStepStatus;
+            updatedSteps[2].status = 'success' as LoadingStepStatus;
+            updatedSteps[3].status = 'loading' as LoadingStepStatus;
+            
+            if (progress === 100) {
+              updatedSteps[3].status = 'success' as LoadingStepStatus;
+            }
+          }
+        };
+        
+        // Panggil generatePdf dengan container ID yang benar
+        generatePdf('certificate-download-container', filename, handleProgress)
+          .then(() => {
+            // Wait a moment to show the success state
+            setTimeout(() => {
+              // Hide loading dialog
+              setShowLoadingDialog(false);
               
               toast({
-                title: "Error",
-                description: "Gagal mengunduh SKL",
-                variant: "destructive",
+                title: "Success",
+                description: `SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil diunduh`,
               });
-              console.error(error);
+            }, 1000);
+          })
+          .catch((error) => {
+            // Show error in dialog
+            setLoadingError("Terjadi kesalahan saat mengunduh SKL. Silakan coba lagi.");
+            
+            // Mark current step as error
+            if (currentStep < updatedSteps.length) {
+              updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
+            }
+            
+            toast({
+              title: "Error",
+              description: "Gagal mengunduh SKL",
+              variant: "destructive",
             });
-        } catch (error) {
-          // Show error in dialog
-          console.error("Error dalam proses mengunduh:", error);
-          setLoadingError("Terjadi kesalahan saat memproses SKL. Silakan coba lagi.");
-          
-          // Mark current step as error
-          if (currentStep < updatedSteps.length) {
-            updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
-          }
-          
-          toast({
-            title: "Error",
-            description: "Gagal memproses SKL",
-            variant: "destructive",
+            console.error(error);
           });
+      } catch (error) {
+        // Show error in dialog
+        console.error("Error dalam proses mengunduh:", error);
+        setLoadingError("Terjadi kesalahan saat memproses SKL. Silakan coba lagi.");
+        
+        // Mark current step as error
+        if (currentStep < updatedSteps.length) {
+          updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
         }
-      }, 100);
-      
-      return updatedData;
-    });
+        
+        toast({
+          title: "Error",
+          description: "Gagal memproses SKL",
+          variant: "destructive",
+        });
+      }
+    }, 100);
   };
   
   // Loading state or redirect if not authenticated
@@ -641,7 +323,7 @@ export default function StudentDashboard() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">Tempat, Tanggal Lahir:</span>
-                      <span className="font-medium">{student.birthPlace}, {formatDate(student.birthDate)}</span>
+                      <span className="font-medium">{student.birthPlace}, {student.birthDate}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">Nama Orang Tua:</span>
@@ -679,7 +361,7 @@ export default function StudentDashboard() {
                       </div>
                       <div className="ml-3">
                         <p className="text-sm text-green-700 dark:text-green-300">SKL Anda telah disetujui dan siap untuk diunduh.</p>
-                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">{student.verificationDate ? formatDate(student.verificationDate.toString()) : ''}</p>
+                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">{student.verificationDate ? new Date(student.verificationDate).toLocaleString() : ''}</p>
                       </div>
                     </div>
                   </div>
@@ -692,7 +374,8 @@ export default function StudentDashboard() {
                         </svg>
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm text-yellow-700 dark:text-yellow-300">SKL Anda sedang menunggu verifikasi dari admin.</p>
+                        <p className="text-sm text-yellow-700 dark:text-yellow-300">SKL Anda sedang dalam proses verifikasi.</p>
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">Harap tunggu konfirmasi dari pihak sekolah.</p>
                       </div>
                     </div>
                   </div>
@@ -701,174 +384,199 @@ export default function StudentDashboard() {
                     <div className="flex">
                       <div className="flex-shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm text-red-700 dark:text-red-300">SKL Anda tidak dapat diverifikasi. Hubungi pihak sekolah untuk informasi lebih lanjut.</p>
+                        <p className="text-sm text-red-700 dark:text-red-300">SKL Anda tidak disetujui.</p>
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                          {student.verificationNotes || 'Tidak ada catatan tambahan.'}
+                        </p>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Tidak ada notifikasi terbaru.</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Certificate Preview & Downloads */}
-          <div className="md:col-span-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Surat Keterangan Lulus (SKL)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {student?.status === 'verified' ? (
-                  <div className="space-y-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      Surat Keterangan Lulus (SKL) Anda sudah tersedia untuk diunduh. Terdapat dua format SKL yang dapat Anda unduh:
-                    </p>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Button 
-                        onClick={() => handleDownloadSKL(false)}
-                        className="flex items-center justify-center gap-2"
-                        size="lg"
-                      >
-                        <FileText className="h-5 w-5" />
-                        SKL Tanpa Nilai
-                      </Button>
-                      <Button 
-                        onClick={() => handleDownloadSKL(true)}
-                        className="flex items-center justify-center gap-2"
-                        variant="outline"
-                        size="lg"
-                      >
-                        <FileText className="h-5 w-5" />
-                        SKL Dengan Nilai
-                      </Button>
-                    </div>
-                    
-                    <div className="pt-4">
-                      <Button 
-                        onClick={() => {
-                          setShowGradesInPopup(false);
-                          setShowCertificatePopup(true);
-                        }}
-                        className="w-full"
-                        variant="secondary"
-                      >
-                        Tampilkan Pratinjau SKL
-                      </Button>
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 rounded-md border-l-4 border-blue-500">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">Semua siswa kelas XII diharapkan mengecek data SKL.</p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Hubungi admin jika ada masalah dengan data Anda.</p>
+                      </div>
                     </div>
                   </div>
-                ) : student?.status === 'pending' ? (
-                  <div className="text-center py-8">
-                    <Loader2 className="h-12 w-12 mx-auto mb-4 text-primary animate-spin" />
-                    <p className="text-gray-600 dark:text-gray-400">SKL Anda masih dalam proses verifikasi. Harap bersabar.</p>
-                  </div>
-                ) : student?.status === 'rejected' ? (
-                  <div className="text-center py-8">
-                    <X className="h-12 w-12 mx-auto mb-4 text-red-500" />
-                    <p className="text-gray-600 dark:text-gray-400">
-                      SKL Anda tidak dapat dikeluarkan. Silakan hubungi pihak sekolah untuk informasi lebih lanjut.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Data siswa tidak tersedia atau belum diinput. Silakan hubungi pihak sekolah.
-                    </p>
-                  </div>
                 )}
-              </CardContent>
-            </Card>
-            
-            {/* Instruction Card */}
-            <Card className="mt-4 sm:mt-6">
-              <CardHeader>
-                <CardTitle>Petunjuk Penggunaan</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <p className="font-medium">1. Unduh SKL</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Pilih format SKL yang ingin Anda unduh. SKL tanpa nilai dapat digunakan untuk keperluan umum, sedangkan SKL dengan nilai mencakup detail nilai mata pelajaran.</p>
-                  </div>
-                  <div>
-                    <p className="font-medium">2. Simpan File dengan Baik</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Simpan file SKL di tempat yang aman. Anda juga disarankan untuk mencetak sebagai cadangan fisik.</p>
-                  </div>
-                  <div>
-                    <p className="font-medium">3. Verifikasi Kelengkapan</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Pastikan semua data di SKL sudah lengkap dan benar. Jika ada ketidaksesuaian, segera hubungi pihak sekolah.</p>
+                
+                <Separator className="my-4" />
+                
+                <div className="p-3 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 rounded-md border-l-4 border-blue-500">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-blue-700 dark:text-blue-300">Pengumuman kelulusan tahun ajaran 2024/2025.</p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">3 Mei 2024</p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
+          
+          {/* Certificate Preview */}
+          <div className="md:col-span-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Surat Keterangan Lulus (SKL)</CardTitle>
+              </CardHeader>
+              
+              <CardContent>
+                {studentLoading ? (
+                  <div className="flex justify-center p-10">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                  </div>
+                ) : !student ? (
+                  <div className="text-center py-10 text-gray-500">
+                    Data siswa tidak tersedia
+                  </div>
+                ) : student.status !== 'verified' ? (
+                  <div className="text-center py-10 text-gray-500">
+                    {student.status === 'pending' 
+                      ? 'SKL Anda sedang dalam proses verifikasi. Harap tunggu konfirmasi dari pihak sekolah.'
+                      : 'SKL Anda belum dapat diakses. Silakan hubungi admin untuk informasi lebih lanjut.'}
+                  </div>
+                ) : certificateData ? (
+                  <>
+                    <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4 mb-6">
+                      <Button 
+                        onClick={() => {
+                          setCertificateData((prevData: CertificateData | null) => 
+                            prevData ? {...prevData, showGrades: false} : null
+                          );
+                          setShowGradesInPopup(false);
+                          setShowCertificatePopup(true);
+                        }}
+                        className="bg-primary hover:bg-primary/90"
+                        size="sm"
+                      >
+                        <FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="text-xs sm:text-sm">Lihat SKL Tanpa Nilai</span>
+                      </Button>
+                      
+                      <Button 
+                        onClick={() => {
+                          setCertificateData((prevData: CertificateData | null) => 
+                            prevData ? {...prevData, showGrades: true} : null
+                          );
+                          setShowGradesInPopup(true);
+                          setShowCertificatePopup(true);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        size="sm"
+                      >
+                        <FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="text-xs sm:text-sm">Lihat SKL Dengan Nilai</span>
+                      </Button>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row justify-center mt-4 space-y-2 sm:space-y-0 sm:space-x-4">
+                      <Button 
+                        onClick={() => handleDownloadSKL(false)}
+                        className="bg-green-600 hover:bg-green-700"
+                        size="sm"
+                      >
+                        <Download className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="text-xs sm:text-sm">Unduh SKL Tanpa Nilai</span>
+                      </Button>
+                      
+                      <Button 
+                        onClick={() => handleDownloadSKL(true)}
+                        className="bg-green-600 hover:bg-green-700"
+                        size="sm"
+                      >
+                        <Download className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="text-xs sm:text-sm">Unduh SKL Dengan Nilai</span>
+                      </Button>
+                    </div>
+                    
+                    {/* Certificate Popup Dialog */}
+                    <Dialog.Root open={showCertificatePopup} onOpenChange={setShowCertificatePopup}>
+                      <Dialog.Portal>
+                        <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+                        <Dialog.Content className="fixed left-[50%] top-[50%] max-h-[85vh] w-[90vw] max-w-[900px] translate-x-[-50%] translate-y-[-50%] bg-white dark:bg-gray-900 rounded-lg p-2 sm:p-4 shadow-lg z-50 overflow-y-auto">
+                          <div className="flex justify-between items-center mb-2 sm:mb-4">
+                            <Dialog.Title className="text-lg sm:text-xl font-semibold">
+                              {showGradesInPopup ? 'SKL Dengan Nilai' : 'SKL Tanpa Nilai'}
+                            </Dialog.Title>
+                            <Dialog.Close asChild>
+                              <button className="rounded-full h-7 w-7 sm:h-8 sm:w-8 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary hover:bg-gray-100 dark:hover:bg-gray-800">
+                                <X className="h-4 w-4 sm:h-5 sm:w-5" />
+                              </button>
+                            </Dialog.Close>
+                          </div>
+                          <Dialog.Description className="sr-only">
+                            Tampilan sertifikat kelulusan {showGradesInPopup ? 'dengan nilai' : 'tanpa nilai'}
+                          </Dialog.Description>
+                          <div id="certificate-popup-container" className="overflow-y-auto max-h-[calc(85vh-100px)]">
+                            <Certificate data={certificateData} />
+                          </div>
+                          <div className="flex justify-center mt-4 sm:mt-6">
+                            <Button 
+                              onClick={() => handleDownloadSKL(showGradesInPopup)}
+                              className="bg-green-600 hover:bg-green-700"
+                              size="sm"
+                            >
+                              <Download className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                              <span className="text-xs sm:text-sm">Unduh SKL {showGradesInPopup ? 'Dengan Nilai' : 'Tanpa Nilai'}</span>
+                            </Button>
+                          </div>
+                        </Dialog.Content>
+                      </Dialog.Portal>
+                    </Dialog.Root>
+                    
+                    {/* Elemen untuk download PDF - gunakan visibility:hidden daripada display:none */}
+                    <div className="absolute opacity-0 pointer-events-none" style={{
+                      position: 'absolute',
+                      left: '-9999px',
+                      width: '210mm',
+                      height: 'auto',
+                      visibility: 'visible'
+                    }}>
+                      <div id="certificate-download-container" className="certificate-container-wrapper bg-white">
+                        <Certificate data={certificateData} />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-10 text-gray-500">
+                    Terjadi kesalahan dalam memuat data SKL
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
       
-      {/* Container for certificate download - hidden by default but made visible during screenshot */}
-      <div id="certificate-container-wrapper" className="fixed top-0 left-0 w-full h-full bg-white z-[-100] opacity-0 pointer-events-none overflow-auto">
-        <div id="certificate-download-container" className="w-[215.9mm] mx-auto bg-white">
-          {certificateData && (
-            /* Membuat dataCopy baru untuk memastikan nilai showGrades diatur dengan benar */
-            <PrintCertificate key={`cert-${certificateData.showGrades ? 'with-grades' : 'no-grades'}`} data={certificateData} />
-          )}
-        </div>
-      </div>
-      
-      {/* Popup Dialog for Certificate Preview */}
-      <Dialog.Root open={showCertificatePopup} onOpenChange={setShowCertificatePopup}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50 z-50 backdrop-blur-sm" />
-          <Dialog.Content className="fixed left-[50%] top-[50%] max-h-[90vh] w-[90vw] md:w-[80vw] max-w-[1200px] translate-x-[-50%] translate-y-[-50%] rounded-md bg-white dark:bg-gray-900 p-4 shadow-lg z-50 flex flex-col">
-            <div className="flex justify-between items-center mb-2">
-              <Dialog.Title className="text-lg font-semibold">
-                Pratinjau Surat Keterangan Lulus
-              </Dialog.Title>
-              <Dialog.Close className="rounded-full h-8 w-8 flex items-center justify-center">
-                <X className="h-5 w-5" />
-              </Dialog.Close>
-            </div>
-            <Separator className="mb-4" />
-            
-            <div className="flex-1 overflow-hidden">
-              {certificateData && (
-                <Certificate 
-                  data={{...certificateData, showGrades: showGradesInPopup}}
-                  showDownloadButton={false} 
-                />
-              )}
-            </div>
-            
-            <div className="flex justify-between mt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowGradesInPopup(!showGradesInPopup)}
-              >
-                {showGradesInPopup ? 'Sembunyikan Nilai' : 'Tampilkan Nilai'}
-              </Button>
-              <Dialog.Close asChild>
-                <Button variant="default">Tutup</Button>
-              </Dialog.Close>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
-      
-      {/* Loading Dialog for PDF Generation */}
+      {/* Loading Dialog */}
       <Dialog.Root open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50 z-50 backdrop-blur-sm" />
-          <Dialog.Content className="fixed left-[50%] top-[50%] max-h-[90vh] w-[90vw] max-w-[450px] translate-x-[-50%] translate-y-[-50%] rounded-md bg-white dark:bg-gray-900 p-6 shadow-lg z-50">
-            <Dialog.Title className="text-lg font-semibold mb-4">
-              Sedang Memproses SKL
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] max-h-[85vh] w-[90vw] max-w-[500px] translate-x-[-50%] translate-y-[-50%] bg-white dark:bg-gray-900 rounded-lg shadow-lg z-50 overflow-y-auto">
+            <Dialog.Title className="sr-only">
+              Proses Pembuatan Sertifikat
             </Dialog.Title>
-            
-            <CertificateLoading 
+            <Dialog.Description className="sr-only">
+              Dialog progres pembuatan sertifikat kelulusan
+            </Dialog.Description>
+            <CertificateLoading
               steps={loadingSteps}
               currentStep={currentStep}
               error={loadingError}

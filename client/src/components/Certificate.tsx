@@ -1,19 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { CertificateData, SubjectGrade } from '@shared/types';
+import { formatDate, generatePdf } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Download, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-
-// Format tanggal untuk lokal Indonesia
-function formatDate(dateString: string): string {
-  const options: Intl.DateTimeFormatOptions = {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  };
-  
-  return new Date(dateString).toLocaleDateString('id-ID', options);
-}
+import { Download } from 'lucide-react';
 
 interface CertificateProps {
   data: CertificateData;
@@ -23,98 +12,31 @@ interface CertificateProps {
 
 export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButton = false, downloadContainerId }) => {
   const certificateRef = useRef<HTMLDivElement>(null);
-  const isMobile = useIsMobile();
-  // Set level zoom default lebih kecil untuk mobile
-  const [zoomLevel, setZoomLevel] = useState(isMobile ? 0.5 : 0.8);
 
   const handleDownload = async () => {
     console.log('Certificate component handleDownload not implemented');
     alert('Fitur ini tidak tersedia dalam pop-up. Silakan gunakan tombol unduh di dashboard utama.');
   };
 
-  const handleZoomIn = () => {
-    setZoomLevel(prevZoom => Math.min(prevZoom + 0.1, 2));
-  };
-
-  const handleZoomOut = () => {
-    setZoomLevel(prevZoom => Math.max(prevZoom - 0.1, 0.3));
-  };
-
-  const handleResetZoom = () => {
-    setZoomLevel(isMobile ? 0.5 : 0.8);
-  };
-
-  // Wrapper style untuk overflow
-  const wrapperStyle = {
-    maxWidth: '100%',
-    overflowX: 'auto' as const,
-    overflowY: 'auto' as const,
-    maxHeight: isMobile ? '70vh' : '85vh',
-    display: 'flex',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    padding: '20px',
-  };
-
   return (
     <div className="flex flex-col items-center">
-      {/* Kontrol Zoom */}
-      <div className="w-full flex justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Button 
-            onClick={handleZoomOut} 
-            variant="outline"
-            size="sm"
-            className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-          >
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          <span className="text-xs mx-1">{Math.round(zoomLevel * 100)}%</span>
-          <Button 
-            onClick={handleZoomIn} 
-            variant="outline"
-            size="sm"
-            className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-          >
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-          <Button 
-            onClick={handleResetZoom} 
-            variant="outline"
-            size="sm"
-            className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-          >
-            <RotateCcw className="h-4 w-4" />
-          </Button>
-        </div>
-        
-        {showDownloadButton && (
+      {showDownloadButton && (
+        <div className="w-full flex justify-end mb-4">
           <Button 
             onClick={handleDownload} 
             className="flex items-center gap-2"
             variant="outline"
-            size="sm"
           >
             <Download className="h-4 w-4" />
             Download PDF
           </Button>
-        )}
-      </div>
+        </div>
+      )}
       
-      {/* Wrapper dengan overflow untuk konten yang di-zoom */}
-      <div style={wrapperStyle} className="rounded border border-gray-200 dark:border-gray-800">
-        <div 
-          ref={certificateRef} 
-          className="relative p-8 border border-gray-300 bg-white text-black transform-gpu"
-          style={{
-            width: '210mm',
-            minHeight: '297mm',
-            transform: `scale(${zoomLevel})`,
-            transformOrigin: 'top left',
-            transition: 'transform 0.2s ease-in-out',
-            marginBottom: '40px',
-          }}
-        >
+      <div 
+        ref={certificateRef} 
+        className="relative p-8 border border-gray-300 bg-white mx-auto w-[210mm] min-h-[297mm] text-black"
+      >
         {/* Header dengan logo dan kop surat */}
         <div className="flex justify-between items-center mb-2">
           <div className="w-20 h-20">
@@ -321,7 +243,6 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
             <p className="font-bold">{data.headmasterName}</p>
             <p>NIP. {data.headmasterNip}</p>
           </div>
-        </div>
         </div>
       </div>
     </div>

@@ -17,7 +17,7 @@ export async function generatePdf(
     console.log(`Generating PDF for element with ID: ${elementId}`);
     
     // Berikan waktu untuk update DOM dan penemuan elemen
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 200));
     
     const element = document.getElementById(elementId);
     if (!element) {
@@ -27,38 +27,52 @@ export async function generatePdf(
     
     // Log element properties untuk debugging
     console.log(`Element found: ${element.tagName}, Width: ${element.offsetWidth}, Height: ${element.offsetHeight}`);
+    console.log(`Visibility: ${window.getComputedStyle(element).visibility}, Display: ${window.getComputedStyle(element).display}`);
     
-    // Pendekatan sederhana: tangkap langsung saja
-    onProgress && onProgress('Menyiapkan elemen sertifikat', 20);
+    // Make element visible for rendering
+    const parentElement = element.parentElement;
+    if (parentElement) {
+      parentElement.style.display = 'block';
+      parentElement.style.visibility = 'visible';
+      parentElement.style.opacity = '1';
+      parentElement.style.position = 'fixed';
+      parentElement.style.top = '-9999px';
+      parentElement.style.left = '-9999px';
+      parentElement.style.width = '210mm';
+      parentElement.style.height = 'auto';
+      parentElement.style.zIndex = '-1000';
+    }
     
-    // Pendekatan baru: Ambil screenshot langsung dari elemen asli
-    // dengan opsi yang disederhanakan
+    // Progress: Element ditemukan
+    onProgress && onProgress('Menyiapkan elemen sertifikat', 15);
+    
+    // Berikan waktu untuk update styling
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Buat opsi html2canvas yang lebih sederhana
     const options = {
-      scale: 2,
+      scale: 1.5,
       useCORS: true,
       allowTaint: true,
-      backgroundColor: '#FFFFFF', 
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: undefined,
-      windowHeight: undefined
+      backgroundColor: '#FFFFFF',
+      logging: true,
+      ignoreElements: (element: Element) => {
+        return element.tagName === 'IFRAME' || element.tagName === 'VIDEO';
+      }
     };
     
-    // Progress: Mulai render
-    onProgress && onProgress('Membuat gambar sertifikat', 40);
-    
-    // Langsung render dari elemen asli
-    const canvas = await html2canvas(element, options);
-    console.log('Canvas created successfully:', canvas.width, 'x', canvas.height);
-    
-    // Progress: Render canvas selesai
-    onProgress && onProgress('Mengoptimasi gambar', 60);
-    
-    // Jika canvas berhasil dibuat, konversi ke gambar
-    const imgData = canvas.toDataURL('image/jpeg', 0.9);
-    
-    // Coba pendekatan paling sederhana dulu: unduh saja sebagai gambar
-    if (filename.endsWith('.pdf')) {
+    try {
+      // Progress: Mulai render
+      onProgress && onProgress('Membuat gambar sertifikat', 40);
+      
+      const canvas = await html2canvas(element, options);
+      console.log('Canvas created successfully:', canvas.width, 'x', canvas.height);
+      
+      // Progress: Render canvas selesai
+      onProgress && onProgress('Mengoptimasi gambar', 60);
+      
+      const imgData = canvas.toDataURL('image/jpeg', 0.85);
+      
       // Progress: Optimasi selesai
       onProgress && onProgress('Membuat file PDF', 70);
       
@@ -67,103 +81,85 @@ export async function generatePdf(
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
-        compress: true
       });
       
-      // A4 dimensions
-      const a4Width = 210;  // width in mm
-      const a4Height = 297; // height in mm
-      
-      // Hitung rasio untuk menyesuaikan gambar
-      const imgRatio = canvas.width / canvas.height;
-      
-      // Sesuaikan dimensi gambar agar fit di halaman PDF (skala penuh)
-      let imgWidth = a4Width;
-      let imgHeight = imgWidth / imgRatio;
-      
-      // Jika tinggi lebih dari halaman A4, skala berdasarkan tinggi
-      if (imgHeight > a4Height) {
-        imgHeight = a4Height;
-        imgWidth = imgHeight * imgRatio;
-      }
+      // Hitung rasio tinggi-lebar
+      const imgWidth = 210; // A4 width
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
       // Progress: Persiapan PDF
       onProgress && onProgress('Memasukkan gambar ke PDF', 80);
       
-      // Posisikan gambar di tengah halaman
-      const xOffset = (a4Width - imgWidth) / 2;
-      const yOffset = (a4Height - imgHeight) / 2;
-      
       // Tambahkan gambar ke PDF
-      pdf.addImage(imgData, 'JPEG', xOffset, yOffset, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
       
       // Progress: Siap untuk save
       onProgress && onProgress('Menyimpan file PDF', 90);
       
       // Simpan PDF
-      pdf.save(filename);
-    } else {
-      // Langsung simpan sebagai gambar jika bukan PDF
-      const a = document.createElement('a');
-      a.href = imgData;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      pdf.save(`${filename}.pdf`);
+      
+      // Progress: Selesai
+      onProgress && onProgress('Berhasil membuat sertifikat', 100);
+      console.log('PDF berhasil dibuat');
+      
+    } catch (canvasError) {
+      console.error('Metode utama gagal, mencoba metode alternatif:', canvasError);
+      
+      // Progress: Error terjadi, mencoba alternatif
+      onProgress && onProgress('Terjadi kesalahan, mencoba metode alternatif', 50);
+      
+      try {
+        // Coba dengan pengaturan yang lebih sederhana
+        onProgress && onProgress('Mencoba metode alternatif dengan pengaturan berbeda', 60);
+        
+        // Opsi yang lebih sederhana
+        const simpleOptions = {
+          scale: 1,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#FFFFFF'
+        };
+        
+        const altCanvas = await html2canvas(element, simpleOptions);
+        const altImgData = altCanvas.toDataURL('image/jpeg', 0.8);
+        
+        // Progress: Alternatif berhasil
+        onProgress && onProgress('Membuat file JPG sebagai alternatif', 80);
+        
+        // Buat link untuk download image sebagai alternatif
+        const a = document.createElement('a');
+        a.href = altImgData;
+        a.download = `${filename}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Progress: Selesai dengan alternatif
+        onProgress && onProgress('Berhasil membuat gambar sertifikat sebagai alternatif', 100);
+      } catch (altError) {
+        console.error('Semua metode gagal:', altError);
+        throw altError;
+      }
+    } finally {
+      // Restore parent element properties
+      if (parentElement) {
+        parentElement.style.display = '';
+        parentElement.style.visibility = '';
+        parentElement.style.opacity = '';
+        parentElement.style.position = '';
+        parentElement.style.top = '';
+        parentElement.style.left = '';
+        parentElement.style.width = '';
+        parentElement.style.height = '';
+        parentElement.style.zIndex = '';
+      }
     }
-    
-    // Progress: Selesai
-    onProgress && onProgress('Berhasil membuat sertifikat', 100);
-    console.log('Sertifikat berhasil dibuat', filename);
     
     return Promise.resolve();
   } catch (error) {
-    console.error('Error generating certificate:', error);
+    console.error('Error generating PDF:', error);
     onProgress && onProgress('Terjadi kesalahan saat membuat sertifikat', 100);
-    
-    // Sebagai fallback langsung ke JPG saja
-    try {
-      onProgress && onProgress('Mencoba unduh sebagai gambar (JPG)', 50);
-      
-      const element = document.getElementById(elementId);
-      if (!element) {
-        throw new Error('Element not found for fallback method');
-      }
-      
-      // Opsi yang lebih sederhana, fokus pada kualitas gambar 
-      const canvas = await html2canvas(element, { 
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#FFFFFF'
-      });
-      
-      onProgress && onProgress('Gambar berhasil dibuat, menyiapkan download', 75);
-      
-      // Konversi ke gambar dengan nama yang sesuai
-      const imgData = canvas.toDataURL('image/jpeg', 0.95); // Quality 95%
-      
-      // Buat link download
-      const a = document.createElement('a');
-      a.href = imgData;
-      a.download = filename.replace('.pdf', '.jpg');
-      document.body.appendChild(a);
-      
-      // Klik link untuk memulai download
-      onProgress && onProgress('Menyimpan gambar sertifikat', 90);
-      a.click();
-      
-      // Hapus link setelah download dimulai
-      setTimeout(() => {
-        document.body.removeChild(a);
-      }, 100);
-      
-      onProgress && onProgress('Berhasil membuat gambar sertifikat', 100);
-    } catch (fallbackError) {
-      console.error('Fallback method failed:', fallbackError);
-      return Promise.reject(error);
-    }
-    
     return Promise.reject(error);
   }
 }
@@ -184,7 +180,7 @@ export function generateCertificateNumber(studentId: number): string {
   return formattedId;
 }
 
-export function prepareCertificateData(student: Record<string, any>, showGrades: boolean = false, settings?: Record<string, any>): CertificateData {
+export function prepareCertificateData(student: any, showGrades: boolean = false, settings?: any): CertificateData {
   const today = new Date();
   const grades = showGrades ? [
     { name: "Pendidikan Agama dan Budi Pekerti", value: 87.52 },
