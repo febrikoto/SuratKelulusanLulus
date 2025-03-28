@@ -42,8 +42,22 @@ const formSchema = z.object({
   headmasterNip: z.string().min(5, { message: 'NIP kepala sekolah wajib diisi' }),
   headmasterSignature: z.string().default(''),
   schoolStamp: z.string().default(''),
-  schoolEmail: z.string().email().optional().or(z.literal('')),
-  schoolWebsite: z.string().url().optional().or(z.literal('')),
+  schoolEmail: z.string().email({ message: 'Format email tidak valid' }).optional().or(z.literal('')),
+  schoolWebsite: z.string()
+    .refine(
+      (val) => {
+        if (!val) return true; // Allow empty string
+        // Jika URL tidak diawali dengan http:// atau https://, tambahkan https://
+        const urlWithProtocol = val.match(/^https?:\/\//) ? val : `https://${val}`;
+        try {
+          new URL(urlWithProtocol);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      },
+      { message: 'Format website tidak valid' }
+    ),
 });
 
 type FormValues = z.infer<typeof formSchema>;
