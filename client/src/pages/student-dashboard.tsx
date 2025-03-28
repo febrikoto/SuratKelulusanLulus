@@ -547,8 +547,9 @@ export default function StudentDashboard() {
                     <div className="absolute opacity-0 pointer-events-none" style={{
                       position: 'absolute',
                       left: '-9999px',
-                      width: '215mm',
+                      width: '215mm', /* Ukuran F4 */
                       height: 'auto',
+                      padding: '0', /* Tanpa padding karena ini akan diset di Certificate component */
                       visibility: 'visible'
                     }}>
                       <div id="certificate-download-container" className="certificate-container-wrapper bg-white">

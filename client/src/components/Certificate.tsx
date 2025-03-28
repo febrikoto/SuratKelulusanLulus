@@ -35,7 +35,8 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
       
       <div 
         ref={certificateRef} 
-        className="relative p-8 border border-gray-300 bg-white mx-auto w-[215mm] min-h-[330mm] text-black"
+        className="relative border border-gray-300 bg-white mx-auto w-[215mm] min-h-[330mm] text-black"
+        style={{ padding: '20mm' }} /* 2cm margin di semua sisi */
       >
         {/* Header dengan logo dan kop surat */}
         <div className="flex justify-between items-center mb-2">

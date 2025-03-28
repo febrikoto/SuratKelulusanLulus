@@ -50,9 +50,9 @@ export async function generatePdf(
     // Berikan waktu untuk update styling
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    // Buat opsi html2canvas yang lebih sederhana
+    // Buat opsi html2canvas dengan kualitas tinggi untuk F4
     const options = {
-      scale: 1.5,
+      scale: 2, // Tingkatkan kualitas (dpi lebih tinggi)
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#FFFFFF',
@@ -82,6 +82,7 @@ export async function generatePdf(
         orientation: 'portrait',
         unit: 'mm',
         format: [215, 330], // Ukuran F4 dalam mm
+        compress: true // Kompres untuk ukuran file yang lebih kecil
       });
       
       // Hitung rasio tinggi-lebar
@@ -164,10 +165,11 @@ export async function generatePdf(
         // Coba dengan pengaturan yang lebih sederhana
         onProgress && onProgress('Mencoba metode alternatif dengan pengaturan berbeda', 60);
         
-        // Opsi yang lebih sederhana
+        // Opsi alternatif dengan kualitas yang lebih baik
         const simpleOptions = {
-          scale: 1,
+          scale: 1.5, // Tingkatkan kualitas tapi tidak terlalu tinggi
           useCORS: true,
+          allowTaint: true,
           logging: false,
           backgroundColor: '#FFFFFF'
         };
