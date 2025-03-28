@@ -425,7 +425,7 @@ export default function SubjectsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Semua</SelectItem>
-                      {uniqueMajors.map((major) => (
+                      {uniqueMajors.map((major: string) => (
                         <SelectItem key={major} value={major === null ? "no-value" : major}>
                           {major === 'semua' ? 'Semua Jurusan' : major}
                         </SelectItem>
@@ -678,8 +678,8 @@ export default function SubjectsPage() {
                           <SelectItem value="semua">Semua Jurusan</SelectItem>
                           {settings?.majorList ? 
                             settings.majorList.split(',')
-                              .filter(major => major !== 'semua')
-                              .map((major) => (
+                              .filter((major: string) => major !== 'semua')
+                              .map((major: string) => (
                                 <SelectItem key={major} value={major}>
                                   {major}
                                 </SelectItem>

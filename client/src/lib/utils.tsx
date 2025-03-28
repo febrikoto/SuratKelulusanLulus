@@ -1,6 +1,13 @@
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import { CertificateData } from "@shared/types";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+// Fungsi cn untuk menggabungkan class tailwind dengan clsx
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 // Definisikan tipe untuk callback progress
 export type ProgressCallback = (step: string, progress: number) => void;

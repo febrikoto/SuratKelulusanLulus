@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { CertificateData, SubjectGrade } from '@shared/types';
-import { formatDate, generatePdf } from '@/lib/utils';
+import { formatDate, generatePdf } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 

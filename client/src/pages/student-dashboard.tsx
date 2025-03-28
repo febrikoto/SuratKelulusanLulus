@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Student, Settings } from '@shared/schema';
 import { UserInfo, CertificateData } from '@shared/types';
-import { generatePdf, prepareCertificateData } from '@/lib/utils';
+import { generatePdf, prepareCertificateData } from '../lib/utils';
 
 // Define a local type for the progress callback
 type ProgressCallback = (step: string, progress: number) => void;
@@ -211,8 +211,13 @@ export default function StudentDashboard() {
           }
         };
         
-        // Panggil generatePdf dengan container ID yang benar
-        generatePdf('certificate-download-container', filename, handleProgress, preview)
+        // Panggil generatePdf dengan container ID yang benar dan parameter yang sesuai
+        generatePdf(
+          'certificate-download-container', 
+          filename, 
+          handleProgress,
+          preview
+        )
           .then(() => {
             // Wait a moment to show the success state
             setTimeout(() => {
@@ -227,7 +232,7 @@ export default function StudentDashboard() {
               });
             }, 1000);
           })
-          .catch((error) => {
+          .catch((error: any) => {
             // Show error in dialog
             setLoadingError("Terjadi kesalahan saat mengunduh SKL. Silakan coba lagi.");
             

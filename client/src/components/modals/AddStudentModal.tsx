@@ -44,7 +44,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClos
   
   // Parse classList from settings
   const classOptions = settings?.classList ? 
-    settings.classList.split(',').map(className => className.trim()) : 
+    settings.classList.split(',').map((className: string) => className.trim()) : 
     ['XII IPA 1', 'XII IPA 2', 'XII IPS 1', 'XII IPS 2']; // Default values if settings not loaded
 
   const form = useForm<FormValues>({
@@ -201,7 +201,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClos
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {classOptions.map((className) => (
+                      {classOptions.map((className: string) => (
                         <SelectItem key={className} value={className}>
                           {className}
                         </SelectItem>

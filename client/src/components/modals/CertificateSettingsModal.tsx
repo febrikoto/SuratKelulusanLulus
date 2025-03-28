@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import TiptapEditor from '@/components/ui/tiptap/TiptapEditor';
 
 import {
   Dialog,
@@ -360,50 +361,50 @@ const CertificateSettingsModal: React.FC<CertificateSettingsModalProps> = ({ isO
                   )}
                 />
                 
-                <FormField
-                  control={form.control}
-                  name="certCriteriaText"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teks Kriteria Kelulusan</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Kriteria kelulusan adalah..." 
-                          className="min-h-[80px]"
-                          {...field} 
+                {/* Gunakan komponen FormTiptap untuk teks kriteria kelulusan */}
+                <FormItem>
+                  <FormLabel>Teks Kriteria Kelulusan</FormLabel>
+                  <FormControl>
+                    <Controller
+                      name="certCriteriaText"
+                      control={form.control}
+                      render={({ field: { value, onChange } }) => (
+                        <TiptapEditor
+                          content={value || ''}
+                          onChange={onChange}
+                          className="min-h-[220px]"
                         />
-                      </FormControl>
-                      <FormDescription>
-                        Jika diisi, teks ini akan menggantikan daftar kriteria kelulusan default. Isi dengan format HTML untuk daftar bernomor seperti berikut:
-                        <div className="relative">
-                          <pre className="bg-gray-100 dark:bg-gray-800 p-2 text-xs mt-1 rounded overflow-auto">
-                            &lt;ol style="list-style-type:decimal; padding-left:20px; text-align:left;"&gt;<br/>
-                            &nbsp;&nbsp;&lt;li&gt;Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.&lt;/li&gt;<br/>
-                            &nbsp;&nbsp;&lt;li&gt;Surat Kepala Dinas Pendidikan Provinsi...&lt;/li&gt;<br/>
-                            &nbsp;&nbsp;&lt;li&gt;Ketuntasan dari seluruh program pembelajaran...&lt;/li&gt;<br/>
-                            &lt;/ol&gt;
-                          </pre>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="absolute top-2 right-2 h-7 text-xs"
-                            onClick={() => {
-                              navigator.clipboard.writeText('<ol style="list-style-type:decimal; padding-left:20px; text-align:left;">\n  <li>Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.</li>\n  <li>Surat Kepala Dinas Pendidikan Provinsi...</li>\n  <li>Ketuntasan dari seluruh program pembelajaran...</li>\n</ol>');
-                              toast({
-                                title: "Disalin!",
-                                description: "Format contoh telah disalin ke clipboard",
-                              });
-                            }}
-                          >
-                            <CopyIcon className="h-3.5 w-3.5 mr-1" />
-                            Salin
-                          </Button>
-                        </div>
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      )}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Jika diisi, teks ini akan menggantikan daftar kriteria kelulusan default. Gunakan editor di atas untuk memformat teks dan membuat daftar bernomor.
+                    <div className="mt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          const exampleContent = `<ol style="list-style-type:decimal; padding-left:20px; text-align:left;">
+  <li>Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.</li>
+  <li>Surat Kepala Dinas Pendidikan Provinsi Sumatera Barat Nomor : 400.14.4.3/1107/PSMA/DISDIK-2024 tanggal 18 April 2024 tentang Kelulusan SMA/AMK/SLB Tahun Ajaran 2024/2025.</li>
+  <li>Ketuntasan dari seluruh program pembelajaran sesuai kurikulum yang berlaku, termasuk Ekstrakurikuler dan prestasi lainnya.</li>
+  <li>Hasil Rapat Pleno Dewan Guru.</li>
+</ol>`;
+                          form.setValue('certCriteriaText', exampleContent);
+                          toast({
+                            title: "Contoh Diterapkan!",
+                            description: "Format contoh kriteria kelulusan telah diterapkan",
+                          });
+                        }}
+                      >
+                        <CopyIcon className="h-3.5 w-3.5 mr-1" />
+                        Terapkan Format Contoh
+                      </Button>
+                    </div>
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
               </div>
               
               <div className="space-y-5 mt-6">
