@@ -216,7 +216,7 @@ export default function StudentDashboard() {
           'certificate-download-container', 
           filename, 
           handleProgress,
-          preview
+          preview // boolean untuk menentukan apakah hanya preview atau download
         )
           .then(() => {
             // Wait a moment to show the success state

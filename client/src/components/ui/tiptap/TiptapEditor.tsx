@@ -2,12 +2,6 @@ import React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
-import Bold from '@tiptap/extension-bold';
-import Italic from '@tiptap/extension-italic';
-import BulletList from '@tiptap/extension-bullet-list';
-import OrderedList from '@tiptap/extension-ordered-list';
-import ListItem from '@tiptap/extension-list-item';
-import Code from '@tiptap/extension-code';
 import { Button } from '@/components/ui/button';
 import { cn } from '../../../lib/utils';
 import {
@@ -36,12 +30,6 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, classNam
         horizontalRule: false,
       }),
       Underline,
-      Bold,
-      Italic,
-      BulletList,
-      OrderedList,
-      ListItem,
-      Code
     ],
     content,
     onUpdate: ({ editor }) => {
