@@ -1,21 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Student, Settings } from '@shared/schema';
 import { UserInfo, CertificateData, SubjectGrade } from '@shared/types';
 import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { Download, Loader2, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import StudentHeader from '@/components/StudentHeader';
+import { StudentHeader } from '@/components/StudentHeader';
 import { Certificate } from '@/components/Certificate';
-import PrintCertificate from '@/components/PrintCertificate';
-import CertificateLoading from '@/components/CertificateLoading';
+import { PrintCertificate } from '@/components/PrintCertificate';
+import { CertificateLoading } from '@/components/CertificateLoading';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/queryClient';
-import WelcomeAnimation from '@/components/WelcomeAnimation';
+import { WelcomeAnimation } from '@/components/WelcomeAnimation';
 import * as Dialog from '@radix-ui/react-dialog';
 
 // Define a local type for the progress callback
@@ -114,16 +113,21 @@ async function generatePdf(
   filename: string, 
   onProgress?: ((step: string, progress: number) => void) | undefined
 ): Promise<void> {
+  // Deklarasikan variabel printWindow di luar try untuk akses di catch block
+  let printWindow: Window | null = null;
+  
   try {
     // Report initial progress
     onProgress && onProgress('Memulai proses', 5);
     
     console.log(`Generating image for element with ID: ${elementId}`);
     
-    // Membuat elemen cetak baru untuk sertifikat
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      throw new Error('Tidak dapat membuka jendela cetak');
+    // Ambil dan simpan elemen container
+    const wrapper = document.getElementById('certificate-container-wrapper');
+    if (wrapper) {
+      // Tampilkan container selama proses
+      wrapper.style.opacity = '1';
+      wrapper.style.zIndex = '9999';
     }
     
     onProgress && onProgress('Menyiapkan halaman sertifikat', 20);
@@ -131,8 +135,26 @@ async function generatePdf(
     // Ambil elemen certificate
     const element = document.getElementById(elementId);
     if (!element) {
-      printWindow.close();
+      // Kembalikan container ke status tersembunyi jika error
+      if (wrapper) {
+        wrapper.style.opacity = '0';
+        wrapper.style.zIndex = '-100';
+      }
       throw new Error(`Element with ID "${elementId}" not found`);
+    }
+    
+    // Tunggu sebentar agar konten terrender dengan sempurna
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Buka jendela cetak
+    printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      // Kembalikan wrapper ke status tersembunyi
+      if (wrapper) {
+        wrapper.style.opacity = '0';
+        wrapper.style.zIndex = '-100';
+      }
+      throw new Error('Tidak dapat membuka jendela cetak');
     }
     
     // Siapkan dokumen cetak dengan ukuran A4
@@ -192,11 +214,21 @@ async function generatePdf(
     
     // Salin style dari halaman utama ke halaman cetak
     const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
-    styles.forEach(style => {
-      printWindow.document.head.appendChild(style.cloneNode(true));
-    });
+    // Sudah diperiksa printWindow tidak null di atas
+    if (printWindow && printWindow.document && printWindow.document.head) {
+      styles.forEach(style => {
+        // Pastikan printWindow tidak null lagi di sini untuk TypeScript
+        if (printWindow && printWindow.document && printWindow.document.head) {
+          printWindow.document.head.appendChild(style.cloneNode(true));
+        }
+      });
+    }
 
     // Salin isi certificate ke container cetak
+    if (!printWindow || !printWindow.document) {
+      throw new Error('Jendela cetak tidak tersedia');
+    }
+    
     const container = printWindow.document.getElementById('print-container');
     if (container) {
       container.innerHTML = element.innerHTML;
@@ -244,8 +276,16 @@ async function generatePdf(
     onProgress && onProgress('Menyimpan gambar sertifikat', 80);
     const imgData = canvas.toDataURL('image/png', 1.0);
     
-    // Tutup jendela cetak
-    printWindow.close();
+    // Tutup jendela cetak jika ada
+    if (printWindow) {
+      printWindow.close();
+    }
+    
+    // Kembalikan container ke status tersembunyi
+    if (wrapper) {
+      wrapper.style.opacity = '0';
+      wrapper.style.zIndex = '-100';
+    }
     
     // Buat link download
     const a = document.createElement('a');
@@ -269,6 +309,22 @@ async function generatePdf(
   } catch (error) {
     console.error('Error generating certificate:', error);
     onProgress && onProgress('Terjadi kesalahan saat membuat sertifikat', 100);
+    
+    // Tutup printWindow jika ada
+    if (printWindow) {
+      try {
+        printWindow.close();
+      } catch (e) {
+        console.error('Error closing print window:', e);
+      }
+    }
+    
+    // Kembalikan container ke status tersembunyi jika terjadi error
+    const wrapper = document.getElementById('certificate-container-wrapper');
+    if (wrapper) {
+      wrapper.style.opacity = '0';
+      wrapper.style.zIndex = '-100';
+    }
     
     // Beri pesan error ke konsol untuk debugging
     console.error('Detail error:', error);
@@ -620,7 +676,7 @@ export default function StudentDashboard() {
                       </div>
                       <div className="ml-3">
                         <p className="text-sm text-green-700 dark:text-green-300">SKL Anda telah disetujui dan siap untuk diunduh.</p>
-                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">{student.verificationDate ? formatDate(student.verificationDate) : ''}</p>
+                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">{student.verificationDate ? formatDate(student.verificationDate.toString()) : ''}</p>
                       </div>
                     </div>
                   </div>
@@ -751,9 +807,9 @@ export default function StudentDashboard() {
         </div>
       </div>
       
-      {/* Hidden container for PDF download */}
-      <div className="hidden">
-        <div id="certificate-download-container">
+      {/* Container for certificate download - hidden by default but made visible during screenshot */}
+      <div id="certificate-container-wrapper" className="fixed top-0 left-0 w-full h-full bg-white z-[-100] opacity-0 pointer-events-none overflow-auto">
+        <div id="certificate-download-container" className="w-[210mm] mx-auto bg-white">
           {certificateData && <PrintCertificate data={certificateData} />}
         </div>
       </div>
