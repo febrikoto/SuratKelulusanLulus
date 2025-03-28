@@ -112,8 +112,8 @@ async function generatePdf(
     
     console.log(`Generating PDF for element with ID: ${elementId}`);
     
-    // Berikan waktu untuk update DOM dan penemuan elemen
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Berikan waktu untuk update DOM
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     const element = document.getElementById(elementId);
     if (!element) {
@@ -124,141 +124,70 @@ async function generatePdf(
     // Log element properties untuk debugging
     console.log(`Element found: ${element.tagName}, Width: ${element.offsetWidth}, Height: ${element.offsetHeight}`);
     
-    // Pendekatan sederhana: tangkap langsung saja
-    onProgress && onProgress('Menyiapkan elemen sertifikat', 20);
+    // Prepare UI for screenshot
+    onProgress && onProgress('Menyiapkan sertifikat', 20);
     
-    // Pendekatan baru: Ambil screenshot langsung dari elemen asli
-    // dengan opsi yang disederhanakan
-    const options = {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#FFFFFF', 
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: undefined,
-      windowHeight: undefined
-    };
+    // Buat salinan elemen dan tambahkan ke body untuk memastikan semua style teraplikasi
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.top = '-9999px';
+    container.style.left = '-9999px';
+    container.style.width = '210mm';
+    container.style.height = 'auto';
+    container.style.backgroundColor = '#FFFFFF';
+    container.innerHTML = element.innerHTML;
     
-    // Progress: Mulai render
+    document.body.appendChild(container);
+    
+    // Capture element as PNG (better quality for text)
     onProgress && onProgress('Membuat gambar sertifikat', 40);
     
-    // Langsung render dari elemen asli
-    const canvas = await html2canvas(element, options);
-    console.log('Canvas created successfully:', canvas.width, 'x', canvas.height);
-    
-    // Progress: Render canvas selesai
-    onProgress && onProgress('Mengoptimasi gambar', 60);
-    
-    // Jika canvas berhasil dibuat, konversi ke gambar
-    const imgData = canvas.toDataURL('image/jpeg', 0.9);
-    
-    // Coba pendekatan paling sederhana dulu: unduh saja sebagai gambar
-    if (filename.endsWith('.pdf')) {
-      // Progress: Optimasi selesai
-      onProgress && onProgress('Membuat file PDF', 70);
-      
-      // Buat file PDF dengan ukuran A4
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-      });
-      
-      // A4 dimensions
-      const a4Width = 210;  // width in mm
-      const a4Height = 297; // height in mm
-      
-      // Hitung rasio untuk menyesuaikan gambar
-      const imgRatio = canvas.width / canvas.height;
-      
-      // Sesuaikan dimensi gambar agar fit di halaman PDF (skala penuh)
-      let imgWidth = a4Width;
-      let imgHeight = imgWidth / imgRatio;
-      
-      // Jika tinggi lebih dari halaman A4, skala berdasarkan tinggi
-      if (imgHeight > a4Height) {
-        imgHeight = a4Height;
-        imgWidth = imgHeight * imgRatio;
+    const canvas = await html2canvas(container, {
+      scale: 2, // Higher scale for better quality
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#FFFFFF',
+      logging: false,
+      onclone: (clonedDoc) => {
+        console.log('Clone successful');
+        return clonedDoc;
       }
-      
-      // Progress: Persiapan PDF
-      onProgress && onProgress('Memasukkan gambar ke PDF', 80);
-      
-      // Posisikan gambar di tengah halaman
-      const xOffset = (a4Width - imgWidth) / 2;
-      const yOffset = (a4Height - imgHeight) / 2;
-      
-      // Tambahkan gambar ke PDF
-      pdf.addImage(imgData, 'JPEG', xOffset, yOffset, imgWidth, imgHeight);
-      
-      // Progress: Siap untuk save
-      onProgress && onProgress('Menyimpan file PDF', 90);
-      
-      // Simpan PDF
-      pdf.save(filename);
-    } else {
-      // Langsung simpan sebagai gambar jika bukan PDF
-      const a = document.createElement('a');
-      a.href = imgData;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
+    });
     
-    // Progress: Selesai
+    // Clean up - remove temp container
+    document.body.removeChild(container);
+    
+    // Langsung simpan sebagai JPG (lebih dapat diandalkan)
+    onProgress && onProgress('Menyimpan gambar sertifikat', 80);
+    
+    // Get image data
+    const imgData = canvas.toDataURL('image/png');
+    
+    // Create download link
+    const a = document.createElement('a');
+    a.href = imgData;
+    a.download = filename.replace('.pdf', '.png');
+    document.body.appendChild(a);
+    
+    // Click link to start download
+    a.click();
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(a);
+    }, 100);
+    
+    // Success
     onProgress && onProgress('Berhasil membuat sertifikat', 100);
-    console.log('Sertifikat berhasil dibuat', filename);
+    console.log('Sertifikat berhasil dibuat sebagai PNG');
     
     return Promise.resolve();
   } catch (error) {
     console.error('Error generating certificate:', error);
     onProgress && onProgress('Terjadi kesalahan saat membuat sertifikat', 100);
     
-    // Sebagai fallback langsung ke JPG saja
-    try {
-      onProgress && onProgress('Mencoba unduh sebagai gambar (JPG)', 50);
-      
-      const element = document.getElementById(elementId);
-      if (!element) {
-        throw new Error('Element not found for fallback method');
-      }
-      
-      // Opsi yang lebih sederhana, fokus pada kualitas gambar 
-      const canvas = await html2canvas(element, { 
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#FFFFFF'
-      });
-      
-      onProgress && onProgress('Gambar berhasil dibuat, menyiapkan download', 75);
-      
-      // Konversi ke gambar dengan nama yang sesuai
-      const imgData = canvas.toDataURL('image/jpeg', 0.95); // Quality 95%
-      
-      // Buat link download
-      const a = document.createElement('a');
-      a.href = imgData;
-      a.download = filename.replace('.pdf', '.jpg');
-      document.body.appendChild(a);
-      
-      // Klik link untuk memulai download
-      onProgress && onProgress('Menyimpan gambar sertifikat', 90);
-      a.click();
-      
-      // Hapus link setelah download dimulai
-      setTimeout(() => {
-        document.body.removeChild(a);
-      }, 100);
-      
-      onProgress && onProgress('Berhasil membuat gambar sertifikat', 100);
-    } catch (fallbackError) {
-      console.error('Fallback method failed:', fallbackError);
-      return Promise.reject(error);
-    }
+    // Beri pesan error ke konsol untuk debugging
+    console.error('Detail error:', error);
     
     return Promise.reject(error);
   }
@@ -292,11 +221,11 @@ export default function StudentDashboard() {
       status: 'pending' as LoadingStepStatus,
     },
     {
-      label: 'Mengoptimasi dan mengonversi',
+      label: 'Mengoptimasi kualitas gambar',
       status: 'pending' as LoadingStepStatus,
     },
     {
-      label: 'Menyimpan file sertifikat',
+      label: 'Menyimpan file PNG',
       status: 'pending' as LoadingStepStatus,
     }
   ];
@@ -392,12 +321,13 @@ export default function StudentDashboard() {
     // Update certificate data to show/hide grades
     setCertificateData({...certificateData, showGrades: withGrades});
     
+    // Ubah ke PNG format untuk keandalan lebih baik
     const filename = withGrades 
-      ? `SKL_Dengan_Nilai_${certificateData.nisn}.pdf` 
-      : `SKL_Tanpa_Nilai_${certificateData.nisn}.pdf`;
+      ? `SKL_Dengan_Nilai_${certificateData.nisn}.png` 
+      : `SKL_Tanpa_Nilai_${certificateData.nisn}.png`;
       
     // Verifikasi elemen yang akan digunakan untuk PDF
-    console.log("Memeriksa elemen untuk PDF...");
+    console.log("Memeriksa elemen untuk screenshot...");
     setTimeout(() => {
       const container = document.getElementById('certificate-download-container');
       console.log("Container exists:", !!container);
