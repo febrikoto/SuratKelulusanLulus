@@ -13,8 +13,18 @@ import {
   Code as CodeIcon,
   AlignLeft,
   AlignCenter,
-  AlignRight
+  AlignRight,
+  Heading1,
+  Heading2,
+  Heading3,
+  Type as TextIcon
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TiptapEditorProps {
   content: string;
@@ -26,7 +36,12 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, classNam
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: false,
+        heading: {
+          levels: [1, 2, 3, 4],
+          HTMLAttributes: {
+            style: 'font-family: Arial, sans-serif; color: #000;'
+          }
+        },
         horizontalRule: false,
         bulletList: {
           HTMLAttributes: {
@@ -120,8 +135,62 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, classNam
 
         <div className="w-px h-8 bg-border mx-1" /> {/* divider */}
         
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              title="Text Style"
+            >
+              {editor.isActive('heading', { level: 1 }) ? <Heading1 className="h-4 w-4 mr-1" /> :
+               editor.isActive('heading', { level: 2 }) ? <Heading2 className="h-4 w-4 mr-1" /> :
+               editor.isActive('heading', { level: 3 }) ? <Heading3 className="h-4 w-4 mr-1" /> :
+               <TextIcon className="h-4 w-4 mr-1" />}
+              <span className="text-xs">
+                {editor.isActive('heading', { level: 1 }) ? 'Heading 1' :
+                 editor.isActive('heading', { level: 2 }) ? 'Heading 2' :
+                 editor.isActive('heading', { level: 3 }) ? 'Heading 3' :
+                 'Paragraph'}
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem 
+              onClick={() => editor.chain().focus().setParagraph().run()}
+              className={`${!editor.isActive('heading') ? 'bg-accent' : ''}`}
+            >
+              <TextIcon className="h-4 w-4 mr-2" />
+              <span className={`${!editor.isActive('heading') ? 'font-semibold' : ''}`}>Normal Text</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+              className={`${editor.isActive('heading', { level: 1 }) ? 'bg-accent' : ''}`}
+            >
+              <Heading1 className="h-4 w-4 mr-2" />
+              <span className={`${editor.isActive('heading', { level: 1 }) ? 'font-semibold' : ''}`}>Heading 1</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+              className={`${editor.isActive('heading', { level: 2 }) ? 'bg-accent' : ''}`}
+            >
+              <Heading2 className="h-4 w-4 mr-2" />
+              <span className={`${editor.isActive('heading', { level: 2 }) ? 'font-semibold' : ''}`}>Heading 2</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+              className={`${editor.isActive('heading', { level: 3 }) ? 'bg-accent' : ''}`}
+            >
+              <Heading3 className="h-4 w-4 mr-2" />
+              <span className={`${editor.isActive('heading', { level: 3 }) ? 'font-semibold' : ''}`}>Heading 3</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        
+        <div className="w-px h-8 bg-border mx-1" /> {/* divider */}
+        
         <Button
-          variant="ghost"
+          variant={editor.isActive({ textAlign: 'left' }) ? 'default' : 'ghost'}
           size="sm"
           onClick={() => {
             // Wrap selected text with left-aligned div
@@ -138,7 +207,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, classNam
         </Button>
         
         <Button
-          variant="ghost"
+          variant={editor.isActive({ textAlign: 'center' }) ? 'default' : 'ghost'}
           size="sm"
           onClick={() => {
             // Wrap selected text with center-aligned div
@@ -155,7 +224,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, classNam
         </Button>
         
         <Button
-          variant="ghost"
+          variant={editor.isActive({ textAlign: 'right' }) ? 'default' : 'ghost'}
           size="sm"
           onClick={() => {
             // Wrap selected text with right-aligned div
@@ -174,7 +243,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, classNam
       
       <EditorContent 
         editor={editor} 
-        className="prose dark:prose-invert max-w-none p-4 min-h-[120px] focus:outline-none prose-p:my-2 prose-ol:pl-5 prose-ol:list-decimal prose-ul:pl-5 prose-ul:list-disc prose-li:my-1" 
+        className="prose dark:prose-invert max-w-none p-4 min-h-[120px] focus:outline-none prose-p:my-2 prose-ol:pl-5 prose-ol:list-decimal prose-ul:pl-5 prose-ul:list-disc prose-li:my-1 prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg" 
         style={{
           fontSize: '14px',
           lineHeight: '1.5',
