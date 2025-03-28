@@ -369,14 +369,14 @@ export default function SubjectsPage() {
               <div className="flex flex-wrap gap-2 w-full md:w-auto">
                 <div>
                   <Select
-                    value={selectedGroup || ""}
-                    onValueChange={(val) => setSelectedGroup(val || null)}
+                    value={selectedGroup || "all"}
+                    onValueChange={(val) => setSelectedGroup(val === "all" ? null : val)}
                   >
                     <SelectTrigger className="w-[120px] h-10">
                       <SelectValue placeholder="Kelompok" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Semua</SelectItem>
+                      <SelectItem value="all">Semua</SelectItem>
                       {uniqueGroups.map((group) => (
                         <SelectItem key={group} value={group}>
                           Kelompok {group}
@@ -388,16 +388,16 @@ export default function SubjectsPage() {
                 
                 <div>
                   <Select
-                    value={selectedMajor || ""}
-                    onValueChange={(val) => setSelectedMajor(val || null)}
+                    value={selectedMajor || "all"}
+                    onValueChange={(val) => setSelectedMajor(val === "all" ? null : val)}
                   >
                     <SelectTrigger className="w-[120px] h-10">
                       <SelectValue placeholder="Jurusan" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Semua</SelectItem>
+                      <SelectItem value="all">Semua</SelectItem>
                       {uniqueMajors.map((major) => (
-                        <SelectItem key={major} value={major}>
+                        <SelectItem key={major} value={major === null ? "no-value" : major}>
                           {major === 'semua' ? 'Semua Jurusan' : major}
                         </SelectItem>
                       ))}
