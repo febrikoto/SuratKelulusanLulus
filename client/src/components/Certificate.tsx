@@ -42,8 +42,39 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
           fontSize: '12pt',
           lineHeight: '1.5',
           color: '#000',
+          position: 'relative',
         }}
       >
+        {/* Penanda koordinat di sertifikat */}
+        <div className="coordinate-markers">
+          {/* Marker kiri atas */}
+          <div className="absolute w-6 h-6 left-2 top-2 z-10" style={{ pointerEvents: 'none' }}>
+            <div className="w-4 h-4 bg-yellow-300 rounded-full flex items-center justify-center">
+              <span className="text-red-600 font-bold text-sm">+</span>
+            </div>
+          </div>
+          
+          {/* Marker kanan atas */}
+          <div className="absolute w-6 h-6 right-2 top-2 z-10" style={{ pointerEvents: 'none' }}>
+            <div className="w-4 h-4 bg-yellow-300 rounded-full flex items-center justify-center">
+              <span className="text-red-600 font-bold text-sm">+</span>
+            </div>
+          </div>
+          
+          {/* Marker kiri bawah */}
+          <div className="absolute w-6 h-6 left-2 bottom-2 z-10" style={{ pointerEvents: 'none' }}>
+            <div className="w-4 h-4 bg-yellow-300 rounded-full flex items-center justify-center">
+              <span className="text-red-600 font-bold text-sm">+</span>
+            </div>
+          </div>
+          
+          {/* Marker kanan bawah */}
+          <div className="absolute w-6 h-6 right-2 bottom-2 z-10" style={{ pointerEvents: 'none' }}>
+            <div className="w-4 h-4 bg-yellow-300 rounded-full flex items-center justify-center">
+              <span className="text-red-600 font-bold text-sm">+</span>
+            </div>
+          </div>
+        </div>
         {/* Header dengan logo dan kop surat */}
         <div className="flex justify-between items-center mb-2">
           <div className="w-20 h-20">

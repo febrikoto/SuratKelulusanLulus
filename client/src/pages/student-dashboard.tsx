@@ -480,7 +480,85 @@ export default function StudentDashboard() {
                 <CardTitle>Daftar Nilai</CardTitle>
               </CardHeader>
               <CardContent>
-                <p>Fitur daftar nilai sedang dalam pengembangan</p>
+                {studentLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <div>
+                    {student?.status === 'verified' ? (
+                      <div className="space-y-6">
+                        <div className="relative overflow-x-auto">
+                          <table className="w-full text-sm text-left">
+                            <thead className="text-xs uppercase bg-gray-50 dark:bg-gray-700">
+                              <tr>
+                                <th className="px-6 py-3">No</th>
+                                <th className="px-6 py-3">Mata Pelajaran</th>
+                                <th className="px-6 py-3">Nilai</th>
+                                <th className="px-6 py-3">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {/* Nilai Akademik */}
+                              <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                                <td className="px-6 py-4">1</td>
+                                <td className="px-6 py-4 font-medium">Bahasa Indonesia</td>
+                                <td className="px-6 py-4">85</td>
+                                <td className="px-6 py-4">
+                                  <span className="px-2 py-1 text-xs rounded-full bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400">
+                                    Tuntas
+                                  </span>
+                                </td>
+                              </tr>
+                              <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                                <td className="px-6 py-4">2</td>
+                                <td className="px-6 py-4 font-medium">Matematika</td>
+                                <td className="px-6 py-4">78</td>
+                                <td className="px-6 py-4">
+                                  <span className="px-2 py-1 text-xs rounded-full bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400">
+                                    Tuntas
+                                  </span>
+                                </td>
+                              </tr>
+                              <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                                <td className="px-6 py-4">3</td>
+                                <td className="px-6 py-4 font-medium">Bahasa Inggris</td>
+                                <td className="px-6 py-4">82</td>
+                                <td className="px-6 py-4">
+                                  <span className="px-2 py-1 text-xs rounded-full bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400">
+                                    Tuntas
+                                  </span>
+                                </td>
+                              </tr>
+                              {/* Total Nilai */}
+                              <tr className="bg-gray-50 dark:bg-gray-700">
+                                <td className="px-6 py-4" colSpan={2}>
+                                  <strong>Rata-rata Nilai</strong>
+                                </td>
+                                <td className="px-6 py-4 font-bold">81.7</td>
+                                <td className="px-6 py-4"></td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="flex justify-end">
+                          <Button 
+                            variant="outline"
+                            onClick={() => handleDownloadSKL(true, false)}
+                            className="flex items-center gap-2"
+                          >
+                            <Download className="h-4 w-4" />
+                            Unduh SKL Dengan Nilai
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-yellow-50 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200 p-4 rounded-md">
+                        <p>Status kelulusan Anda belum terverifikasi. Nilai akan ditampilkan setelah status kelulusan terverifikasi.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </AnimatedTabsContent>
@@ -491,7 +569,82 @@ export default function StudentDashboard() {
                 <CardTitle>Mata Pelajaran</CardTitle>
               </CardHeader>
               <CardContent>
-                <p>Fitur mata pelajaran sedang dalam pengembangan</p>
+                {studentLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <div>
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Kelompok A - Umum */}
+                        <Card>
+                          <CardHeader className="py-3">
+                            <CardTitle className="text-sm">Kelompok A (Umum)</CardTitle>
+                          </CardHeader>
+                          <CardContent className="py-0">
+                            <ul className="space-y-2">
+                              <li className="flex justify-between text-sm border-b pb-2">
+                                <span>Pendidikan Agama</span>
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">2 SKS</span>
+                              </li>
+                              <li className="flex justify-between text-sm border-b pb-2">
+                                <span>PKN</span>
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">2 SKS</span>
+                              </li>
+                              <li className="flex justify-between text-sm border-b pb-2">
+                                <span>Bahasa Indonesia</span>
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">4 SKS</span>
+                              </li>
+                              <li className="flex justify-between text-sm border-b pb-2">
+                                <span>Matematika</span>
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">4 SKS</span>
+                              </li>
+                              <li className="flex justify-between text-sm">
+                                <span>Bahasa Inggris</span>
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">4 SKS</span>
+                              </li>
+                            </ul>
+                          </CardContent>
+                        </Card>
+                        
+                        {/* Kelompok B - Kejuruan */}
+                        <Card>
+                          <CardHeader className="py-3">
+                            <CardTitle className="text-sm">Kelompok B (Kejuruan)</CardTitle>
+                          </CardHeader>
+                          <CardContent className="py-0">
+                            <ul className="space-y-2">
+                              <li className="flex justify-between text-sm border-b pb-2">
+                                <span>Pemrograman Web</span>
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">4 SKS</span>
+                              </li>
+                              <li className="flex justify-between text-sm border-b pb-2">
+                                <span>Basis Data</span>
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">4 SKS</span>
+                              </li>
+                              <li className="flex justify-between text-sm border-b pb-2">
+                                <span>Jaringan Komputer</span>
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">4 SKS</span>
+                              </li>
+                              <li className="flex justify-between text-sm border-b pb-2">
+                                <span>Algoritma & Pemrograman</span>
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">4 SKS</span>
+                              </li>
+                              <li className="flex justify-between text-sm">
+                                <span>Desain Grafis</span>
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">2 SKS</span>
+                              </li>
+                            </ul>
+                          </CardContent>
+                        </Card>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                        <p className="text-sm text-gray-600 dark:text-gray-300">Total SKS: <span className="font-medium">30 SKS</span></p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </AnimatedTabsContent>
