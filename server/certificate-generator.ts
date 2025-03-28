@@ -601,14 +601,14 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       if (data.useDigitalSignature && qrCodeBuffer) {
         // Jika TTE diaktifkan, tambahkan QR code di atas nama kepala sekolah
         try {
-          // Posisikan QR code di tengah di atas nama kepala sekolah
-          const qrX = signatureX + 20;  // Sesuaikan posisi agar di tengah tanda tangan
-          const qrY = y + 40;  // Sejajar dengan posisi tanda tangan biasa
-          doc.image(qrCodeBuffer, qrX, qrY, { width: 100 });
+          // Posisikan QR code tepat di atas nama kepala sekolah dengan ukuran lebih kecil
+          const qrX = signatureX;  // Posisi X sama dengan posisi nama kepala sekolah
+          const qrY = y + 40;  // Posisi Y sejajar dengan posisi tanda tangan biasa
+          doc.image(qrCodeBuffer, qrX, qrY, { width: 80 }); // Ukuran diperkecil menjadi 80
           
           // Tambahkan teks "TTE" di bawah QR
           doc.fontSize(8).font('Helvetica');
-          doc.text('TTE', qrX, qrY + 100, { width: 100, align: 'center' });
+          doc.text('TTE', qrX, qrY + 80, { width: 80, align: 'center' });
         } catch (e) {
           console.error("Error adding QR code to PDF:", e);
         }
