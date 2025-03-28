@@ -99,6 +99,8 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
                 fontSize: '12pt',
                 lineHeight: '1.5',
                 fontFamily: 'Times New Roman, serif',
+                maxWidth: '100%', /* Agar lebarnya sama dengan paragraf lainnya */
+                textAlign: 'justify' /* Untuk konsistensi dengan teks lainnya */
               }}
               dangerouslySetInnerHTML={{ __html: data.certCriteriaText }}
             />
