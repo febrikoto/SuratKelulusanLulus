@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
+
 import {
   Dialog,
   DialogContent,
@@ -17,14 +17,15 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, School, Calendar, Clock, FileImage, Upload, Clipboard } from 'lucide-react';
+import { Loader2, School, FileImage, Upload } from 'lucide-react';
 
 interface SchoolSettingsModalProps {
   isOpen: boolean;
@@ -41,18 +42,8 @@ const formSchema = z.object({
   headmasterNip: z.string().min(5, { message: 'NIP kepala sekolah wajib diisi' }),
   headmasterSignature: z.string().default(''),
   schoolStamp: z.string().default(''),
-  certHeader: z.string().default(''),
-  certFooter: z.string().default(''),
-  certBeforeStudentData: z.string().default('Yang bertanda tangan di bawah ini, Kepala SMK Negeri 1 Lubuk Sikaping, menerangkan bahwa yang bersangkutan:'),
-  certAfterStudentData: z.string().default('telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.'),
-  certNumberPrefix: z.string().default(''),
-  certRegulationText: z.string().default(''),
-  certCriteriaText: z.string().default(''),
-  academicYear: z.string().min(5, { message: 'Tahun ajaran wajib diisi (contoh: 2024/2025)' }),
-  graduationDate: z.string().min(5, { message: 'Tanggal kelulusan wajib diisi' }),
-  graduationTime: z.string().default(''),
-  cityName: z.string().min(2, { message: 'Nama kota wajib diisi' }),
-  provinceName: z.string().min(2, { message: 'Nama provinsi wajib diisi' }),
+  schoolEmail: z.string().email().optional().or(z.literal('')),
+  schoolWebsite: z.string().url().optional().or(z.literal('')),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -94,18 +85,8 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
       headmasterNip: '',
       headmasterSignature: '',
       schoolStamp: '',
-      certHeader: '',
-      certFooter: '',
-      certBeforeStudentData: '',
-      certAfterStudentData: '',
-      certNumberPrefix: '',
-      certRegulationText: '',
-      certCriteriaText: '',
-      academicYear: '',
-      graduationDate: '',
-      graduationTime: '',
-      cityName: '',
-      provinceName: '',
+      schoolEmail: '',
+      schoolWebsite: '',
     },
   });
   
@@ -121,18 +102,8 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
         headmasterNip: settings.headmasterNip || '',
         headmasterSignature: settings.headmasterSignature || '',
         schoolStamp: settings.schoolStamp || '',
-        certHeader: settings.certHeader || '',
-        certFooter: settings.certFooter || '',
-        certBeforeStudentData: settings.certBeforeStudentData || 'Yang bertanda tangan di bawah ini, Kepala SMK Negeri 1 Lubuk Sikaping, menerangkan bahwa yang bersangkutan:',
-        certAfterStudentData: settings.certAfterStudentData || 'telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.',
-        certNumberPrefix: settings.certNumberPrefix || '',
-        certRegulationText: settings.certRegulationText || '',
-        certCriteriaText: settings.certCriteriaText || '',
-        academicYear: settings.academicYear || '',
-        graduationDate: settings.graduationDate || '',
-        graduationTime: settings.graduationTime || '',
-        cityName: settings.cityName || '',
-        provinceName: settings.provinceName || '',
+        schoolEmail: settings.schoolEmail || '',
+        schoolWebsite: settings.schoolWebsite || '',
       });
     }
   }, [settings, form]);
@@ -433,210 +404,6 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
                     )}
                   />
                 </div>
-              </div>
-              
-              <div className="space-y-5 mt-6">
-                <div className="flex items-center space-x-2 mb-2 sticky top-0 bg-background z-10 py-2 border-b">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <h3 className="text-md font-semibold">Informasi Kelulusan</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="academicYear"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tahun Ajaran</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Contoh: 2024/2025" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="graduationDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tanggal Kelulusan</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="graduationTime"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Waktu Kelulusan</FormLabel>
-                          <FormControl>
-                            <Input type="time" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="cityName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Kota</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nama kota" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="provinceName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Provinsi</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nama provinsi" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="certNumberPrefix"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Prefiks Nomor Sertifikat</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Contoh: SKL/2024/" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Prefiks untuk nomor sertifikat. Akan ditambahkan sebelum nomor urut siswa.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="certHeader"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Header Sertifikat</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Header tambahan untuk sertifikat (opsional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="certFooter"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Footer Sertifikat</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Footer tambahan untuk sertifikat (opsional)" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="certBeforeStudentData"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teks Sebelum Data Siswa</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Teks yang akan ditampilkan sebelum data siswa" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Contoh: "Yang bertanda tangan di bawah ini, Kepala SMK Negeri 1 Lubuk Sikaping, menerangkan bahwa yang bersangkutan:"
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="certAfterStudentData"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teks Setelah Data Siswa</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Teks yang akan ditampilkan setelah data siswa" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Contoh: "telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan."
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="certRegulationText"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teks Peraturan/Regulasi</FormLabel>
-                      <FormControl>
-                        <textarea 
-                          placeholder="Peraturan atau regulasi yang menjadi dasar kelulusan" 
-                          className="flex h-[80px] min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Contoh: "Berdasarkan Peraturan Menteri Pendidikan, Kebudayaan, Riset, dan Teknologi Nomor 21 Tahun 2022..."
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="certCriteriaText"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teks Kriteria Kelulusan</FormLabel>
-                      <FormControl>
-                        <textarea 
-                          placeholder="Kriteria dan ketentuan kelulusan" 
-                          className="flex h-[80px] min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Contoh: "Kepala SMKN 1 LUBUK SIKAPING berdasarkan ketentuan yang berlaku mempertimbangan kelulusan peserta didik pada Tahun Pelajaran 2024/2025, diantaranya sebagai berikut: ..."
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
               
               <DialogFooter className="flex flex-col sm:flex-row sm:justify-between">
