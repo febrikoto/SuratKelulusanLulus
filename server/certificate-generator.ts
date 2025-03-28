@@ -1,7 +1,7 @@
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
-import { CertificateData } from '@shared/types';
+import { CertificateData, SubjectGrade } from '@shared/types';
 import { formatDate } from '../client/src/lib/utils';
 
 // Fungsi untuk memformat tanggal
@@ -91,7 +91,29 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       const headerY = 40;
       const headerHeight = 100;
       
-      // Kop surat dengan teks
+      // Logo Kementerian di kiri
+      if (data.ministryLogo) {
+        try {
+          doc.image(data.ministryLogo, doc.page.margins.left, headerY, {
+            width: 70
+          });
+        } catch (e) {
+          console.error("Error loading ministry logo:", e);
+        }
+      }
+      
+      // Logo Sekolah di kanan
+      if (data.schoolLogo) {
+        try {
+          doc.image(data.schoolLogo, doc.page.width - doc.page.margins.right - 70, headerY, {
+            width: 70
+          });
+        } catch (e) {
+          console.error("Error loading school logo:", e);
+        }
+      }
+      
+      // Kop surat dengan teks (di tengah antara kedua logo)
       doc.fontSize(14).font('Helvetica-Bold');
       addCenteredText(`PEMERINTAH PROVINSI ${data.provinceName.toUpperCase()}`, headerY);
       addCenteredText('DINAS PENDIDIKAN', headerY + 20);
@@ -181,7 +203,7 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
         }
       }
       
-      y += 10;
+      y += 5;
       
       // Teks sebelum data siswa
       const beforeStudentText = data.certBeforeStudentData || "Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:";
@@ -191,7 +213,7 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
         align: 'justify'
       });
       
-      y += 20;
+      y += 15;
 
       // Data siswa
       const studentInfo = [
@@ -215,7 +237,7 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
         y += 25;
       }
       
-      y += 10;
+      y += 5;
       
       // Teks setelah data siswa
       const afterStudentText = data.certAfterStudentData || "telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.";
@@ -224,7 +246,7 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
         align: 'justify'
       });
       
-      y += 50;
+      y += 30;
       
       // LULUS box
       const boxWidth = 200;
@@ -237,7 +259,7 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       doc.font('Helvetica-Bold').fontSize(16);
       addCenteredText('LULUS', y + 10, 16, true);
       
-      y += boxHeight + 30;
+      y += boxHeight + 20;
       
       // Tampilkan nilai jika diperlukan
       if (data.showGrades && data.grades && data.grades.length > 0) {
@@ -454,7 +476,7 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
         doc.page.margins.left, y, { align: 'justify', width: textWidth });
       
       // Jika tidak cukup ruang untuk tanda tangan, buat halaman baru
-      if (y + 200 > doc.page.height - doc.page.margins.bottom) {
+      if (y + 180 > doc.page.height - doc.page.margins.bottom) {
         doc.addPage({
           size: [210 * 2.83, 330 * 2.83],
           margins: {
@@ -466,7 +488,7 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
         });
         y = doc.page.margins.top;
       } else {
-        y += 60;
+        y += 40;
       }
       
       // Tanda tangan

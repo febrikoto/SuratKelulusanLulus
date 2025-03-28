@@ -109,11 +109,11 @@ export const CertificateServerSide: React.FC<CertificateServerSideProps> = ({ st
   return (
     <>
       <Button
-        className="mt-4 w-full"
+        className={`${showGrades ? 'bg-green-600 hover:bg-green-700' : 'bg-primary hover:bg-primary/90'} w-full`}
         onClick={handleDownload}
         disabled={loading}
       >
-        <Download className="mr-2 h-4 w-4" /> Unduh Sertifikat {showGrades ? 'dengan Nilai' : 'tanpa Nilai'}
+        <Download className="mr-2 h-4 w-4" /> Unduh SKL {showGrades ? 'dengan Nilai' : 'tanpa Nilai'}
       </Button>
       
       {loading && (

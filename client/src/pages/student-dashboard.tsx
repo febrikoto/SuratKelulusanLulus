@@ -2,10 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Student, Settings } from '@shared/schema';
 import { UserInfo, CertificateData } from '@shared/types';
-import { generatePdf, prepareCertificateData } from '../lib/utils';
-
-// Define a local type for the progress callback
-type ProgressCallback = (step: string, progress: number) => void;
+import { prepareCertificateData } from '../lib/utils';
 import { Download, Loader2, FileText, X, LayoutDashboard, GraduationCap, BookText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -143,131 +140,12 @@ export default function StudentDashboard() {
     }
   };
   
-  // Fungsi untuk mengunduh SKL dengan atau tanpa nilai
-  const handleDownloadSKL = (withGrades: boolean, preview: boolean = true) => {
+  // Fungsi untuk memperbarui data sertifikat dengan status menampilkan nilai
+  const updateCertificateWithGrades = (withGrades: boolean) => {
     if (!certificateData) return;
     
     // Update certificate data to show/hide grades
     setCertificateData({...certificateData, showGrades: withGrades});
-    
-    const filename = withGrades 
-      ? `SKL_Dengan_Nilai_${certificateData.nisn}` 
-      : `SKL_Tanpa_Nilai_${certificateData.nisn}`;
-      
-    // Verifikasi elemen yang akan digunakan untuk PDF
-    console.log("Memeriksa elemen untuk PDF...");
-    setTimeout(() => {
-      const container = document.getElementById('certificate-download-container');
-      console.log("Container exists:", !!container);
-      if (container) {
-        console.log("Container dimensions:", container.offsetWidth, "x", container.offsetHeight);
-        console.log("Container visibility:", window.getComputedStyle(container.parentElement as Element).display);
-      }
-    }, 50);
-    
-    // Reset the loading dialog state
-    setLoadingProgress(0);
-    setCurrentStep(0);
-    setLoadingError(null);
-    setLoadingStep('');
-    
-    // Update steps to pending
-    const updatedSteps = loadingSteps.map(step => ({
-      ...step,
-      status: 'pending' as LoadingStepStatus
-    }));
-    
-    // Show loading dialog
-    setShowLoadingDialog(true);
-    
-    // Slight delay to ensure state update is applied
-    setTimeout(() => {
-      try {
-        // Start tracking progress, update steps
-        const handleProgress = (step: string, progress: number) => {
-          setLoadingStep(step);
-          setLoadingProgress(progress);
-          
-          // Find step index
-          if (progress <= 30) {
-            setCurrentStep(0);
-            updatedSteps[0].status = 'loading' as LoadingStepStatus;
-          } else if (progress <= 60) {
-            setCurrentStep(1);
-            updatedSteps[0].status = 'success' as LoadingStepStatus;
-            updatedSteps[1].status = 'loading' as LoadingStepStatus;
-          } else if (progress <= 90) {
-            setCurrentStep(2);
-            updatedSteps[0].status = 'success' as LoadingStepStatus;
-            updatedSteps[1].status = 'success' as LoadingStepStatus;
-            updatedSteps[2].status = 'loading' as LoadingStepStatus;
-          } else {
-            setCurrentStep(3);
-            updatedSteps[0].status = 'success' as LoadingStepStatus;
-            updatedSteps[1].status = 'success' as LoadingStepStatus;
-            updatedSteps[2].status = 'success' as LoadingStepStatus;
-            updatedSteps[3].status = 'loading' as LoadingStepStatus;
-            
-            if (progress === 100) {
-              updatedSteps[3].status = 'success' as LoadingStepStatus;
-            }
-          }
-        };
-        
-        // Panggil generatePdf dengan container ID yang benar dan parameter yang sesuai
-        generatePdf(
-          'certificate-download-container', 
-          filename, 
-          handleProgress, // progress callback
-          preview // boolean untuk menentukan apakah hanya preview atau download
-        )
-          .then(() => {
-            // Wait a moment to show the success state
-            setTimeout(() => {
-              // Hide loading dialog
-              setShowLoadingDialog(false);
-              
-              toast({
-                title: "Success",
-                description: preview 
-                  ? `Preview SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil ditampilkan` 
-                  : `SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil diunduh`,
-              });
-            }, 1000);
-          })
-          .catch((error: any) => {
-            // Show error in dialog
-            setLoadingError("Terjadi kesalahan saat mengunduh SKL. Silakan coba lagi.");
-            
-            // Mark current step as error
-            if (currentStep < updatedSteps.length) {
-              updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
-            }
-            
-            toast({
-              title: "Error",
-              description: "Gagal mengunduh SKL",
-              variant: "destructive",
-            });
-            console.error(error);
-          });
-      } catch (error) {
-        // Show error in dialog
-        console.error("Error dalam proses mengunduh:", error);
-        setLoadingError("Terjadi kesalahan saat memproses SKL. Silakan coba lagi.");
-        
-        // Mark current step as error
-        if (currentStep < updatedSteps.length) {
-          updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
-        }
-        
-        toast({
-          title: "Error",
-          description: "Gagal memproses SKL",
-          variant: "destructive",
-        });
-      }
-    }, 100);
   };
   
   // Loading state or redirect if not authenticated
@@ -644,22 +522,6 @@ export default function StudentDashboard() {
             </Card>
           </AnimatedTabsContent>
         </AnimatedTabs>
-        
-        {/* Container for certificate download - disembunyikan namun tetap dirender dengan benar */}
-        <div style={{ 
-          position: 'fixed', 
-          left: '-9999px', 
-          top: '-9999px', 
-          opacity: '0',
-          width: '800px',
-          height: 'auto',
-          overflow: 'hidden',
-          display: 'block',
-          backgroundColor: '#fff',
-          padding: '0'
-        }} id="certificate-download-container">
-          {certificateData && <Certificate data={certificateData} />}
-        </div>
         
         {/* Certificate Loading Dialog */}
         {showLoadingDialog && (

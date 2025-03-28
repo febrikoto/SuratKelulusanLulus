@@ -5,10 +5,11 @@ import csvParser from "csv-parser";
 import { Readable } from "stream";
 import path from "path";
 import fs from "fs";
+import os from "os";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertStudentSchema, verificationSchema, insertGradeSchema, insertSettingsSchema, insertSubjectSchema } from "@shared/schema";
-import { CertificateData } from "@shared/types";
+import { CertificateData, SubjectGrade } from "@shared/types";
 import { generateCertificatePDF } from "./certificate-generator"; 
 import { formatDate } from "../client/src/lib/utils";
 
@@ -231,6 +232,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedStudent);
     } catch (error) {
       res.status(500).json({ message: "Failed to verify student" });
+    }
+  });
+
+  // Certificate API endpoint for PDF generation
+  app.get("/api/certificates/:studentId", requireAuth, async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId);
+      const showGrades = req.query.showGrades === 'true';
+      
+      if (isNaN(studentId)) {
+        return res.status(400).json({ error: 'Invalid student ID' });
+      }
+      
+      // Get the student data
+      const student = await storage.getStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ error: 'Student not found' });
+      }
+      
+      // Get settings
+      const settings = await storage.getSettings();
+      if (!settings) {
+        return res.status(404).json({ error: 'School settings not found' });
+      }
+      
+      // Get grades for the student if needed
+      let grades: SubjectGrade[] = [];
+      let averageGrade = 0;
+      
+      if (showGrades) {
+        const studentGrades = await storage.getStudentGrades(studentId);
+        
+        if (studentGrades && studentGrades.length > 0) {
+          // Use grade.subjectName directly as we store it in the grade object
+          grades = studentGrades.map((grade) => ({
+            name: grade.subjectName,
+            value: grade.value
+          }));
+          
+          // Calculate average
+          const sum = studentGrades.reduce((acc, grade) => acc + grade.value, 0);
+          averageGrade = sum / studentGrades.length;
+        }
+      }
+      
+      // Compose the certificate data
+      const certificateData: CertificateData = {
+        id: student.id,
+        nisn: student.nisn,
+        nis: student.nis,
+        fullName: student.fullName,
+        birthPlace: student.birthPlace,
+        birthDate: student.birthDate,
+        parentName: student.parentName,
+        className: student.className,
+        certNumber: `${settings.certNumberPrefix || ''}${student.id}/SKL/${new Date().getFullYear()}`,
+        certNumberPrefix: settings.certNumberPrefix || undefined,
+        certBeforeStudentData: settings.certBeforeStudentData || undefined,
+        certAfterStudentData: settings.certAfterStudentData || undefined,
+        certRegulationText: settings.certRegulationText || undefined,
+        certCriteriaText: settings.certCriteriaText || undefined,
+        issueDate: new Date().toISOString(),
+        graduationDate: settings.graduationDate || new Date().toISOString().split('T')[0],
+        graduationTime: settings.graduationTime || undefined,
+        headmasterName: settings.headmasterName,
+        headmasterNip: settings.headmasterNip,
+        headmasterSignature: settings.headmasterSignature || undefined,
+        schoolName: settings.schoolName,
+        schoolAddress: settings.schoolAddress,
+        schoolEmail: settings.schoolEmail || undefined,
+        schoolWebsite: settings.schoolWebsite || undefined,
+        schoolLogo: settings.schoolLogo || undefined,
+        schoolStamp: settings.schoolStamp || undefined,
+        ministryLogo: settings.ministryLogo || undefined,
+        cityName: settings.cityName || 'Jakarta',
+        provinceName: settings.provinceName || 'DKI Jakarta',
+        academicYear: settings.academicYear,
+        showGrades: showGrades,
+        majorName: "MIPA", // Default to MIPA since majorName is not in settings
+        grades: grades,
+        averageGrade: averageGrade
+      };
+      
+      // Generate a PDF file and send it as response
+      const filePath = path.join(os.tmpdir(), `certificate-${student.id}.pdf`);
+      
+      await generateCertificatePDF(certificateData, filePath);
+      
+      res.download(filePath, `SKL-${student.fullName.replace(/\s+/g, '-')}-${student.nisn}.pdf`, (err) => {
+        if (err) {
+          console.error('Error sending file:', err);
+          res.status(500).json({ error: 'Error sending certificate file' });
+        }
+        
+        // Remove the temporary file after sending
+        fs.unlink(filePath, (unlinkErr) => {
+          if (unlinkErr) {
+            console.error('Error removing temporary file:', unlinkErr);
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Error generating certificate:', error);
+      res.status(500).json({ error: 'Failed to generate certificate' });
     }
   });
 

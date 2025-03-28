@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { CertificateData, SubjectGrade } from '@shared/types';
-import { formatDate, generatePdf } from '../lib/utils';
+import { formatDate } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 
@@ -14,8 +14,12 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
   const certificateRef = useRef<HTMLDivElement>(null);
 
   const handleDownload = async () => {
-    console.log('Certificate component handleDownload not implemented');
-    alert('Fitur ini tidak tersedia dalam pop-up. Silakan gunakan tombol unduh di dashboard utama.');
+    if (data && data.id) {
+      const url = `/api/certificates/${data.id}?showGrades=${data.showGrades ? 'true' : 'false'}`;
+      window.open(url, '_blank');
+    } else {
+      alert('Tidak dapat mengunduh sertifikat. Data siswa tidak lengkap.');
+    }
   };
 
   return (

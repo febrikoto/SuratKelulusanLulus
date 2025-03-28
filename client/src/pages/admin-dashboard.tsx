@@ -6,7 +6,7 @@ import { Student } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { prepareCertificateData, generatePdf } from '@/lib/utils.tsx';
+
 import WelcomeAnimation from '@/components/WelcomeAnimation';
 import { 
   PlusCircle, 
@@ -172,29 +172,13 @@ export default function AdminDashboard() {
   };
   
   const generateCertificate = (student: Student) => {
-    const certificateData = prepareCertificateData(student, false, schoolSettings);
-    setPreviewCertificateData(certificateData);
+    const url = `/api/certificates/${student.id}?showGrades=false`;
+    window.open(url, '_blank');
     
-    // Use setTimeout to ensure the certificate is rendered before generating PDF
-    setTimeout(() => {
-      generatePdf('certificate-container', `SKL_${student.nisn}.pdf`)
-        .then(() => {
-          toast({
-            title: "Success",
-            description: "Certificate downloaded successfully",
-          });
-          setPreviewCertificateData(null);
-        })
-        .catch((error) => {
-          toast({
-            title: "Error",
-            description: "Failed to generate certificate",
-            variant: "destructive",
-          });
-          console.error(error);
-          setPreviewCertificateData(null);
-        });
-    }, 500);
+    toast({
+      title: "Certificate Requested",
+      description: "Certificate is being generated and will download automatically",
+    });
   };
   
   const handleGenerateAllCertificates = () => {
