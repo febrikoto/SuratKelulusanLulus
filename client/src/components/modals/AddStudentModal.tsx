@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
@@ -32,6 +32,20 @@ type FormValues = z.infer<typeof formSchema>;
 export const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Fetch class list from settings
+  const { data: settings } = useQuery({
+    queryKey: ['/api/settings'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/settings');
+      return res.json();
+    },
+  });
+  
+  // Parse classList from settings
+  const classOptions = settings?.classList ? 
+    settings.classList.split(',').map(className => className.trim()) : 
+    ['XII IPA 1', 'XII IPA 2', 'XII IPS 1', 'XII IPS 2']; // Default values if settings not loaded
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -187,10 +201,11 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClos
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="XII IPA 1">XII IPA 1</SelectItem>
-                      <SelectItem value="XII IPA 2">XII IPA 2</SelectItem>
-                      <SelectItem value="XII IPS 1">XII IPS 1</SelectItem>
-                      <SelectItem value="XII IPS 2">XII IPS 2</SelectItem>
+                      {classOptions.map((className) => (
+                        <SelectItem key={className} value={className}>
+                          {className}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

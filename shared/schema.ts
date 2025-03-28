@@ -31,6 +31,7 @@ export const settings = pgTable("settings", {
   cityName: varchar("city_name", { length: 100 }).default(""),
   provinceName: varchar("province_name", { length: 100 }).default(""),
   majorList: text("major_list").default("semua,MIPA,IPS,BAHASA"),
+  classList: text("class_list").default("XII IPA 1,XII IPA 2,XII IPS 1,XII IPS 2"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
@@ -119,7 +120,8 @@ export const insertSettingsSchema = createInsertSchema(settings)
     graduationTime: z.string().optional().default(""),
     cityName: z.string().optional().default(""),
     provinceName: z.string().optional().default(""),
-    majorList: z.string().optional().default("semua,MIPA,IPS,BAHASA")
+    majorList: z.string().optional().default("semua,MIPA,IPS,BAHASA"),
+    classList: z.string().optional().default("XII IPA 1,XII IPA 2,XII IPS 1,XII IPS 2")
   });
 
 export const insertGradeSchema = createInsertSchema(grades).omit({

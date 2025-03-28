@@ -658,7 +658,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           graduationTime: "10:00",
           cityName: "Jakarta",
           provinceName: "DKI Jakarta",
-          certNumberPrefix: "SKL/2024"
+          certNumberPrefix: "SKL/2024",
+          majorList: "semua,MIPA,IPS,BAHASA",
+          classList: "XII IPA 1,XII IPA 2,XII IPS 1,XII IPS 2"
         };
         
         settings = await storage.saveSettings(defaultSettings);

@@ -48,6 +48,7 @@ const formSchema = z.object({
   certRegulationText: z.string().default(''),
   certCriteriaText: z.string().default(''),
   majorList: z.string().default('semua,MIPA,IPS,BAHASA'),
+  classList: z.string().default('XII IPA 1,XII IPA 2,XII IPS 1,XII IPS 2'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -88,6 +89,7 @@ const CertificateSettingsModal: React.FC<CertificateSettingsModalProps> = ({ isO
       certRegulationText: '',
       certCriteriaText: '',
       majorList: 'semua,MIPA,IPS,BAHASA',
+      classList: 'XII IPA 1,XII IPA 2,XII IPS 1,XII IPS 2',
     },
   });
   
@@ -108,6 +110,7 @@ const CertificateSettingsModal: React.FC<CertificateSettingsModalProps> = ({ isO
         certRegulationText: settings.certRegulationText || '',
         certCriteriaText: settings.certCriteriaText || '',
         majorList: settings.majorList || 'semua,MIPA,IPS,BAHASA',
+        classList: settings.classList || 'XII IPA 1,XII IPA 2,XII IPS 1,XII IPS 2',
       });
     }
   }, [settings, form]);
@@ -382,7 +385,7 @@ const CertificateSettingsModal: React.FC<CertificateSettingsModalProps> = ({ isO
               <div className="space-y-5 mt-6">
                 <div className="flex items-center space-x-2 mb-2 sticky top-0 bg-background z-10 py-2 border-b">
                   <Clipboard className="h-5 w-5 text-primary" />
-                  <h3 className="text-md font-semibold">Pengaturan Jurusan</h3>
+                  <h3 className="text-md font-semibold">Pengaturan Jurusan & Kelas</h3>
                 </div>
                 
                 <FormField
@@ -401,6 +404,28 @@ const CertificateSettingsModal: React.FC<CertificateSettingsModalProps> = ({ isO
                       <FormDescription>
                         Daftar jurusan yang tersedia di sekolah. Pisahkan dengan koma (,).
                         Contoh: semua,MIPA,IPS,BAHASA
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="classList"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Daftar Kelas</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="XII IPA 1,XII IPA 2,XII IPS 1,XII IPS 2" 
+                          className="min-h-[80px]"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Daftar kelas yang tersedia di sekolah. Pisahkan dengan koma (,).
+                        Contoh: XII IPA 1,XII IPA 2,XII IPS 1,XII IPS 2
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
