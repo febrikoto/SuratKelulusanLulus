@@ -88,14 +88,14 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       drawPlusMark(docWidth - margin, docHeight - margin);
 
       // Header: logos & school name
-      const headerY = 40;
-      const headerHeight = 100;
+      const headerY = 35;
+      const headerHeight = 80;
       
       // Logo Kementerian di kiri
       if (data.ministryLogo) {
         try {
           doc.image(data.ministryLogo, doc.page.margins.left, headerY, {
-            width: 70
+            width: 60
           });
         } catch (e) {
           console.error("Error loading ministry logo:", e);
@@ -105,8 +105,8 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       // Logo Sekolah di kanan
       if (data.schoolLogo) {
         try {
-          doc.image(data.schoolLogo, doc.page.width - doc.page.margins.right - 70, headerY, {
-            width: 70
+          doc.image(data.schoolLogo, doc.page.width - doc.page.margins.right - 60, headerY, {
+            width: 60
           });
         } catch (e) {
           console.error("Error loading school logo:", e);
@@ -114,23 +114,23 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       }
       
       // Kop surat dengan teks (di tengah antara kedua logo)
-      doc.fontSize(14).font('Helvetica-Bold');
+      doc.fontSize(13).font('Helvetica-Bold');
       addCenteredText(`PEMERINTAH PROVINSI ${data.provinceName.toUpperCase()}`, headerY);
-      addCenteredText('DINAS PENDIDIKAN', headerY + 20);
-      addCenteredText(data.schoolName.toUpperCase(), headerY + 40, 16);
-      doc.fontSize(11).font('Helvetica');
-      addCenteredText(`Jalan: ${data.schoolAddress}`, headerY + 65);
+      addCenteredText('DINAS PENDIDIKAN', headerY + 16);
+      addCenteredText(data.schoolName.toUpperCase(), headerY + 32, 14);
+      doc.fontSize(10).font('Helvetica');
+      addCenteredText(`Jalan: ${data.schoolAddress}`, headerY + 50);
       
       if (data.schoolEmail || data.schoolWebsite) {
         let contactText = '';
         if (data.schoolEmail) contactText += `E-mail: ${data.schoolEmail} `;
         if (data.schoolEmail && data.schoolWebsite) contactText += ' - ';
         if (data.schoolWebsite) contactText += `Website: ${data.schoolWebsite}`;
-        addCenteredText(contactText, headerY + 85);
+        addCenteredText(contactText, headerY + 65);
       }
 
       // Garis pemisah header
-      const lineY = headerY + headerHeight + 10;
+      const lineY = headerY + headerHeight;
       doc.moveTo(doc.page.margins.left, lineY)
          .lineTo(doc.page.width - doc.page.margins.right, lineY)
          .lineWidth(2)
@@ -161,7 +161,7 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       
       // Teks kriteria kelulusan
       if (data.certCriteriaText) {
-        // Kriteria dari database
+        // Kriteria dari database - format yang disimpan dari editor
         // Karena kita tidak bisa langsung parse HTML, kita harus membuat parsing teks sederhana
         const criteriaParagraphs = data.certCriteriaText
           .replace(/<\/?p>/g, '')
@@ -175,31 +175,41 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
           .split('\n')
           .filter(line => line.trim() !== '');
           
+        // Tambahkan judul Kriteria sebelum list
+        doc.font('Helvetica').fontSize(12);
+        doc.text('Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.', doc.page.margins.left, y, { 
+          width: textWidth, 
+          align: 'left'
+        });
+        y += doc.heightOfString('Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.', { width: textWidth }) + 15;
+        
         for (const paragraph of criteriaParagraphs) {
-          y += doc.heightOfString(paragraph, { width: textWidth, align: 'justify' });
-          doc.text(paragraph.trim(), doc.page.margins.left, y - doc.heightOfString(paragraph), {
-            width: textWidth,
-            align: 'justify'
+          doc.text(paragraph.trim(), doc.page.margins.left + 20, y, {
+            width: textWidth - 20,
+            align: 'left'
           });
-          y += 10; // Spacing antar paragraf
+          y += doc.heightOfString(paragraph.trim(), { width: textWidth - 20 }) + 10;
         }
       } else {
-        // Kriteria default
+        // Kriteria default - format sesuai gambar dari user
+        doc.font('Helvetica').fontSize(12);
+        doc.text('Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.', doc.page.margins.left, y, { 
+          width: textWidth, 
+          align: 'left'
+        });
+        y += doc.heightOfString('Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.', { width: textWidth }) + 15;
+        
         const defaultCriteria = [
-          `Kepala ${data.schoolName} berdasarkan ketentuan yang berlaku mempertimbangan kelulusan peserta didik pada Tahun Pelajaran ${data.academicYear}, diantaranya sebagai berikut:`,
-          '1. Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.',
-          `2. Surat Kepala Dinas Pendidikan Provinsi ${data.provinceName} Nomor : 400.14.4.3/1107/PSMA/DISDIK-2024 tanggal 18 April 2024 tentang Kelulusan SMA/SMK/SLB Tahun Ajaran ${data.academicYear}`,
-          '3. Ketuntasan dari seluruh program pembelajaran sesuai kurikulum yang berlaku, termasuk Ekstrakurikuler dan prestasi lainnya',
-          `4. Hasil Rapat Pleno Dewan Guru pada hari Senin, ${formatDateForCertificate(data.graduationDate)} ${data.graduationTime ? `Pukul ${data.graduationTime}` : ''}.`
+          `• Surat Kepala Dinas Pendidikan Provinsi ${data.provinceName} Nomor : 400.14.4.3/1107/PSMA/DISDIK-2024 tanggal 18 April 2025 tentang Kelulusan SMA/SMK/SLB Tahun Ajaran ${data.academicYear}`,
+          `• Ketuntasan dari seluruh program pembelajaran sesuai kurikulum yang berlaku, termasuk Ekstrakurikuler dan Prestasi lainnya.`
         ];
         
         for (const line of defaultCriteria) {
-          y += doc.heightOfString(line, { width: textWidth });
-          doc.text(line, doc.page.margins.left, y - doc.heightOfString(line), {
-            width: textWidth,
-            align: line.startsWith('1.') || line.startsWith('2.') || line.startsWith('3.') || line.startsWith('4.') ? 'left' : 'justify'
+          doc.text(line, doc.page.margins.left + 20, y, {
+            width: textWidth - 20,
+            align: 'left'
           });
-          y += 10; // Spacing between lines
+          y += doc.heightOfString(line, { width: textWidth - 20 }) + 10;
         }
       }
       
