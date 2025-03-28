@@ -258,48 +258,49 @@ const StudentGradesModal: React.FC<StudentGradesModalProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Object.entries(groupedGrades).map(([category, categoryGrades]) => (
-                  <React.Fragment key={category}>
-                    <TableRow className="bg-gray-50 dark:bg-gray-800/50">
-                      <TableCell colSpan={4} className="font-medium py-2">
-                        {category}
-                      </TableCell>
-                    </TableRow>
-                    {categoryGrades.map((grade, index) => (
-                      <TableRow key={grade.id}>
-                        <TableCell className="text-center">{index + 1}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <Book className="h-4 w-4 mr-2 text-gray-400" />
-                            {grade.subjectName}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {grade.group && (
-                            <Badge variant="outline" className="font-normal">
-                              {grade.group}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className={`text-right ${getGradeColor(grade.value)}`}>
-                          {grade.value}
+                {Object.entries(groupedGrades).map(([category, categoryGrades]) => {
+                  const avgValue = categoryGrades.reduce((sum, g) => sum + g.value, 0) / (categoryGrades.length || 1);
+                  const roundedAvg = Math.round(avgValue * 100) / 100;
+
+                  return (
+                    <React.Fragment key={category}>
+                      <TableRow className="bg-gray-50 dark:bg-gray-800/50">
+                        <TableCell colSpan={4} className="font-medium py-2">
+                          {category}
                         </TableCell>
                       </TableRow>
-                    ))}
-                    <TableRow className="border-b-2">
-                      <TableCell colSpan={3} className="text-right font-medium">
-                        Rata-rata {category}:
-                      </TableCell>
-                      <TableCell className={`text-right font-medium ${
-                        getGradeColor(
-                          categoryGrades.reduce((sum, g) => sum + g.value, 0) / categoryGrades.length
-                        )
-                      }`}>
-                        {Math.round((categoryGrades.reduce((sum, g) => sum + g.value, 0) / categoryGrades.length) * 100) / 100}
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                ))}
+                      {categoryGrades.map((grade, index) => (
+                        <TableRow key={grade.id}>
+                          <TableCell className="text-center">{index + 1}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <Book className="h-4 w-4 mr-2 text-gray-400" />
+                              {grade.subjectName}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {grade.group && (
+                              <Badge variant="outline" className="font-normal">
+                                {grade.group}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className={`text-right ${getGradeColor(grade.value)}`}>
+                            {grade.value}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="border-b-2">
+                        <TableCell colSpan={3} className="text-right font-medium">
+                          Rata-rata {category}:
+                        </TableCell>
+                        <TableCell className={`text-right font-medium ${getGradeColor(roundedAvg)}`}>
+                          {roundedAvg}
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
+                  );
+                })}
                 {filteredGrades.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-10 text-gray-500">

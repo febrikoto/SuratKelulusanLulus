@@ -35,8 +35,8 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ user, onLogout }) 
 
       <div className="flex items-center gap-4">
         <div className="text-sm text-right">
-          <div className="font-medium">{user.fullName}</div>
-          <div className="text-gray-500 dark:text-gray-400">NISN: {user.studentId || '-'}</div>
+          <div className="font-medium">{user?.fullName || 'Siswa'}</div>
+          <div className="text-gray-500 dark:text-gray-400">NISN: {user?.studentId || '-'}</div>
         </div>
         <Button
           variant="outline"

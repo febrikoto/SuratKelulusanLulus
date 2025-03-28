@@ -57,8 +57,8 @@ export const TeacherHeader: React.FC<TeacherHeaderProps> = ({ user, onLogout }) 
         </nav>
         
         <div className="text-sm text-right hidden sm:block">
-          <div className="font-medium">{user.fullName}</div>
-          <div className="text-gray-500 dark:text-gray-400">{user.username}</div>
+          <div className="font-medium">{user?.fullName || 'Guru'}</div>
+          <div className="text-gray-500 dark:text-gray-400">{user?.username || ''}</div>
         </div>
         <Button
           variant="outline"
