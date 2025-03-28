@@ -25,7 +25,19 @@ export function AuthRedirect({ children }: AuthRedirectProps) {
       // If the user is on login page or root, redirect to the appropriate dashboard
       if (currentPath === '/' || currentPath === '/login') {
         console.log('Redirecting to', redirectPath);
-        navigate(redirectPath);
+        // Force a page reload using window.location.href instead of navigate
+        window.location.href = redirectPath;
+      } else {
+        // Make sure the user is on the correct dashboard for their role
+        if (
+          (user.role === 'admin' && !currentPath.startsWith('/admin')) ||
+          (user.role === 'guru' && !currentPath.startsWith('/guru')) ||
+          (user.role === 'siswa' && !currentPath.startsWith('/siswa'))
+        ) {
+          // User is on wrong dashboard, redirect to correct one
+          console.log('User is on wrong dashboard, redirecting to', redirectPath);
+          window.location.href = redirectPath;
+        }
       }
     } else if (!isLoading && !user) {
       // User is not authenticated, redirect to login if on a protected route
