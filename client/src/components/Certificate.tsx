@@ -1,9 +1,19 @@
 import React, { useRef, useState } from 'react';
 import { CertificateData, SubjectGrade } from '@shared/types';
-import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Download, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+
+// Format tanggal untuk lokal Indonesia
+function formatDate(dateString: string): string {
+  const options: Intl.DateTimeFormatOptions = {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  };
+  
+  return new Date(dateString).toLocaleDateString('id-ID', options);
+}
 
 interface CertificateProps {
   data: CertificateData;
@@ -15,7 +25,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
   const certificateRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   // Set level zoom default lebih kecil untuk mobile
-  const [zoomLevel, setZoomLevel] = useState(isMobile ? 0.6 : 0.8);
+  const [zoomLevel, setZoomLevel] = useState(isMobile ? 0.5 : 0.8);
 
   const handleDownload = async () => {
     console.log('Certificate component handleDownload not implemented');
@@ -31,7 +41,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
   };
 
   const handleResetZoom = () => {
-    setZoomLevel(isMobile ? 0.6 : 0.8);
+    setZoomLevel(isMobile ? 0.5 : 0.8);
   };
 
   // Wrapper style untuk overflow

@@ -10,14 +10,6 @@ export async function generatePdf(
   filename: string, 
   onProgress?: ((step: string, progress: number) => void) | undefined
 ): Promise<void> {
-  // Variables untuk menyimpan referensi elemen yang di-clone
-  let clone: HTMLElement | null = null;
-  let altClone: HTMLElement | null = null;
-  
-  // Pastikan ukuran umum A4 dalam pixel dengan DPI standar (96 dpi)
-  const A4Width: number = 794; // ~ 210mm (8.27 inches × 96dpi)
-  const A4Height: number = 1123; // ~ 297mm (11.69 inches × 96dpi)
-  
   try {
     // Report initial progress
     onProgress && onProgress('Memulai proses', 5);
@@ -35,76 +27,38 @@ export async function generatePdf(
     
     // Log element properties untuk debugging
     console.log(`Element found: ${element.tagName}, Width: ${element.offsetWidth}, Height: ${element.offsetHeight}`);
-    console.log(`Visibility: ${window.getComputedStyle(element).visibility}, Display: ${window.getComputedStyle(element).display}`);
     
-    // Clone element untuk dirender
-    clone = element.cloneNode(true) as HTMLElement;
-    document.body.appendChild(clone);
+    // Pendekatan sederhana: tangkap langsung saja
+    onProgress && onProgress('Menyiapkan elemen sertifikat', 20);
     
-    // Set styling untuk clone element
-    clone.style.position = 'fixed';
-    clone.style.top = '-9999px';
-    clone.style.left = '-9999px';
-    clone.style.width = '210mm';
-    clone.style.height = '297mm';
-    clone.style.margin = '0';
-    clone.style.padding = '0';
-    clone.style.border = 'none';
-    clone.style.boxSizing = 'border-box';
-    clone.style.overflow = 'hidden';
-    clone.style.zIndex = '-9999';
-    clone.style.backgroundColor = 'white';
-    clone.style.transform = 'none';
-    clone.style.transformOrigin = 'center top';
-    clone.style.zoom = '1';
-    clone.style.display = 'block';
-    clone.style.visibility = 'visible';
-    clone.style.opacity = '1';
-    
-    // Progress: Element ditemukan
-    onProgress && onProgress('Menyiapkan elemen sertifikat', 15);
-    
-    // Berikan waktu untuk update styling
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Buat opsi html2canvas yang optimal untuk A4
+    // Pendekatan baru: Ambil screenshot langsung dari elemen asli
+    // dengan opsi yang disederhanakan
     const options = {
-      scale: 2, // Tingkatkan kualitas dengan scale 2
+      scale: 2,
       useCORS: true,
       allowTaint: true,
-      backgroundColor: '#FFFFFF',
-      logging: true,
-      width: A4Width, 
-      height: A4Height,
-      windowWidth: A4Width,
-      windowHeight: A4Height,
+      backgroundColor: '#FFFFFF', 
       scrollX: 0,
       scrollY: 0,
-      x: 0,
-      y: 0,
-      foreignObjectRendering: false, // Mungkin membantu dengan masalah rendering
-      onclone: (clonedDoc: Document) => {
-        // Log tinggi dokumen cloned untuk verifikasi
-        console.log('Cloned document height: ', clonedDoc.documentElement.scrollHeight);
-        return clonedDoc;
-      },
-      ignoreElements: (element: Element) => {
-        return element.tagName === 'IFRAME' || element.tagName === 'VIDEO';
-      }
+      windowWidth: undefined,
+      windowHeight: undefined
     };
     
-    try {
-      // Progress: Mulai render
-      onProgress && onProgress('Membuat gambar sertifikat', 40);
-      
-      const canvas = await html2canvas(clone, options);
-      console.log('Canvas created successfully:', canvas.width, 'x', canvas.height);
-      
-      // Progress: Render canvas selesai
-      onProgress && onProgress('Mengoptimasi gambar', 60);
-      
-      const imgData = canvas.toDataURL('image/jpeg', 0.9);
-      
+    // Progress: Mulai render
+    onProgress && onProgress('Membuat gambar sertifikat', 40);
+    
+    // Langsung render dari elemen asli
+    const canvas = await html2canvas(element, options);
+    console.log('Canvas created successfully:', canvas.width, 'x', canvas.height);
+    
+    // Progress: Render canvas selesai
+    onProgress && onProgress('Mengoptimasi gambar', 60);
+    
+    // Jika canvas berhasil dibuat, konversi ke gambar
+    const imgData = canvas.toDataURL('image/jpeg', 0.9);
+    
+    // Coba pendekatan paling sederhana dulu: unduh saja sebagai gambar
+    if (filename.endsWith('.pdf')) {
       // Progress: Optimasi selesai
       onProgress && onProgress('Membuat file PDF', 70);
       
@@ -113,165 +67,101 @@ export async function generatePdf(
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
-        compress: true,
-        hotfixes: ['px_scaling', 'c2d_text_baseline']
+        compress: true
       });
       
       // A4 dimensions
       const a4Width = 210;  // width in mm
       const a4Height = 297; // height in mm
       
-      // Progress: Persiapan PDF
-      onProgress && onProgress('Mengukur dan mengatur dokumen', 75);
+      // Hitung rasio untuk menyesuaikan gambar
+      const imgRatio = canvas.width / canvas.height;
       
-      // Hitung rasio aspek canvas
-      const canvasRatio = canvas.width / canvas.height;
-      // Hitung rasio aspek A4
-      const a4Ratio = a4Width / a4Height;
-      
-      // Sesuaikan dimensi gambar
+      // Sesuaikan dimensi gambar agar fit di halaman PDF (skala penuh)
       let imgWidth = a4Width;
-      let imgHeight = a4Height;
+      let imgHeight = imgWidth / imgRatio;
       
-      // Jika rasio aspek berbeda, sesuaikan dimensi
-      if (Math.abs(canvasRatio - a4Ratio) > 0.01) {
-        console.log('Aspect ratio adjustment needed:', canvasRatio, a4Ratio);
-        if (canvasRatio > a4Ratio) {
-          // Canvas lebih lebar, sesuaikan tinggi
-          imgHeight = a4Width / canvasRatio;
-        } else {
-          // Canvas lebih tinggi, sesuaikan lebar
-          imgWidth = a4Height * canvasRatio;
-        }
+      // Jika tinggi lebih dari halaman A4, skala berdasarkan tinggi
+      if (imgHeight > a4Height) {
+        imgHeight = a4Height;
+        imgWidth = imgHeight * imgRatio;
       }
       
-      // Progress: Menyesuaikan gambar
+      // Progress: Persiapan PDF
       onProgress && onProgress('Memasukkan gambar ke PDF', 80);
       
-      // Tambahkan gambar ke PDF (centered if needed)
+      // Posisikan gambar di tengah halaman
       const xOffset = (a4Width - imgWidth) / 2;
       const yOffset = (a4Height - imgHeight) / 2;
       
+      // Tambahkan gambar ke PDF
       pdf.addImage(imgData, 'JPEG', xOffset, yOffset, imgWidth, imgHeight);
       
       // Progress: Siap untuk save
       onProgress && onProgress('Menyimpan file PDF', 90);
       
-      // Simpan PDF dengan nama file yang benar
+      // Simpan PDF
       pdf.save(filename);
-      
-      // Progress: Selesai
-      onProgress && onProgress('Berhasil membuat sertifikat', 100);
-      console.log('PDF berhasil dibuat');
-      
-    } catch (canvasError) {
-      console.error('Metode utama gagal, mencoba metode alternatif:', canvasError);
-      
-      // Progress: Error terjadi, mencoba alternatif
-      onProgress && onProgress('Terjadi kesalahan, mencoba metode alternatif', 50);
-      
-      try {
-        // Coba dengan pengaturan yang lebih sederhana
-        onProgress && onProgress('Mencoba metode alternatif dengan pengaturan berbeda', 60);
-        
-        // Opsi yang lebih sederhana untuk metode alternatif
-        const simpleOptions = {
-          scale: 1.5,
-          useCORS: true,
-          allowTaint: true, 
-          logging: false,
-          backgroundColor: '#FFFFFF',
-          width: A4Width,
-          height: A4Height,
-          onclone: (doc: Document) => {
-            console.log('Alt cloned document height: ', doc.documentElement.scrollHeight);
-            const allElements = doc.querySelectorAll('*');
-            console.log('Total elements in alt clone: ', allElements.length);
-            return doc;
-          }
-        };
-        
-        // Buat clone baru untuk metode alternatif
-        altClone = element.cloneNode(true) as HTMLElement;
-        document.body.appendChild(altClone);
-        
-        // Set styling untuk clone alternatif
-        altClone.style.position = 'fixed';
-        altClone.style.top = '-9999px';
-        altClone.style.left = '-9999px';
-        altClone.style.width = '210mm';
-        altClone.style.height = '297mm';
-        altClone.style.margin = '0';
-        altClone.style.padding = '0';
-        altClone.style.border = 'none';
-        altClone.style.boxSizing = 'border-box';
-        altClone.style.overflow = 'hidden';
-        altClone.style.backgroundColor = 'white';
-        
-        // Progress: Alternatif berhasil
-        onProgress && onProgress('Membuat file JPG sebagai alternatif', 70);
-        
-        const altCanvas = await html2canvas(altClone, simpleOptions);
-        console.log('Alt canvas created successfully:', altCanvas.width, 'x', altCanvas.height);
-        const altImgData = altCanvas.toDataURL('image/jpeg', 0.95);
-        
-        // Buat link untuk download image sebagai alternatif
-        const a = document.createElement('a');
-        a.href = altImgData;
-        a.download = filename.replace('.pdf', '.jpg');
-        document.body.appendChild(a);
-        
-        // Progress: Selesai dengan alternatif
-        onProgress && onProgress('Menyimpan file JPG', 90);
-        
-        a.click();
-        document.body.removeChild(a);
-        
-        // Progress: Selesai dengan alternatif
-        onProgress && onProgress('Berhasil membuat gambar sertifikat sebagai alternatif', 100);
-      } catch (altError) {
-        console.error('Semua metode gagal:', altError);
-        throw altError;
-      }
-    } finally {
-      // Clean up all clones
-      try {
-        if (clone && clone.parentElement) {
-          document.body.removeChild(clone);
-        }
-      } catch (err) {
-        console.error('Error removing clone in finally:', err);
-      }
-      
-      try {
-        if (altClone && altClone.parentElement) {
-          document.body.removeChild(altClone);
-        }
-      } catch (err) {
-        console.error('Error removing altClone in finally:', err);
-      }
+    } else {
+      // Langsung simpan sebagai gambar jika bukan PDF
+      const a = document.createElement('a');
+      a.href = imgData;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
+    
+    // Progress: Selesai
+    onProgress && onProgress('Berhasil membuat sertifikat', 100);
+    console.log('Sertifikat berhasil dibuat', filename);
     
     return Promise.resolve();
   } catch (error) {
-    console.error('Error generating PDF:', error);
+    console.error('Error generating certificate:', error);
     onProgress && onProgress('Terjadi kesalahan saat membuat sertifikat', 100);
     
-    // Make sure to clean up any clones that might be left
+    // Sebagai fallback langsung ke JPG saja
     try {
-      if (clone && clone.parentElement) {
-        document.body.removeChild(clone);
+      onProgress && onProgress('Mencoba unduh sebagai gambar (JPG)', 50);
+      
+      const element = document.getElementById(elementId);
+      if (!element) {
+        throw new Error('Element not found for fallback method');
       }
-    } catch (err) {
-      console.error('Error removing clone:', err);
-    }
-    
-    try {
-      if (altClone && altClone.parentElement) {
-        document.body.removeChild(altClone);
-      }
-    } catch (err) {
-      console.error('Error removing altClone:', err);
+      
+      // Opsi yang lebih sederhana, fokus pada kualitas gambar 
+      const canvas = await html2canvas(element, { 
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#FFFFFF'
+      });
+      
+      onProgress && onProgress('Gambar berhasil dibuat, menyiapkan download', 75);
+      
+      // Konversi ke gambar dengan nama yang sesuai
+      const imgData = canvas.toDataURL('image/jpeg', 0.95); // Quality 95%
+      
+      // Buat link download
+      const a = document.createElement('a');
+      a.href = imgData;
+      a.download = filename.replace('.pdf', '.jpg');
+      document.body.appendChild(a);
+      
+      // Klik link untuk memulai download
+      onProgress && onProgress('Menyimpan gambar sertifikat', 90);
+      a.click();
+      
+      // Hapus link setelah download dimulai
+      setTimeout(() => {
+        document.body.removeChild(a);
+      }, 100);
+      
+      onProgress && onProgress('Berhasil membuat gambar sertifikat', 100);
+    } catch (fallbackError) {
+      console.error('Fallback method failed:', fallbackError);
+      return Promise.reject(error);
     }
     
     return Promise.reject(error);
