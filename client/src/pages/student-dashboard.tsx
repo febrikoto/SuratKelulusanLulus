@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { StudentHeader } from '@/components/StudentHeader';
 import { Certificate } from '@/components/Certificate';
 import { CertificateLoading } from '@/components/CertificateLoading';
+import { CertificateServerSide } from '@/components/CertificateServerSide';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/queryClient';
@@ -430,20 +431,17 @@ export default function StudentDashboard() {
                           </div>
                           
                           <div className="flex flex-col sm:flex-row gap-3">
-                            <Button 
-                              variant="outline" 
-                              onClick={() => handleDownloadSKL(false, false)}
-                            >
-                              <Download className="mr-2 h-4 w-4" />
-                              Unduh SKL Tanpa Nilai
-                            </Button>
-                            <Button 
-                              variant="outline"
-                              onClick={() => handleDownloadSKL(true, false)}
-                            >
-                              <Download className="mr-2 h-4 w-4" />
-                              Unduh SKL Dengan Nilai
-                            </Button>
+                            {/* Server-side PDF generation without grades */}
+                            <CertificateServerSide
+                              studentId={student.id}
+                              showGrades={false}
+                            />
+                            
+                            {/* Server-side PDF generation with grades */}
+                            <CertificateServerSide
+                              studentId={student.id}
+                              showGrades={true}
+                            />
                           </div>
                         </div>
                       ) : student?.status === 'rejected' ? (
@@ -542,14 +540,11 @@ export default function StudentDashboard() {
                           </table>
                         </div>
                         <div className="flex justify-end">
-                          <Button 
-                            variant="outline"
-                            onClick={() => handleDownloadSKL(true, false)}
-                            className="flex items-center gap-2"
-                          >
-                            <Download className="h-4 w-4" />
-                            Unduh SKL Dengan Nilai
-                          </Button>
+                          {/* Server-side PDF generation with grades */}
+                          <CertificateServerSide
+                            studentId={student.id}
+                            showGrades={true}
+                          />
                         </div>
                       </div>
                     ) : (
@@ -711,13 +706,12 @@ export default function StudentDashboard() {
                   >
                     Tutup
                   </Button>
-                  <Button 
-                    onClick={() => handleDownloadSKL(showGradesInPopup, false)}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Unduh
-                  </Button>
+                  {student && (
+                    <CertificateServerSide
+                      studentId={student.id}
+                      showGrades={showGradesInPopup}
+                    />
+                  )}
                 </div>
               </Dialog.Content>
             </Dialog.Portal>

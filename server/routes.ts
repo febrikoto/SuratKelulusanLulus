@@ -1,11 +1,16 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import csvParser from "csv-parser";
 import { Readable } from "stream";
+import path from "path";
+import fs from "fs";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertStudentSchema, verificationSchema, insertGradeSchema, insertSettingsSchema, insertSubjectSchema } from "@shared/schema";
+import { CertificateData } from "@shared/types";
+import { generateCertificatePDF } from "./certificate-generator"; 
+import { formatDate } from "../client/src/lib/utils";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const { requireAuth, requireRole } = setupAuth(app);
@@ -960,6 +965,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Bulk delete error:', error);
       res.status(500).json({ message: "Failed to perform bulk delete operation" });
+    }
+  });
+  
+  // Pastikan direktori untuk file sementara PDF ada
+  if (!fs.existsSync('uploads/certificates')) {
+    fs.mkdirSync('uploads/certificates', { recursive: true });
+  }
+  
+  // Server-side PDF generation endpoint
+  app.get("/api/certificates/:studentId", requireAuth, async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId);
+      if (isNaN(studentId)) {
+        return res.status(400).json({ message: "ID siswa tidak valid" });
+      }
+      
+      // Check user permissions - siswa can only access their own certificate
+      const user = req.user as Express.User;
+      if (user.role === 'siswa' && user.studentId !== studentId) {
+        return res.status(403).json({ message: "Anda tidak berhak mengakses sertifikat siswa lain" });
+      }
+      
+      // Get student data
+      const student = await storage.getStudent(studentId);
+      if (!student) {
+        return res.status(404).json({ message: "Siswa tidak ditemukan" });
+      }
+      
+      // Check if student is verified
+      if (student.status !== 'verified') {
+        return res.status(403).json({ message: "Siswa belum diverifikasi" });
+      }
+      
+      // Get settings
+      const settings = await storage.getSettings();
+      if (!settings) {
+        return res.status(500).json({ message: "Pengaturan sekolah tidak ditemukan" });
+      }
+      
+      // Get showGrades from query param
+      const showGrades = req.query.showGrades === 'true';
+      
+      // Get grades if needed
+      let grades = undefined;
+      let averageGrade = undefined;
+      
+      if (showGrades) {
+        grades = await storage.getStudentGrades(studentId);
+        
+        if (grades && grades.length > 0) {
+          // Calculate average grade
+          const sum = grades.reduce((acc, grade) => acc + grade.value, 0);
+          averageGrade = Number((sum / grades.length).toFixed(2));
+        }
+      }
+      
+      // Prepare certificate data
+      const certificateData: CertificateData = {
+        id: student.id,
+        nisn: student.nisn,
+        nis: student.nis,
+        fullName: student.fullName,
+        birthPlace: student.birthPlace,
+        birthDate: student.birthDate,
+        parentName: student.parentName,
+        className: student.className,
+        certNumber: String(student.id).padStart(3, '0'),
+        certNumberPrefix: settings.certNumberPrefix || '',
+        certBeforeStudentData: settings.certBeforeStudentData || '',
+        certAfterStudentData: settings.certAfterStudentData || '',
+        certRegulationText: settings.certRegulationText || '',
+        certCriteriaText: settings.certCriteriaText || '',
+        issueDate: formatDate(new Date().toISOString()),
+        graduationDate: settings.graduationDate || formatDate(new Date().toISOString()),
+        graduationTime: settings.graduationTime || '',
+        headmasterName: settings.headmasterName || '',
+        headmasterNip: settings.headmasterNip || '',
+        headmasterSignature: settings.headmasterSignature || '',
+        schoolName: settings.schoolName || '',
+        schoolAddress: settings.schoolAddress || '',
+        schoolEmail: settings.schoolEmail || '',
+        schoolWebsite: settings.schoolWebsite || '',
+        schoolLogo: settings.schoolLogo || '',
+        schoolStamp: settings.schoolStamp || '',
+        ministryLogo: settings.ministryLogo || '',
+        cityName: settings.cityName || '',
+        provinceName: settings.provinceName || '',
+        academicYear: settings.academicYear || '',
+        majorName: settings.majorList?.split(',')[0] || 'MIPA',
+        showGrades,
+        grades: grades ? grades.map(g => ({ name: g.subjectName, value: g.value })) : [],
+        averageGrade
+      };
+      
+      // Generate a unique filename
+      const filename = `certificate_${student.nisn}_${Date.now()}.pdf`;
+      const filePath = path.join(process.cwd(), 'uploads', 'certificates', filename);
+      
+      // Generate PDF
+      await generateCertificatePDF(certificateData, filePath);
+      
+      // Send the file
+      res.download(filePath, `SKL_${student.fullName.replace(/\s+/g, '_')}_${showGrades ? 'dengan_nilai' : 'tanpa_nilai'}.pdf`, (err) => {
+        if (err) {
+          console.error("Error sending PDF:", err);
+        }
+        
+        // Delete the temporary file after sending
+        fs.unlink(filePath, (unlinkErr) => {
+          if (unlinkErr) {
+            console.error("Error deleting temporary PDF:", unlinkErr);
+          }
+        });
+      });
+      
+    } catch (error) {
+      console.error("Error generating certificate:", error);
+      res.status(500).json({ message: "Gagal membuat sertifikat" });
     }
   });
 
