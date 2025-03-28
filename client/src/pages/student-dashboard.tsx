@@ -547,7 +547,7 @@ export default function StudentDashboard() {
                     <div className="absolute opacity-0 pointer-events-none" style={{
                       position: 'absolute',
                       left: '-9999px',
-                      width: '210mm',
+                      width: '215mm',
                       height: 'auto',
                       visibility: 'visible'
                     }}>

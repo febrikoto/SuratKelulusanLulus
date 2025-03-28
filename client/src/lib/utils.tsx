@@ -39,7 +39,7 @@ export async function generatePdf(
       parentElement.style.position = 'fixed';
       parentElement.style.top = '-9999px';
       parentElement.style.left = '-9999px';
-      parentElement.style.width = '210mm';
+      parentElement.style.width = '215mm';
       parentElement.style.height = 'auto';
       parentElement.style.zIndex = '-1000';
     }
@@ -77,22 +77,55 @@ export async function generatePdf(
       // Progress: Optimasi selesai
       onProgress && onProgress('Membuat file PDF', 70);
       
-      // Buat file PDF dengan ukuran A4
+      // Buat file PDF dengan ukuran F4
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: 'a4',
+        format: [215, 330], // Ukuran F4 dalam mm
       });
       
       // Hitung rasio tinggi-lebar
-      const imgWidth = 210; // A4 width
+      const imgWidth = 215; // F4 width
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
       // Progress: Persiapan PDF
       onProgress && onProgress('Memasukkan gambar ke PDF', 80);
       
-      // Tambahkan gambar ke PDF
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      // Periksa apakah konten terlalu panjang dan memerlukan halaman kedua
+      const maxPageHeight = 330; // F4 height in mm
+      
+      if (imgHeight <= maxPageHeight) {
+        // Konten muat dalam satu halaman
+        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      } else {
+        // Kasus untuk SKL dengan nilai - biasanya membutuhkan beberapa halaman
+        console.log(`Sertifikat membutuhkan multi-halaman: tinggi gambar ${imgHeight}mm melebihi tinggi halaman ${maxPageHeight}mm`);
+        
+        // Hitung berapa halaman yang dibutuhkan
+        const numPages = Math.ceil(imgHeight / maxPageHeight);
+        console.log(`Membutuhkan ${numPages} halaman`);
+        
+        // Metode yang lebih baik untuk multi-halaman
+        for (let i = 0; i < numPages; i++) {
+          // Untuk halaman berikutnya, tambahkan halaman baru
+          if (i > 0) {
+            pdf.addPage([215, 330]);
+          }
+          
+          // Offset (posisi) gambar untuk halaman ini
+          const yPosition = -i * maxPageHeight;
+          
+          // Tambahkan gambar dengan posisi yang sesuai untuk halaman ini
+          pdf.addImage(
+            imgData, 'JPEG',
+            0, yPosition, // Posisi Y negatif untuk "menggeser" gambar
+            imgWidth, imgHeight,
+            '', 'FAST'
+          );
+          
+          console.log(`Halaman ${i+1}: Posisi Y = ${yPosition}`);
+        }
+      }
       
       // Progress: Siap untuk save
       onProgress && onProgress('Menyimpan file PDF', 90);
@@ -214,7 +247,13 @@ export function prepareCertificateData(student: any, showGrades: boolean = false
     { name: "Biologi", value: 88.56 },
     { name: "Fisika", value: 87.64 },
     { name: "Kimia", value: 88.60 },
-    { name: "Sosiologi Peminatan", value: 89.04 }
+    { name: "Sosiologi Peminatan", value: 89.04 },
+    { name: "Bahasa Jepang", value: 87.75 },
+    { name: "Bahasa Arab", value: 88.20 },
+    { name: "Teknologi Informasi dan Komunikasi", value: 92.45 },
+    { name: "Ekonomi", value: 86.50 },
+    { name: "Geografi", value: 88.30 },
+    { name: "Sejarah Peminatan", value: 89.15 }
   ] : undefined;
   
   const averageGrade = grades 

@@ -35,7 +35,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
       
       <div 
         ref={certificateRef} 
-        className="relative p-8 border border-gray-300 bg-white mx-auto w-[210mm] min-h-[297mm] text-black"
+        className="relative p-8 border border-gray-300 bg-white mx-auto w-[215mm] min-h-[330mm] text-black"
       >
         {/* Header dengan logo dan kop surat */}
         <div className="flex justify-between items-center mb-2">
@@ -150,7 +150,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
                     {/* Group A: Pelajaran Umum */}
                     <tr>
                       <td className="border border-gray-400 px-4 py-2 font-bold">A</td>
-                      <td className="border border-gray-400 px-4 py-2"></td>
+                      <td className="border border-gray-400 px-4 py-2 font-bold">Pelajaran Umum</td>
                       <td className="border border-gray-400 px-4 py-2"></td>
                     </tr>
                     {data.grades.slice(0, 6).map((grade, index) => (
@@ -164,7 +164,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
                     {/* Group B: Keterampilan */}
                     <tr>
                       <td className="border border-gray-400 px-4 py-2 font-bold">B</td>
-                      <td className="border border-gray-400 px-4 py-2"></td>
+                      <td className="border border-gray-400 px-4 py-2 font-bold">Keterampilan</td>
                       <td className="border border-gray-400 px-4 py-2"></td>
                     </tr>
                     {data.grades.slice(6, 9).map((grade, index) => (
@@ -178,16 +178,34 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
                     {/* Group C: Peminatan */}
                     <tr>
                       <td className="border border-gray-400 px-4 py-2 font-bold">C</td>
-                      <td className="border border-gray-400 px-4 py-2"></td>
+                      <td className="border border-gray-400 px-4 py-2 font-bold">Peminatan</td>
                       <td className="border border-gray-400 px-4 py-2"></td>
                     </tr>
-                    {data.grades.slice(9).map((grade, index) => (
+                    {data.grades.slice(9, 14).map((grade, index) => (
                       <tr key={`c-${index}`}>
                         <td className="border border-gray-400 px-4 py-2">{index + 10}</td>
                         <td className="border border-gray-400 px-4 py-2">{grade.name}</td>
                         <td className="border border-gray-400 px-4 py-2">{grade.value.toFixed(2)}</td>
                       </tr>
                     ))}
+                    
+                    {/* Group D: Tambahan */}
+                    {data.grades.length > 14 && (
+                      <>
+                        <tr>
+                          <td className="border border-gray-400 px-4 py-2 font-bold">D</td>
+                          <td className="border border-gray-400 px-4 py-2 font-bold">Lintas Minat</td>
+                          <td className="border border-gray-400 px-4 py-2"></td>
+                        </tr>
+                        {data.grades.slice(14).map((grade, index) => (
+                          <tr key={`d-${index}`}>
+                            <td className="border border-gray-400 px-4 py-2">{index + 15}</td>
+                            <td className="border border-gray-400 px-4 py-2">{grade.name}</td>
+                            <td className="border border-gray-400 px-4 py-2">{grade.value.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </>
+                    )}
                     
                     {/* Average */}
                     <tr>
