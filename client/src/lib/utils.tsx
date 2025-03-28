@@ -96,8 +96,8 @@ export async function generatePdf(
       // Progress: Siap untuk save
       onProgress && onProgress('Menyimpan file PDF', 90);
       
-      // Simpan PDF
-      pdf.save(`${filename}.pdf`);
+      // Simpan PDF dengan nama file yang benar
+      pdf.save(filename);
       
       // Progress: Selesai
       onProgress && onProgress('Berhasil membuat sertifikat', 100);
@@ -130,7 +130,7 @@ export async function generatePdf(
         // Buat link untuk download image sebagai alternatif
         const a = document.createElement('a');
         a.href = altImgData;
-        a.download = `${filename}.jpg`;
+        a.download = filename.replace('.pdf', '.jpg');
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

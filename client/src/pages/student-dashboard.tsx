@@ -547,10 +547,13 @@ export default function StudentDashboard() {
                       left: '-9999px',
                       width: '210mm',
                       height: 'auto',
-                      visibility: 'visible'
+                      visibility: 'visible',
+                      backgroundColor: 'white',
+                      padding: '10px',
+                      zIndex: '-1000'
                     }}>
-                      <div id="certificate-download-container" className="certificate-container-wrapper bg-white">
-                        <Certificate data={certificateData} />
+                      <div id="certificate-download-container" className="certificate-container-wrapper bg-white" style={{width: '210mm', backgroundColor: 'white'}}>
+                        <Certificate data={certificateData} showDownloadButton={false} />
                       </div>
                     </div>
                   </>
