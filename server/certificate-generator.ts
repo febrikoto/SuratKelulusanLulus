@@ -562,10 +562,11 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       if (data.schoolStamp) {
         try {
           // Posisikan stempel di tengah tanda tangan, dengan opacity
-          doc.opacity(0.8);
-          doc.image(data.schoolStamp, signatureX + 20, y + 30, {
-            width: 100,
-            height: 100
+          // Ukuran stempel juga diperbesar dan posisi disesuaikan
+          doc.opacity(0.7); // Sedikit lebih transparan
+          doc.image(data.schoolStamp, signatureX, y + 30, {
+            width: 180, // Sebelumnya 100
+            height: 180 // Sebelumnya 100
           });
           doc.opacity(1); // Reset opacity
         } catch (e) {
@@ -576,8 +577,9 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       // Tambahkan tanda tangan jika ada
       if (data.headmasterSignature) {
         try {
-          doc.image(data.headmasterSignature, signatureX + 30, y + 40, {
-            width: 80
+          // Ukuran tanda tangan diperbesar 2x lipat (dari 80 menjadi 160)
+          doc.image(data.headmasterSignature, signatureX + 20, y + 40, {
+            width: 160
           });
         } catch (e) {
           console.error("Error loading headmaster signature:", e);
@@ -588,10 +590,11 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       }
       
       // Nama kepala sekolah dengan garis bawah
+      // Posisi teks disesuaikan agar tidak tumpang tindih dengan tanda tangan yang lebih besar
       doc.fontSize(12).font('Helvetica-Bold');
-      doc.text(`${data.headmasterName}`, signatureX, y + 100);
+      doc.text(`${data.headmasterName}`, signatureX, y + 150);
       doc.fontSize(11).font('Helvetica');
-      doc.text(`NIP. ${data.headmasterNip}`, signatureX, y + 120);
+      doc.text(`NIP. ${data.headmasterNip}`, signatureX, y + 170);
       
       // Finalize the PDF
       doc.end();
