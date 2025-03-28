@@ -37,25 +37,49 @@ function generateQRCode(data: string): Promise<Buffer> {
 
 // Fungsi utama untuk membuat PDF
 export async function generateCertificatePDF(data: CertificateData, filePath: string): Promise<void> {
+  // Proses QR code di luar Promise constructor jika diperlukan
+  let qrCodeBuffer: Buffer | null = null;
+  
+  if (data.useDigitalSignature) {
+    try {
+      // Buat data untuk QR code (berisi informasi identitas sertifikat)
+      const qrData = JSON.stringify({
+        nisn: data.nisn,
+        nama: data.fullName,
+        sekolah: data.schoolName,
+        jurusan: data.majorName || "MIPA",
+        tanggalLulus: formatDateForCertificate(data.graduationDate),
+        tanggalTerbit: formatDateForCertificate(data.issueDate),
+        nomorSurat: data.certNumber
+      });
+      
+      // Buat QR code sebelum mulai membuat PDF
+      qrCodeBuffer = await generateQRCode(qrData);
+    } catch (e) {
+      console.error("Error generating QR code before PDF creation:", e);
+    }
+  }
+  
+  // Buat dokumen PDF baru dengan ukuran F4
+  const doc = new PDFDocument({
+    size: [210 * 2.83, 330 * 2.83], // F4 size in points (1mm ≈ 2.83 points)
+    margins: {
+      top: 20 * 2.83,    // 2cm top margin
+      bottom: 20 * 2.83, // 2cm bottom margin
+      left: 20 * 2.83,   // 2cm left margin
+      right: 20 * 2.83,  // 2cm right margin
+    },
+    info: {
+      Title: `Surat Keterangan Lulus - ${data.fullName}`,
+      Author: data.schoolName,
+      Subject: 'Surat Keterangan Lulus',
+      Keywords: 'SKL, surat keterangan lulus, ijazah',
+      CreationDate: new Date(),
+    }
+  });
+  
   return new Promise((resolve, reject) => {
     try {
-      // Buat dokumen PDF baru dengan ukuran F4
-      const doc = new PDFDocument({
-        size: [210 * 2.83, 330 * 2.83], // F4 size in points (1mm ≈ 2.83 points)
-        margins: {
-          top: 20 * 2.83,    // 2cm top margin
-          bottom: 20 * 2.83, // 2cm bottom margin
-          left: 20 * 2.83,   // 2cm left margin
-          right: 20 * 2.83,  // 2cm right margin
-        },
-        info: {
-          Title: `Surat Keterangan Lulus - ${data.fullName}`,
-          Author: data.schoolName,
-          Subject: 'Surat Keterangan Lulus',
-          Keywords: 'SKL, surat keterangan lulus, ijazah',
-          CreationDate: new Date(),
-        }
-      });
 
       // Stream the PDF to the specified file
       const writeStream = fs.createWriteStream(filePath);
@@ -603,31 +627,20 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
         doc.moveDown(4);
       }
 
-      // Tambahkan QR code untuk tanda tangan digital
-      try {
-        // Buat data untuk QR code (berisi informasi identitas sertifikat)
-        const qrData = JSON.stringify({
-          nisn: data.nisn,
-          nama: data.fullName,
-          sekolah: data.schoolName,
-          tanggalLulus: data.graduationDate,
-          nomorSurat: data.certNumber
-        });
-        
-        // Buat QR code menggunakan fungsi helper
-        generateQRCode(qrData).then(qrCodeBuffer => {
-          // Posisikan QR code di samping tanda tangan
-          const qrX = signatureX - 180; // Posisi di kiri tanda tangan
-          doc.image(qrCodeBuffer, qrX, y + 40, { width: 100 });
+      // Tambahkan QR code jika telah diproses sebelumnya dan jika fitur TTE diaktifkan
+      if (qrCodeBuffer && data.useDigitalSignature) {
+        try {
+          // Posisikan QR code di kiri bawah sejajar dengan nama kepala sekolah
+          const qrX = doc.page.margins.left;
+          const qrY = y + 100 - 60; // Sejajar dengan posisi nama kepala sekolah
+          doc.image(qrCodeBuffer, qrX, qrY, { width: 100 });
           
           // Tambahkan teks "Tanda Tangan Digital" di bawah QR
           doc.fontSize(8).font('Helvetica');
-          doc.text('Tanda Tangan Digital', qrX, y + 145, { width: 100, align: 'center' });
-        }).catch(e => {
-          console.error("Error generating QR code:", e);
-        });
-      } catch (e) {
-        console.error("Error generating QR code:", e);
+          doc.text('Tanda Tangan Digital (TTE)', qrX, qrY + 105, { width: 100, align: 'center' });
+        } catch (e) {
+          console.error("Error adding QR code to PDF:", e);
+        }
       }
       
       // Nama kepala sekolah dengan garis bawah

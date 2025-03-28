@@ -25,7 +25,8 @@ import {
 } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, School, FileImage, Upload } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, School, FileImage, Upload, QrCode } from 'lucide-react';
 
 interface SchoolSettingsModalProps {
   isOpen: boolean;
@@ -58,6 +59,7 @@ const formSchema = z.object({
       },
       { message: 'Format website tidak valid' }
     ),
+  useDigitalSignature: z.boolean().default(true),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -101,6 +103,7 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
       schoolStamp: '',
       schoolEmail: '',
       schoolWebsite: '',
+      useDigitalSignature: true,
     },
   });
   
@@ -118,6 +121,7 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
         schoolStamp: settings.schoolStamp || '',
         schoolEmail: settings.schoolEmail || '',
         schoolWebsite: settings.schoolWebsite || '',
+        useDigitalSignature: settings.useDigitalSignature !== undefined ? settings.useDigitalSignature : true,
       });
     }
   }, [settings, form]);
@@ -414,6 +418,35 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
                           </div>
                         )}
                         <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                {/* Digital Signature Toggle */}
+                <div className="space-y-5">
+                  <div className="flex items-center space-x-2 mb-2 bg-background py-2 border-b">
+                    <QrCode className="h-5 w-5 text-primary" />
+                    <h3 className="text-md font-semibold">Tanda Tangan Digital</h3>
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="useDigitalSignature"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Tanda Tangan Digital (TTE)</FormLabel>
+                          <FormDescription>
+                            Aktifkan untuk menggunakan tanda tangan digital (QR Code) sebagai tambahan TTD basah kepala sekolah
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
                       </FormItem>
                     )}
                   />
