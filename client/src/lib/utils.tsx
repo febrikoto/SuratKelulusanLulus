@@ -219,6 +219,8 @@ export function prepareCertificateData(student: any, showGrades: boolean = false
     headmasterSignature: settings?.headmasterSignature || "",
     schoolName: settings?.schoolName || "SMA Negeri 1 Dua Koto",
     schoolAddress: settings?.schoolAddress || "Jl. Pendidikan No. 1",
+    schoolEmail: settings?.schoolEmail || "",
+    schoolWebsite: settings?.schoolWebsite || "",
     schoolLogo: settings?.schoolLogo || "",
     schoolStamp: settings?.schoolStamp || "",
     ministryLogo: settings?.ministryLogo || "",
