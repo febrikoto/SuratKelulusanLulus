@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { PublicHeader } from '@/components/PublicHeader';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 import { useAuth } from '@/hooks/use-auth';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -63,6 +64,11 @@ export default function LoginPage() {
   }, []);
 
   // Handle login redirect with useEffect
+  // State for tracking loading screen while redirecting
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [redirectMessage, setRedirectMessage] = useState('');
+  
+  // Handle login redirect with useEffect
   useEffect(() => {
     // Redirect if user is logged in
     if (user) {
@@ -73,11 +79,14 @@ export default function LoginPage() {
           ? '/guru' 
           : '/siswa';
       
-      // Use setTimeout to ensure all cached data is available before redirect
-      // This prevents the need for page refresh after login
+      // Show loading screen with personalized message
+      setIsRedirecting(true);
+      setRedirectMessage(`Selamat datang, ${user.fullName}! Sedang mempersiapkan dashboard...`);
+      
+      // Use a longer timeout for better user experience and to ensure data is loaded
       setTimeout(() => {
         setLocation(redirectPath);
-      }, 50);
+      }, 1000);
     }
   }, [user, setLocation]);
 
@@ -92,6 +101,9 @@ export default function LoginPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
+      {/* Show loading screen during redirection */}
+      {isRedirecting && <LoadingScreen message={redirectMessage} />}
+      
       <PublicHeader />
       
       <div className="flex flex-col items-center justify-center py-8">

@@ -42,27 +42,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Set user data in cache immediately
       queryClient.setQueryData(["/api/user"], user);
       
-      // Preload essential data in parallel to reduce dashboard loading time
+      // Optimized preloading logic with better error handling
+      // Use Promise.all to load all data in parallel
       Promise.all([
-        // Preload settings
+        // Preload settings with error handling
         fetch('/api/settings')
-          .then(response => response.json())
+          .then(response => {
+            if (!response.ok) throw new Error(`Settings API returned ${response.status}`);
+            return response.json();
+          })
           .then(data => {
             queryClient.setQueryData(["/api/settings"], data);
+            return true;
           })
           .catch(err => {
             console.error("Failed to prefetch settings:", err);
+            return false;
           }),
         
-        // Preload dashboard stats
+        // Preload dashboard stats with error handling
         fetch('/api/dashboard/stats')
-          .then(response => response.json())
+          .then(response => {
+            if (!response.ok) throw new Error(`Dashboard stats API returned ${response.status}`);
+            return response.json();
+          })
           .then(data => {
             queryClient.setQueryData(["/api/dashboard/stats"], data);
+            return true;
           })
           .catch(err => {
             console.error("Failed to prefetch dashboard stats:", err);
-          })
+            return false;
+          }),
+          
+        // Preload students data with error handling (for admin and teacher roles)
+        user.role !== 'siswa' ? 
+          fetch('/api/students')
+            .then(response => {
+              if (!response.ok) throw new Error(`Students API returned ${response.status}`);
+              return response.json();
+            })
+            .then(data => {
+              queryClient.setQueryData(["/api/students"], data);
+              return true;
+            })
+            .catch(err => {
+              console.error("Failed to prefetch students:", err);
+              return false;
+            })
+          : Promise.resolve(true) // Skip for student role
       ]);
       
       toast({
