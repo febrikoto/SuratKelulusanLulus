@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import StudentHeader from '@/components/StudentHeader';
 import { Certificate } from '@/components/Certificate';
+import PrintCertificate from '@/components/PrintCertificate';
 import CertificateLoading from '@/components/CertificateLoading';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -22,13 +23,20 @@ type ProgressCallback = (step: string, progress: number) => void;
 
 // Format tanggal untuk lokal Indonesia
 function formatDate(dateString: string): string {
+  if (!dateString) return '';
+  
   const options: Intl.DateTimeFormatOptions = {
     day: 'numeric',
     month: 'long',
     year: 'numeric'
   };
   
-  return new Date(dateString).toLocaleDateString('id-ID', options);
+  try {
+    return new Date(dateString).toLocaleDateString('id-ID', options);
+  } catch (e) {
+    console.error('Error formatting date:', e);
+    return dateString;
+  }
 }
 
 // Mempersiapkan data sertifikat dari data siswa
@@ -100,7 +108,7 @@ function prepareCertificateData(student: Record<string, any>, showGrades: boolea
   };
 }
 
-// Fungsi untuk menghasilkan PDF dari element
+// Fungsi untuk menghasilkan PNG dari element
 async function generatePdf(
   elementId: string, 
   filename: string, 
@@ -110,74 +118,126 @@ async function generatePdf(
     // Report initial progress
     onProgress && onProgress('Memulai proses', 5);
     
-    console.log(`Generating PDF for element with ID: ${elementId}`);
+    console.log(`Generating image for element with ID: ${elementId}`);
     
-    // Berikan waktu untuk update DOM
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Membuat elemen cetak baru untuk sertifikat
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      throw new Error('Tidak dapat membuka jendela cetak');
+    }
     
+    onProgress && onProgress('Menyiapkan halaman sertifikat', 20);
+    
+    // Ambil elemen certificate
     const element = document.getElementById(elementId);
     if (!element) {
-      console.error(`Element with ID "${elementId}" not found`);
+      printWindow.close();
       throw new Error(`Element with ID "${elementId}" not found`);
     }
     
-    // Log element properties untuk debugging
-    console.log(`Element found: ${element.tagName}, Width: ${element.offsetWidth}, Height: ${element.offsetHeight}`);
+    // Siapkan dokumen cetak dengan ukuran A4
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Cetak Sertifikat</title>
+        <style>
+          @page {
+            size: A4;
+            margin: 0;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+            background-color: white;
+          }
+          .container {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 0;
+            background-color: white;
+            overflow: hidden;
+            position: relative;
+          }
+          @media print {
+            body {
+              width: 210mm;
+              height: 297mm;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container" id="print-container">
+        </div>
+        <script>
+          // Akan diisi dengan kode gambar
+        </script>
+      </body>
+      </html>
+    `);
     
-    // Prepare UI for screenshot
-    onProgress && onProgress('Menyiapkan sertifikat', 20);
+    // Salin style dari halaman utama ke halaman cetak
+    const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
+    styles.forEach(style => {
+      printWindow.document.head.appendChild(style.cloneNode(true));
+    });
+
+    // Salin isi certificate ke container cetak
+    const container = printWindow.document.getElementById('print-container');
+    if (container) {
+      container.innerHTML = element.innerHTML;
+    }
     
-    // Buat salinan elemen dan tambahkan ke body untuk memastikan semua style teraplikasi
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.top = '-9999px';
-    container.style.left = '-9999px';
-    container.style.width = '210mm';
-    container.style.height = 'auto';
-    container.style.backgroundColor = '#FFFFFF';
-    container.innerHTML = element.innerHTML;
+    onProgress && onProgress('Membuat gambar sertifikat', 50);
     
-    document.body.appendChild(container);
+    // Tunggu sebentar agar dom printWindow selesai dimuat
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Capture element as PNG (better quality for text)
-    onProgress && onProgress('Membuat gambar sertifikat', 40);
+    // Fokus dan ambil content
+    printWindow.focus();
+    const contentElement = printWindow.document.getElementById('print-container');
     
-    const canvas = await html2canvas(container, {
-      scale: 2, // Higher scale for better quality
+    if (!contentElement) {
+      printWindow.close();
+      throw new Error('Tidak dapat menemukan kontainer cetak');
+    }
+    
+    // Ambil screenshot dengan html2canvas
+    const canvas = await html2canvas(contentElement, {
+      scale: 2,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#FFFFFF',
-      logging: false,
-      onclone: (clonedDoc) => {
-        console.log('Clone successful');
-        return clonedDoc;
-      }
+      width: 793, // ~210mm in px
+      height: 1122, // ~297mm in px
+      windowWidth: 793,
+      windowHeight: 1122
     });
     
-    // Clean up - remove temp container
-    document.body.removeChild(container);
-    
-    // Langsung simpan sebagai JPG (lebih dapat diandalkan)
+    // Dapatkan data gambar
     onProgress && onProgress('Menyimpan gambar sertifikat', 80);
+    const imgData = canvas.toDataURL('image/png', 1.0);
     
-    // Get image data
-    const imgData = canvas.toDataURL('image/png');
+    // Tutup jendela cetak
+    printWindow.close();
     
-    // Create download link
+    // Buat link download
     const a = document.createElement('a');
     a.href = imgData;
-    a.download = filename.replace('.pdf', '.png');
+    a.download = filename;
     document.body.appendChild(a);
     
-    // Click link to start download
+    // Klik link untuk mulai download
     a.click();
     
-    // Clean up
+    // Bersihkan
     setTimeout(() => {
       document.body.removeChild(a);
     }, 100);
     
-    // Success
+    // Berhasil
     onProgress && onProgress('Berhasil membuat sertifikat', 100);
     console.log('Sertifikat berhasil dibuat sebagai PNG');
     
@@ -670,7 +730,7 @@ export default function StudentDashboard() {
       {/* Hidden container for PDF download */}
       <div className="hidden">
         <div id="certificate-download-container">
-          {certificateData && <Certificate data={certificateData} />}
+          {certificateData && <PrintCertificate data={certificateData} />}
         </div>
       </div>
       
