@@ -26,7 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Calendar, Clipboard } from 'lucide-react';
+import { Loader2, Calendar, Clipboard, Copy as CopyIcon } from 'lucide-react';
 
 interface CertificateSettingsModalProps {
   isOpen: boolean;
@@ -374,7 +374,31 @@ const CertificateSettingsModal: React.FC<CertificateSettingsModalProps> = ({ isO
                         />
                       </FormControl>
                       <FormDescription>
-                        Jika diisi, teks ini akan menggantikan daftar kriteria kelulusan default. Pastikan sudah mencakup semua poin kriteria kelulusan yang diperlukan. Gunakan HTML &lt;ol&gt; dan &lt;li&gt; untuk daftar bernomor jika perlu.
+                        Jika diisi, teks ini akan menggantikan daftar kriteria kelulusan default. Isi dengan format HTML untuk daftar bernomor seperti berikut:
+                        <div className="relative">
+                          <pre className="bg-gray-100 dark:bg-gray-800 p-2 text-xs mt-1 rounded overflow-auto">
+                            &lt;ol style="list-style-type:decimal; padding-left:20px; text-align:left;"&gt;<br/>
+                            &nbsp;&nbsp;&lt;li&gt;Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.&lt;/li&gt;<br/>
+                            &nbsp;&nbsp;&lt;li&gt;Surat Kepala Dinas Pendidikan Provinsi...&lt;/li&gt;<br/>
+                            &nbsp;&nbsp;&lt;li&gt;Ketuntasan dari seluruh program pembelajaran...&lt;/li&gt;<br/>
+                            &lt;/ol&gt;
+                          </pre>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="absolute top-2 right-2 h-7 text-xs"
+                            onClick={() => {
+                              navigator.clipboard.writeText('<ol style="list-style-type:decimal; padding-left:20px; text-align:left;">\n  <li>Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.</li>\n  <li>Surat Kepala Dinas Pendidikan Provinsi...</li>\n  <li>Ketuntasan dari seluruh program pembelajaran...</li>\n</ol>');
+                              toast({
+                                title: "Disalin!",
+                                description: "Format contoh telah disalin ke clipboard",
+                              });
+                            }}
+                          >
+                            <CopyIcon className="h-3.5 w-3.5 mr-1" />
+                            Salin
+                          </Button>
+                        </div>
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
