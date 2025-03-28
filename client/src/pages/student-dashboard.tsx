@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Student, Settings } from '@shared/schema';
 import { UserInfo, CertificateData } from '@shared/types';
-import { generatePdf, prepareCertificateData } from '@/lib/utils';
+import { generatePdf, prepareCertificateData, ProgressCallback } from '@/lib/utils';
 import { Download, Loader2, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -496,7 +496,7 @@ export default function StudentDashboard() {
                     <Dialog.Root open={showCertificatePopup} onOpenChange={setShowCertificatePopup}>
                       <Dialog.Portal>
                         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-                        <Dialog.Content className="fixed left-[50%] top-[50%] max-h-[85vh] w-[90vw] max-w-[900px] translate-x-[-50%] translate-y-[-50%] bg-white dark:bg-gray-900 rounded-lg p-2 sm:p-4 shadow-lg z-50 overflow-y-auto" aria-describedby="certificate-popup-desc">
+                        <Dialog.Content className="fixed left-[50%] top-[50%] max-h-[85vh] w-[90vw] max-w-[900px] translate-x-[-50%] translate-y-[-50%] bg-white dark:bg-gray-900 rounded-lg p-2 sm:p-4 shadow-lg z-50 overflow-y-auto">
                           <div className="flex justify-between items-center mb-2 sm:mb-4">
                             <Dialog.Title className="text-lg sm:text-xl font-semibold">
                               {showGradesInPopup ? 'SKL Dengan Nilai' : 'SKL Tanpa Nilai'}
@@ -507,6 +507,9 @@ export default function StudentDashboard() {
                               </button>
                             </Dialog.Close>
                           </div>
+                          <Dialog.Description className="sr-only">
+                            Tampilan sertifikat kelulusan {showGradesInPopup ? 'dengan nilai' : 'tanpa nilai'}
+                          </Dialog.Description>
                           <div id="certificate-popup-container" className="overflow-y-auto max-h-[calc(85vh-100px)]">
                             <Certificate data={certificateData} />
                           </div>
@@ -547,6 +550,12 @@ export default function StudentDashboard() {
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
           <Dialog.Content className="fixed left-[50%] top-[50%] max-h-[85vh] w-[90vw] max-w-[500px] translate-x-[-50%] translate-y-[-50%] bg-white dark:bg-gray-900 rounded-lg shadow-lg z-50 overflow-y-auto">
+            <Dialog.Title className="sr-only">
+              Proses Pembuatan Sertifikat
+            </Dialog.Title>
+            <Dialog.Description className="sr-only">
+              Dialog progres pembuatan sertifikat kelulusan
+            </Dialog.Description>
             <CertificateLoading
               steps={loadingSteps}
               currentStep={currentStep}

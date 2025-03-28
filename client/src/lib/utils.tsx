@@ -2,7 +2,8 @@ import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import { CertificateData } from "@shared/types";
 
-type ProgressCallback = (step: string, progress: number) => void;
+// Definisikan tipe untuk callback progress
+export type ProgressCallback = (step: string, progress: number) => void;
 
 export async function generatePdf(
   elementId: string, 
