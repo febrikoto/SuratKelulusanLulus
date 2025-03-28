@@ -825,6 +825,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update welcome status" });
     }
   });
+  
+  // Bulk delete endpoint (admin only)
+  app.post("/api/admin/bulk-delete", requireRole(["admin"]), async (req, res) => {
+    try {
+      const { targets } = req.body;
+      
+      if (!targets || !Array.isArray(targets) || targets.length === 0) {
+        return res.status(400).json({ message: "No targets specified for deletion" });
+      }
+      
+      const results = {
+        deleted: 0,
+        errors: 0,
+        details: {} as Record<string, { success: number, failed: number }>
+      };
+      
+      // Process each target type
+      for (const target of targets) {
+        results.details[target] = { success: 0, failed: 0 };
+        
+        if (target === 'students') {
+          try {
+            const students = await storage.getStudents();
+            for (const student of students) {
+              try {
+                await storage.deleteStudent(student.id);
+                results.deleted++;
+                results.details[target].success++;
+              } catch (err) {
+                results.errors++;
+                results.details[target].failed++;
+              }
+            }
+          } catch (err) {
+            results.errors++;
+          }
+        } 
+        else if (target === 'subjects') {
+          try {
+            const subjects = await storage.getSubjects();
+            for (const subject of subjects) {
+              try {
+                await storage.deleteSubject(subject.id);
+                results.deleted++;
+                results.details[target].success++;
+              } catch (err) {
+                results.errors++;
+                results.details[target].failed++;
+              }
+            }
+          } catch (err) {
+            results.errors++;
+          }
+        } 
+        else if (target === 'grades') {
+          try {
+            // For grades, we need to get all students and their grades
+            const students = await storage.getStudents();
+            for (const student of students) {
+              try {
+                const grades = await storage.getStudentGrades(student.id);
+                for (const grade of grades) {
+                  try {
+                    await storage.deleteGrade(grade.id);
+                    results.deleted++;
+                    results.details[target].success++;
+                  } catch (err) {
+                    results.errors++;
+                    results.details[target].failed++;
+                  }
+                }
+              } catch (err) {
+                results.errors++;
+              }
+            }
+          } catch (err) {
+            results.errors++;
+          }
+        } 
+        else if (target === 'logs') {
+          // Logs are not implemented yet, but we'll include it for future use
+          results.details[target].success = 0;
+          results.details[target].failed = 0;
+          // Would delete logs here if implemented
+        }
+      }
+      
+      res.json(results);
+    } catch (error) {
+      console.error('Bulk delete error:', error);
+      res.status(500).json({ message: "Failed to perform bulk delete operation" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
