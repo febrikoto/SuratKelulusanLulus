@@ -169,242 +169,24 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
           
-          // Get first sheet
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
+          // Check if the workbook has required sheets
+          const sheetNames = workbook.SheetNames;
+          const hasMultiSheets = sheetNames.length >= 3;
+          const hasSiswaSheet = sheetNames.some(name => name.toLowerCase().includes('siswa'));
+          const hasMapelSheet = sheetNames.some(name => name.toLowerCase().includes('mapel'));
+          const hasNilaiSheet = sheetNames.some(name => name.toLowerCase().includes('nilai'));
           
-          // Convert to JSON
-          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 'A' });
+          let isMultiSheetFormat = hasMultiSheets && hasSiswaSheet && hasMapelSheet && hasNilaiSheet;
           
-          if (rows.length <= 1) {
-            setFileError('File tidak memiliki data');
-            setIsUploading(false);
-            return;
-          }
-          
-          // Get header row - row 1 is the header
-          const headerRow = rows[0] as any;
-          const headerKeys = Object.keys(headerRow).filter(key => key !== '__rowNum__');
-          
-          // Define expected columns
-          const expectedBaseColumns = ['nisn', 'nis', 'nama'];
-          
-          // Check if required base columns exist
-          const hasRequiredColumns = expectedBaseColumns.every(col => {
-            return Object.values(headerRow).some(
-              val => typeof val === 'string' && val.toLowerCase().includes(col)
-            );
-          });
-          
-          if (!hasRequiredColumns) {
-            setFileError('Format file tidak sesuai. Kolom yang diperlukan: NISN, NIS, Nama Siswa, dan minimal satu mata pelajaran');
-            setIsUploading(false);
-            return;
-          }
-          
-          // Map header indices to column names
-          const columnMap: Record<string, string> = {};
-          const subjectCols: SubjectColumn[] = [];
-          
-          headerKeys.forEach(key => {
-            const value = headerRow[key];
-            if (typeof value === 'string') {
-              const lowerValue = value.toLowerCase().trim();
-              if (lowerValue.includes('nisn')) {
-                columnMap[key] = 'nisn';
-              } else if (lowerValue.includes('nis') && !lowerValue.includes('nisn')) {
-                columnMap[key] = 'nis';
-              } else if (lowerValue.includes('nama')) {
-                columnMap[key] = 'fullName';
-              } else {
-                // This might be a subject column
-                // Try to match with existing subjects
-                const matchedSubject = subjects.find(s => 
-                  lowerValue.includes(s.name.toLowerCase()) || 
-                  (s.code && lowerValue.includes(s.code.toLowerCase()))
-                );
-                
-                if (matchedSubject) {
-                  columnMap[key] = matchedSubject.code;
-                  subjectCols.push({
-                    code: matchedSubject.code,
-                    name: matchedSubject.name,
-                    id: matchedSubject.id
-                  });
-                } else {
-                  // Create a code from subject name
-                  const code = value.replace(/[^A-Z0-9]/gi, '').substring(0, 5).toUpperCase();
-                  columnMap[key] = code;
-                  subjectCols.push({
-                    code,
-                    name: value
-                  });
-                }
-              }
-            }
-          });
-          
-          setSubjectColumns(subjectCols);
-          
-          if (subjectCols.length === 0) {
-            setFileError('Tidak ada kolom mata pelajaran yang terdeteksi');
-            setIsUploading(false);
-            return;
-          }
-          
-          // Parse and validate data rows
-          const grades: GradeData[] = [];
-          const errors: ImportError[] = [];
-          
-          // Get students from the selected class
-          const classStudents = students.filter(s => s.className === selectedClass);
-          
-          // Skip header row (start from index 1)
-          for (let i = 1; i < rows.length; i++) {
-            const row = rows[i] as any;
-            const rowNum = i + 1; // Excel row number (1-based)
-            
-            if (!row || Object.keys(row).filter(k => k !== '__rowNum__').length === 0) {
-              continue; // Skip empty rows
-            }
-            
-            const gradeData: GradeData = {
-              studentId: 0,
-              nisn: '',
-              nis: '',
-              fullName: ''
-            };
-            
-            // Extract student info
-            let hasStudentIdentifier = false;
-            
-            headerKeys.forEach(key => {
-              const colType = columnMap[key];
-              const value = row[key];
-              
-              if (!value && !['nisn', 'nis', 'fullName'].includes(colType)) {
-                return; // Skip empty subject values
-              }
-              
-              if (colType === 'nisn' || colType === 'nis' || colType === 'fullName') {
-                if (value) {
-                  gradeData[colType] = String(value).trim();
-                  hasStudentIdentifier = true;
-                }
-              } else if (colType) {
-                // This is a subject column
-                if (value !== undefined && value !== '') {
-                  // Validate subject grade
-                  const numValue = Number(value);
-                  if (isNaN(numValue) || numValue < 0 || numValue > 100) {
-                    errors.push({
-                      row: rowNum,
-                      column: headerRow[key],
-                      studentName: gradeData.fullName,
-                      nisn: gradeData.nisn,
-                      error: `Nilai harus berupa angka 0-100, ditemukan: ${value}`
-                    });
-                  } else {
-                    gradeData[colType] = numValue;
-                  }
-                }
-              }
-            });
-            
-            // Validate student identifiers
-            if (!hasStudentIdentifier) {
-              errors.push({
-                row: rowNum,
-                column: 'NISN/NIS/Nama',
-                error: 'Baris tidak berisi identitas siswa'
-              });
-              continue;
-            }
-            
-            // Find matching student
-            let matchedStudent: Student | undefined;
-            
-            if (gradeData.nisn) {
-              matchedStudent = classStudents.find(s => s.nisn === gradeData.nisn);
-            }
-            
-            if (!matchedStudent && gradeData.nis) {
-              matchedStudent = classStudents.find(s => s.nis === gradeData.nis);
-            }
-            
-            if (!matchedStudent && gradeData.fullName) {
-              // Try fuzzy match with name
-              matchedStudent = classStudents.find(s => 
-                s.fullName.toLowerCase() === gradeData.fullName.toLowerCase()
-              );
-            }
-            
-            if (!matchedStudent) {
-              errors.push({
-                row: rowNum,
-                column: 'NISN/NIS/Nama',
-                studentName: gradeData.fullName,
-                nisn: gradeData.nisn,
-                error: `Siswa tidak ditemukan di kelas ${selectedClass}`
-              });
-              continue;
-            }
-            
-            // Add student ID
-            gradeData.studentId = matchedStudent.id;
-            gradeData.nisn = matchedStudent.nisn;
-            gradeData.nis = matchedStudent.nis;
-            gradeData.fullName = matchedStudent.fullName;
-            
-            // Check if student has any subject grades
-            const hasGrades = subjectCols.some(col => gradeData[col.code] !== undefined);
-            
-            if (!hasGrades) {
-              errors.push({
-                row: rowNum,
-                column: 'Semua kolom nilai',
-                studentName: gradeData.fullName,
-                nisn: gradeData.nisn,
-                error: 'Tidak ada nilai mata pelajaran yang diisi'
-              });
-              continue;
-            }
-            
-            grades.push(gradeData);
-          }
-          
-          // Set all data
-          setPreviewData(grades);
-          setImportErrors(errors);
-          setIsPreviewReady(true);
-          setIsUploading(false);
-          
-          // Show summary toast notification
-          if (errors.length > 0) {
-            toast({
-              title: 'Validasi selesai dengan peringatan',
-              description: `${grades.length} siswa siap di-import nilai, ${errors.length} peringatan ditemukan. Silahkan cek tab Peringatan.`,
-              variant: 'default'
-            });
-          } else if (grades.length > 0) {
-            toast({
-              title: 'Validasi berhasil',
-              description: `Data nilai siap di-import untuk ${grades.length} siswa kelas ${selectedClass}.`,
-            });
+          // Process data based on detected format
+          if (isMultiSheetFormat) {
+            // Process multi-sheet format
+            await processMultiSheetFormat(workbook);
           } else {
-            toast({
-              title: 'Tidak ada data valid',
-              description: 'Tidak ada data nilai yang valid untuk diimport',
-              variant: 'destructive'
-            });
+            // Process single sheet format (original implementation)
+            await processSingleSheetFormat(workbook);
           }
           
-          // Switch to preview tab if we have data
-          if (grades.length > 0) {
-            setActiveTab('preview');
-          } else if (errors.length > 0) {
-            setActiveTab('errors');
-          }
         } catch (error) {
           console.error('Error parsing Excel data:', error);
           setFileError('Gagal membaca file. Pastikan format file sesuai');
@@ -417,6 +199,476 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       console.error('Error parsing Excel file:', error);
       setFileError('Gagal membaca file. Pastikan format file sesuai');
       setFile(null);
+      setIsUploading(false);
+    }
+  };
+  
+  // Process multi-sheet format (Siswa, Mapel, Nilai)
+  const processMultiSheetFormat = async (workbook: XLSX.WorkBook) => {
+    try {
+      // 1. Find the appropriate sheets
+      const siswaSheetName = workbook.SheetNames.find(name => 
+        name.toLowerCase().includes('siswa')
+      ) || '';
+      
+      const mapelSheetName = workbook.SheetNames.find(name => 
+        name.toLowerCase().includes('mapel')
+      ) || '';
+      
+      const nilaiSheetName = workbook.SheetNames.find(name => 
+        name.toLowerCase().includes('nilai')
+      ) || '';
+      
+      if (!siswaSheetName || !mapelSheetName || !nilaiSheetName) {
+        setFileError('Format file multi-sheet tidak lengkap. Dibutuhkan sheet Siswa, Mapel, dan Nilai');
+        setIsUploading(false);
+        return;
+      }
+      
+      // 2. Parse Mapel (Subject) sheet first
+      const mapelWorksheet = workbook.Sheets[mapelSheetName];
+      const mapelRows = XLSX.utils.sheet_to_json(mapelWorksheet);
+      
+      if (mapelRows.length === 0) {
+        setFileError('Sheet Mapel tidak memiliki data mata pelajaran');
+        setIsUploading(false);
+        return;
+      }
+      
+      // Extract subject data
+      const subjectCols: SubjectColumn[] = [];
+      
+      for (const row of mapelRows) {
+        const mapelData = row as any;
+        
+        // Skip rows without essential data
+        if (!mapelData['Kode Mapel'] || !mapelData['Nama Mapel']) {
+          continue;
+        }
+        
+        const code = String(mapelData['Kode Mapel']).trim();
+        const name = String(mapelData['Nama Mapel']).trim();
+        const group = mapelData['Kelompok Mapel'] ? String(mapelData['Kelompok Mapel']).trim() : 'A';
+        const major = mapelData['Jurusan'] ? String(mapelData['Jurusan']).trim() : null;
+        
+        // Skip if already in the list
+        if (subjectCols.some(s => s.code === code)) {
+          continue;
+        }
+        
+        // Find if subject already exists in the database
+        const existingSubject = subjects.find(s => s.code === code);
+        
+        if (existingSubject) {
+          subjectCols.push({
+            code,
+            name,
+            id: existingSubject.id
+          });
+        } else {
+          // New subject to be created
+          subjectCols.push({
+            code,
+            name
+          });
+        }
+      }
+      
+      if (subjectCols.length === 0) {
+        setFileError('Tidak ada mata pelajaran valid yang ditemukan di sheet Mapel');
+        setIsUploading(false);
+        return;
+      }
+      
+      setSubjectColumns(subjectCols);
+      
+      // 3. Process Nilai sheet to extract grades
+      const nilaiWorksheet = workbook.Sheets[nilaiSheetName];
+      const nilaiRows = XLSX.utils.sheet_to_json(nilaiWorksheet);
+      
+      if (nilaiRows.length === 0) {
+        setFileError('Sheet Nilai tidak memiliki data nilai siswa');
+        setIsUploading(false);
+        return;
+      }
+      
+      // Parse nilai data
+      const grades: GradeData[] = [];
+      const errors: ImportError[] = [];
+      
+      // Get students from the selected class
+      const classStudents = students.filter(s => s.className === selectedClass);
+      
+      for (let i = 0; i < nilaiRows.length; i++) {
+        const rowData = nilaiRows[i] as any;
+        const rowNum = i + 2; // Excel row number (2-based, accounting for header)
+        
+        // Skip rows without student identifiers
+        if (!rowData['NIS'] && !rowData['NISN'] && !rowData['NAMA SISWA']) {
+          continue;
+        }
+        
+        const gradeData: GradeData = {
+          studentId: 0,
+          nisn: rowData['NISN'] ? String(rowData['NISN']).trim() : '',
+          nis: rowData['NIS'] ? String(rowData['NIS']).trim() : '',
+          fullName: rowData['NAMA SISWA'] ? String(rowData['NAMA SISWA']).trim() : ''
+        };
+        
+        // Find matching student
+        let matchedStudent: Student | undefined;
+        
+        if (gradeData.nis) {
+          matchedStudent = classStudents.find(s => s.nis === gradeData.nis);
+        }
+        
+        if (!matchedStudent && gradeData.nisn) {
+          matchedStudent = classStudents.find(s => s.nisn === gradeData.nisn);
+        }
+        
+        if (!matchedStudent && gradeData.fullName) {
+          matchedStudent = classStudents.find(s => 
+            s.fullName.toLowerCase() === gradeData.fullName.toLowerCase()
+          );
+        }
+        
+        if (!matchedStudent) {
+          errors.push({
+            row: rowNum,
+            column: 'NIS/NISN/NAMA SISWA',
+            studentName: gradeData.fullName,
+            nisn: gradeData.nisn,
+            error: `Siswa tidak ditemukan di kelas ${selectedClass}`
+          });
+          continue;
+        }
+        
+        // Add student ID
+        gradeData.studentId = matchedStudent.id;
+        gradeData.nisn = matchedStudent.nisn;
+        gradeData.nis = matchedStudent.nis;
+        gradeData.fullName = matchedStudent.fullName;
+        
+        // Process subject grades
+        let hasGrades = false;
+        
+        for (const subject of subjectCols) {
+          const code = subject.code;
+          
+          if (rowData[code] !== undefined && rowData[code] !== '') {
+            const value = Number(rowData[code]);
+            
+            if (isNaN(value) || value < 0 || value > 100) {
+              errors.push({
+                row: rowNum,
+                column: code,
+                studentName: gradeData.fullName,
+                nisn: gradeData.nisn,
+                error: `Nilai ${code} harus berupa angka 0-100, ditemukan: ${rowData[code]}`
+              });
+            } else {
+              gradeData[code] = value;
+              hasGrades = true;
+            }
+          }
+        }
+        
+        if (!hasGrades) {
+          errors.push({
+            row: rowNum,
+            column: 'Semua mata pelajaran',
+            studentName: gradeData.fullName,
+            nisn: gradeData.nisn,
+            error: 'Tidak ada nilai mata pelajaran yang diisi'
+          });
+          continue;
+        }
+        
+        grades.push(gradeData);
+      }
+      
+      // Set all data
+      setPreviewData(grades);
+      setImportErrors(errors);
+      setIsPreviewReady(true);
+      setIsUploading(false);
+      
+      // Show summary toast notification
+      if (errors.length > 0) {
+        toast({
+          title: 'Validasi selesai dengan peringatan',
+          description: `${grades.length} siswa siap di-import nilai, ${errors.length} peringatan ditemukan. Silahkan cek tab Peringatan.`,
+          variant: 'default'
+        });
+      } else if (grades.length > 0) {
+        toast({
+          title: 'Validasi berhasil',
+          description: `Data nilai siap di-import untuk ${grades.length} siswa kelas ${selectedClass} dengan ${subjectCols.length} mata pelajaran.`,
+        });
+      } else {
+        toast({
+          title: 'Tidak ada data valid',
+          description: 'Tidak ada data nilai yang valid untuk diimport',
+          variant: 'destructive'
+        });
+      }
+      
+      // Switch to preview tab if we have data
+      if (grades.length > 0) {
+        setActiveTab('preview');
+      } else if (errors.length > 0) {
+        setActiveTab('errors');
+      }
+      
+    } catch (error) {
+      console.error('Error processing multi-sheet Excel:', error);
+      setFileError('Gagal memproses file multi-sheet. Pastikan format sesuai');
+      setIsUploading(false);
+    }
+  };
+  
+  // Process original single-sheet format
+  const processSingleSheetFormat = async (workbook: XLSX.WorkBook) => {
+    try {
+      // Get first sheet
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      
+      // Convert to JSON
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 'A' });
+      
+      if (rows.length <= 1) {
+        setFileError('File tidak memiliki data');
+        setIsUploading(false);
+        return;
+      }
+      
+      // Get header row - row 1 is the header
+      const headerRow = rows[0] as any;
+      const headerKeys = Object.keys(headerRow).filter(key => key !== '__rowNum__');
+      
+      // Define expected columns
+      const expectedBaseColumns = ['nisn', 'nis', 'nama'];
+      
+      // Check if required base columns exist
+      const hasRequiredColumns = expectedBaseColumns.every(col => {
+        return Object.values(headerRow).some(
+          val => typeof val === 'string' && val.toLowerCase().includes(col)
+        );
+      });
+      
+      if (!hasRequiredColumns) {
+        setFileError('Format file tidak sesuai. Kolom yang diperlukan: NISN, NIS, Nama Siswa, dan minimal satu mata pelajaran');
+        setIsUploading(false);
+        return;
+      }
+      
+      // Map header indices to column names
+      const columnMap: Record<string, string> = {};
+      const subjectCols: SubjectColumn[] = [];
+      
+      headerKeys.forEach(key => {
+        const value = headerRow[key];
+        if (typeof value === 'string') {
+          const lowerValue = value.toLowerCase().trim();
+          if (lowerValue.includes('nisn')) {
+            columnMap[key] = 'nisn';
+          } else if (lowerValue.includes('nis') && !lowerValue.includes('nisn')) {
+            columnMap[key] = 'nis';
+          } else if (lowerValue.includes('nama')) {
+            columnMap[key] = 'fullName';
+          } else {
+            // This might be a subject column
+            // Try to match with existing subjects
+            const matchedSubject = subjects.find(s => 
+              lowerValue.includes(s.name.toLowerCase()) || 
+              (s.code && lowerValue.includes(s.code.toLowerCase()))
+            );
+            
+            if (matchedSubject) {
+              columnMap[key] = matchedSubject.code;
+              subjectCols.push({
+                code: matchedSubject.code,
+                name: matchedSubject.name,
+                id: matchedSubject.id
+              });
+            } else {
+              // Create a code from subject name
+              const code = value.replace(/[^A-Z0-9]/gi, '').substring(0, 5).toUpperCase();
+              columnMap[key] = code;
+              subjectCols.push({
+                code,
+                name: value
+              });
+            }
+          }
+        }
+      });
+      
+      setSubjectColumns(subjectCols);
+      
+      if (subjectCols.length === 0) {
+        setFileError('Tidak ada kolom mata pelajaran yang terdeteksi');
+        setIsUploading(false);
+        return;
+      }
+      
+      // Parse and validate data rows
+      const grades: GradeData[] = [];
+      const errors: ImportError[] = [];
+      
+      // Get students from the selected class
+      const classStudents = students.filter(s => s.className === selectedClass);
+      
+      // Skip header row (start from index 1)
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i] as any;
+        const rowNum = i + 1; // Excel row number (1-based)
+        
+        if (!row || Object.keys(row).filter(k => k !== '__rowNum__').length === 0) {
+          continue; // Skip empty rows
+        }
+        
+        const gradeData: GradeData = {
+          studentId: 0,
+          nisn: '',
+          nis: '',
+          fullName: ''
+        };
+        
+        // Extract student info
+        let hasStudentIdentifier = false;
+        
+        headerKeys.forEach(key => {
+          const colType = columnMap[key];
+          const value = row[key];
+          
+          if (!value && !['nisn', 'nis', 'fullName'].includes(colType)) {
+            return; // Skip empty subject values
+          }
+          
+          if (colType === 'nisn' || colType === 'nis' || colType === 'fullName') {
+            if (value) {
+              gradeData[colType] = String(value).trim();
+              hasStudentIdentifier = true;
+            }
+          } else if (colType) {
+            // This is a subject column
+            if (value !== undefined && value !== '') {
+              // Validate subject grade
+              const numValue = Number(value);
+              if (isNaN(numValue) || numValue < 0 || numValue > 100) {
+                errors.push({
+                  row: rowNum,
+                  column: headerRow[key],
+                  studentName: gradeData.fullName,
+                  nisn: gradeData.nisn,
+                  error: `Nilai harus berupa angka 0-100, ditemukan: ${value}`
+                });
+              } else {
+                gradeData[colType] = numValue;
+              }
+            }
+          }
+        });
+        
+        // Validate student identifiers
+        if (!hasStudentIdentifier) {
+          errors.push({
+            row: rowNum,
+            column: 'NISN/NIS/Nama',
+            error: 'Baris tidak berisi identitas siswa'
+          });
+          continue;
+        }
+        
+        // Find matching student
+        let matchedStudent: Student | undefined;
+        
+        if (gradeData.nisn) {
+          matchedStudent = classStudents.find(s => s.nisn === gradeData.nisn);
+        }
+        
+        if (!matchedStudent && gradeData.nis) {
+          matchedStudent = classStudents.find(s => s.nis === gradeData.nis);
+        }
+        
+        if (!matchedStudent && gradeData.fullName) {
+          // Try fuzzy match with name
+          matchedStudent = classStudents.find(s => 
+            s.fullName.toLowerCase() === gradeData.fullName.toLowerCase()
+          );
+        }
+        
+        if (!matchedStudent) {
+          errors.push({
+            row: rowNum,
+            column: 'NISN/NIS/Nama',
+            studentName: gradeData.fullName,
+            nisn: gradeData.nisn,
+            error: `Siswa tidak ditemukan di kelas ${selectedClass}`
+          });
+          continue;
+        }
+        
+        // Add student ID
+        gradeData.studentId = matchedStudent.id;
+        gradeData.nisn = matchedStudent.nisn;
+        gradeData.nis = matchedStudent.nis;
+        gradeData.fullName = matchedStudent.fullName;
+        
+        // Check if student has any subject grades
+        const hasGrades = subjectCols.some(col => gradeData[col.code] !== undefined);
+        
+        if (!hasGrades) {
+          errors.push({
+            row: rowNum,
+            column: 'Semua kolom nilai',
+            studentName: gradeData.fullName,
+            nisn: gradeData.nisn,
+            error: 'Tidak ada nilai mata pelajaran yang diisi'
+          });
+          continue;
+        }
+        
+        grades.push(gradeData);
+      }
+      
+      // Set all data
+      setPreviewData(grades);
+      setImportErrors(errors);
+      setIsPreviewReady(true);
+      setIsUploading(false);
+      
+      // Show summary toast notification
+      if (errors.length > 0) {
+        toast({
+          title: 'Validasi selesai dengan peringatan',
+          description: `${grades.length} siswa siap di-import nilai, ${errors.length} peringatan ditemukan. Silahkan cek tab Peringatan.`,
+          variant: 'default'
+        });
+      } else if (grades.length > 0) {
+        toast({
+          title: 'Validasi berhasil',
+          description: `Data nilai siap di-import untuk ${grades.length} siswa kelas ${selectedClass}.`,
+        });
+      } else {
+        toast({
+          title: 'Tidak ada data valid',
+          description: 'Tidak ada data nilai yang valid untuk diimport',
+          variant: 'destructive'
+        });
+      }
+      
+      // Switch to preview tab if we have data
+      if (grades.length > 0) {
+        setActiveTab('preview');
+      } else if (errors.length > 0) {
+        setActiveTab('errors');
+      }
+    } catch (error) {
+      console.error('Error processing single-sheet Excel:', error);
+      setFileError('Gagal memproses file. Pastikan format sesuai');
       setIsUploading(false);
     }
   };
@@ -479,59 +731,166 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       // Create empty workbook
       const wb = XLSX.utils.book_new();
       
-      // First create a worksheet with instructions
-      const instructionData = [
-        ['TEMPLATE NILAI KELAS ' + selectedClass],
-        [''],
-        ['Petunjuk Pengisian:'],
-        ['1. Jangan mengubah format kolom yang sudah ada (terutama kolom NISN, NIS, dan Nama Siswa)'],
-        ['2. Nilai harus berupa angka antara 0-100'],
-        ['3. Kolom yang kosong tidak akan diimport'],
-        ['4. Pastikan nama mata pelajaran sudah sesuai dengan yang terdaftar di sistem'],
-        ['']
-      ];
+      // 1. Create SISWA Worksheet
+      const siswaHeaders = ['NO', 'NIS', 'NISN', 'NAMA', 'JENGKEL', 'TEMPAT', 'TANGGAL LAHIR', 'USERNAME', 'PASSWORD', 'KELAS', 'JURUSAN', 'KETERANGAN/NIP', 'TAHUN LULUS', 'NAMA WALI', 'Keterangan'];
+      const siswaData = [siswaHeaders];
       
-      // Add subject information
-      instructionData.push(['Daftar Mata Pelajaran yang Tersedia:']);
-      subjects.forEach(subject => {
-        instructionData.push([`- ${subject.name} (${subject.code})`]);
+      classStudents.forEach((student, index) => {
+        const studentRow = [
+          index + 1,
+          student.nis,
+          student.nisn,
+          student.fullName,
+          student.gender || 'L', // Default jenis kelamin
+          student.birthPlace || '',
+          student.birthDate ? new Date(student.birthDate).toISOString().split('T')[0] : '',
+          '',  // Username
+          '',  // Password
+          student.className,
+          student.major || '',
+          student.status || 'LULUS',
+          new Date().getFullYear().toString(),
+          student.parentName || '',
+          ''   // Keterangan tambahan
+        ];
+        
+        siswaData.push(studentRow);
       });
       
-      instructionData.push(['']);
+      const siswaWs = XLSX.utils.aoa_to_sheet(siswaData);
+      XLSX.utils.book_append_sheet(wb, siswaWs, "Siswa");
+      
+      // 2. Create MAPEL Worksheet
+      const mapelHeaders = ['No Urut', 'Kode Mapel', 'Nama Mapel', 'Kelompok Mapel', 'Jurusan', 'STATUS', 'No Urut', 'Keterangan'];
+      const mapelData = [mapelHeaders];
+      
+      subjects.forEach((subject, index) => {
+        const mapelRow = [
+          index + 1,
+          subject.code,
+          subject.name,
+          subject.group || 'A',
+          subject.major || 'semua',
+          'aktif',
+          index + 1,
+          ''  // Keterangan
+        ];
+        
+        mapelData.push(mapelRow);
+      });
+      
+      const mapelWs = XLSX.utils.aoa_to_sheet(mapelData);
+      XLSX.utils.book_append_sheet(wb, mapelWs, "Mapel");
+      
+      // 3. Create NILAI Worksheet
+      // Create header row with info about semester and year
+      const nilaiInfo = [
+        ['DATA NILAI SISWA', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['SEMESTER', '0', '<< ISI SEMESTER DISINI (1/2/3/4/5/6), UNTUK KEPERLUAN SKL SAJA BISA DIISI 0 SAJA'],
+        ['TAHUN LULUS', new Date().getFullYear().toString(), '<< ISI TAHUN LULUS DISINI']
+      ];
+      
+      // Create header for subject columns
+      const nilaiHeaders = ['No', 'NIS', 'NAMA SISWA', 'KELAS'];
+      
+      // Add subject codes as columns
+      subjects.forEach(subject => {
+        nilaiHeaders.push(subject.code);
+      });
+      
+      // Add note
+      nilaiHeaders.push('HAPUS KOLOM KODE MAPEL JIKA TIDAK ADA DI SEMESTER INI');
+      
+      nilaiInfo.push(nilaiHeaders);
+      
+      // Add student rows
+      classStudents.forEach((student, index) => {
+        const row = [
+          index + 1,
+          student.nis,
+          student.fullName,
+          student.className
+        ];
+        
+        // Add value cells for each subject (default empty or 0)
+        subjects.forEach(() => {
+          // Use 0 as placeholder
+          row.push(0);
+        });
+        
+        nilaiInfo.push(row);
+      });
+      
+      const nilaiWs = XLSX.utils.aoa_to_sheet(nilaiInfo);
+      
+      // Set column widths for better readability
+      const wscols = [
+        { wch: 5 },   // No
+        { wch: 12 },  // NIS
+        { wch: 25 },  // Nama
+        { wch: 10 }   // Kelas
+      ];
+      
+      // Add width for each subject column
+      subjects.forEach(() => {
+        wscols.push({ wch: 8 });
+      });
+      
+      nilaiWs['!cols'] = wscols;
+      
+      // Add colored header styling
+      const headerStyle = {
+        fill: { fgColor: { rgb: "FFFF00" } }, // Yellow background
+        font: { bold: true }
+      };
+      
+      // Apply styling to header cells
+      // Note: XLSX styling is complex and may not work in all cases
+      
+      XLSX.utils.book_append_sheet(wb, nilaiWs, "Nilai");
+      
+      // 4. Add instruction sheet
+      const instructionData = [
+        ['PETUNJUK PENGGUNAAN TEMPLATE'],
+        [''],
+        ['Petunjuk Umum:'],
+        ['1. File Excel ini memiliki 3 sheet: Siswa, Mapel, dan Nilai'],
+        ['2. Isi data nilai pada sheet Nilai sesuai dengan kode mata pelajaran'],
+        ['3. Nilai harus berupa angka 0-100'],
+        ['4. Jangan mengubah format kode mata pelajaran yang sudah ada'],
+        ['5. Pastikan data siswa pada sheet Nilai sesuai dengan data di sistem'],
+        [''],
+        ['Petunjuk Sheet Siswa:'],
+        ['- Berisi data lengkap siswa yang akan diimport'],
+        ['- Data pada sheet ini tidak perlu diubah, hanya sebagai referensi'],
+        [''],
+        ['Petunjuk Sheet Mapel:'],
+        ['- Berisi daftar mata pelajaran dengan kode, nama, dan kelompok'],
+        ['- Kode Mapel tidak boleh menggunakan spasi'],
+        ['- Kelompok Mapel cukup pilih A/B/C'],
+        ['- Jurusan harus sama seperti jurusan di data siswa'],
+        [''],
+        ['Petunjuk Sheet Nilai:'],
+        ['- Digunakan untuk mengisi nilai siswa'],
+        ['- Pastikan Kode Mapel sesuai dengan yang ada di sheet Mapel'],
+        ['- Nilai berupa angka 0-100'],
+        ['- Kolom yang kosong tidak akan diimport'],
+        ['- Semester diisi dengan angka 1-6 (untuk SKL bisa diisi 0)'],
+        ['- Tahun lulus diisi dengan tahun kelulusan siswa'],
+        [''],
+        ['Format yang diimport:'],
+        ['1. NIS/NISN siswa akan digunakan untuk mencocokkan data'],
+        ['2. Kode mata pelajaran akan digunakan untuk menyimpan nilai'],
+        ['3. Sistem akan otomatis membuat mata pelajaran baru jika belum ada'],
+        [''],
+        [`Kelas yang dipilih: ${selectedClass}`],
+        [`Jumlah siswa: ${classStudents.length}`],
+        [`Jumlah mata pelajaran: ${subjects.length}`],
+      ];
       
       const instructionWs = XLSX.utils.aoa_to_sheet(instructionData);
       XLSX.utils.book_append_sheet(wb, instructionWs, "Petunjuk");
-      
-      // Create header for data worksheet
-      const headers = ['NISN', 'NIS', 'Nama Siswa'];
-      
-      // Add subject columns
-      subjects.forEach(subject => {
-        headers.push(subject.name);
-      });
-      
-      // Create data worksheet with students
-      const data = [headers];
-      
-      classStudents.forEach(student => {
-        const row = [
-          student.nisn,
-          student.nis,
-          student.fullName
-        ];
-        
-        // Add empty cells for subjects
-        subjects.forEach(() => {
-          row.push('');
-        });
-        
-        data.push(row);
-      });
-      
-      const dataWs = XLSX.utils.aoa_to_sheet(data);
-      
-      // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(wb, dataWs, `Nilai ${selectedClass}`);
       
       // Export the workbook to a file and download it
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -554,8 +913,8 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       }, 0);
       
       toast({
-        title: 'Template Excel berhasil dibuat',
-        description: 'Silahkan isi template sesuai format yang disediakan',
+        title: 'Template Excel Multi-Sheet berhasil dibuat',
+        description: 'Template berisi 3 sheet: Siswa, Mapel, dan Nilai. Silahkan isi sesuai petunjuk.',
       });
     } catch (error) {
       console.error('Error generating Excel template:', error);
