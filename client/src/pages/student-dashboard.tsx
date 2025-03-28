@@ -650,8 +650,19 @@ export default function StudentDashboard() {
           </AnimatedTabsContent>
         </AnimatedTabs>
         
-        {/* Hidden container for certificate download */}
-        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0 }} id="certificate-download-container">
+        {/* Container for certificate download - disembunyikan namun tetap dirender dengan benar */}
+        <div style={{ 
+          position: 'fixed', 
+          left: '-9999px', 
+          top: '-9999px', 
+          opacity: '0',
+          width: '800px',
+          height: 'auto',
+          overflow: 'hidden',
+          display: 'block',
+          backgroundColor: '#fff',
+          padding: '0'
+        }} id="certificate-download-container">
           {certificateData && <Certificate data={certificateData} />}
         </div>
         

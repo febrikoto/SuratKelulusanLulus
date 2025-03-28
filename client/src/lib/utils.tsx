@@ -38,17 +38,35 @@ export async function generatePdf(
     console.log(`Visibility: ${window.getComputedStyle(element).visibility}, Display: ${window.getComputedStyle(element).display}`);
     
     // Make element visible for rendering
+    const originalStyle = element.getAttribute('style') || '';
     const parentElement = element.parentElement;
+    const parentOriginalStyle = parentElement ? (parentElement.getAttribute('style') || '') : '';
+    
+    // Atur properti element itu sendiri
+    element.style.width = '800px'; // Ukuran yang cukup besar untuk resolusi tinggi
+    element.style.height = 'auto';
+    element.style.display = 'block';
+    element.style.visibility = 'visible';
+    element.style.opacity = '1';
+    element.style.position = 'absolute';
+    element.style.transform = 'none';
+    element.style.maxHeight = 'none';
+    element.style.maxWidth = 'none';
+    element.style.overflow = 'visible';
+    
+    // Atur properti parent element
     if (parentElement) {
       parentElement.style.display = 'block';
       parentElement.style.visibility = 'visible';
       parentElement.style.opacity = '1';
       parentElement.style.position = 'fixed';
-      parentElement.style.top = '-9999px';
-      parentElement.style.left = '-9999px';
-      parentElement.style.width = '215mm';
+      parentElement.style.top = '200%'; // Jauh di bawah viewport tapi tetap di-render
+      parentElement.style.left = '0';
+      parentElement.style.width = '800px'; // Ukuran yang cukup besar 
       parentElement.style.height = 'auto';
-      parentElement.style.zIndex = '-1000';
+      parentElement.style.zIndex = '9999';
+      parentElement.style.transform = 'none';
+      parentElement.style.overflow = 'visible';
     }
     
     // Progress: Element ditemukan
@@ -204,17 +222,12 @@ export async function generatePdf(
         throw altError;
       }
     } finally {
-      // Restore parent element properties
+      // Kembalikan style element ke keadaan semula
+      element.setAttribute('style', originalStyle);
+      
+      // Kembalikan style parent element ke keadaan semula
       if (parentElement) {
-        parentElement.style.display = '';
-        parentElement.style.visibility = '';
-        parentElement.style.opacity = '';
-        parentElement.style.position = '';
-        parentElement.style.top = '';
-        parentElement.style.left = '';
-        parentElement.style.width = '';
-        parentElement.style.height = '';
-        parentElement.style.zIndex = '';
+        parentElement.setAttribute('style', parentOriginalStyle);
       }
     }
     

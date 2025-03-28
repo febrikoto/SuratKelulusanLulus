@@ -45,34 +45,34 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
           position: 'relative',
         }}
       >
-        {/* Penanda koordinat di sertifikat */}
+        {/* Penanda koordinat di sertifikat - Tanda plus kecil tanpa warna */}
         <div className="coordinate-markers">
           {/* Marker kiri atas */}
-          <div className="absolute w-6 h-6 left-2 top-2 z-10" style={{ pointerEvents: 'none' }}>
-            <div className="w-4 h-4 bg-yellow-300 rounded-full flex items-center justify-center">
-              <span className="text-red-600 font-bold text-sm">+</span>
-            </div>
+          <div className="absolute w-4 h-4 left-1 top-1 z-10" style={{ pointerEvents: 'none' }}>
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 0V8M0 4H8" stroke="#888888" strokeWidth="0.5"/>
+            </svg>
           </div>
           
           {/* Marker kanan atas */}
-          <div className="absolute w-6 h-6 right-2 top-2 z-10" style={{ pointerEvents: 'none' }}>
-            <div className="w-4 h-4 bg-yellow-300 rounded-full flex items-center justify-center">
-              <span className="text-red-600 font-bold text-sm">+</span>
-            </div>
+          <div className="absolute w-4 h-4 right-1 top-1 z-10" style={{ pointerEvents: 'none' }}>
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 0V8M0 4H8" stroke="#888888" strokeWidth="0.5"/>
+            </svg>
           </div>
           
           {/* Marker kiri bawah */}
-          <div className="absolute w-6 h-6 left-2 bottom-2 z-10" style={{ pointerEvents: 'none' }}>
-            <div className="w-4 h-4 bg-yellow-300 rounded-full flex items-center justify-center">
-              <span className="text-red-600 font-bold text-sm">+</span>
-            </div>
+          <div className="absolute w-4 h-4 left-1 bottom-1 z-10" style={{ pointerEvents: 'none' }}>
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 0V8M0 4H8" stroke="#888888" strokeWidth="0.5"/>
+            </svg>
           </div>
           
           {/* Marker kanan bawah */}
-          <div className="absolute w-6 h-6 right-2 bottom-2 z-10" style={{ pointerEvents: 'none' }}>
-            <div className="w-4 h-4 bg-yellow-300 rounded-full flex items-center justify-center">
-              <span className="text-red-600 font-bold text-sm">+</span>
-            </div>
+          <div className="absolute w-4 h-4 right-1 bottom-1 z-10" style={{ pointerEvents: 'none' }}>
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 0V8M0 4H8" stroke="#888888" strokeWidth="0.5"/>
+            </svg>
           </div>
         </div>
         {/* Header dengan logo dan kop surat */}
