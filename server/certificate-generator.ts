@@ -163,7 +163,7 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       if (data.certCriteriaText) {
         // Kriteria dari database - format yang disimpan dari editor
         // Karena kita tidak bisa langsung parse HTML, kita harus membuat parsing teks sederhana
-        const criteriaParagraphs = data.certCriteriaText
+        let criteriaParagraphs = data.certCriteriaText
           .replace(/<\/?p>/g, '')
           .replace(/<\/?strong>/g, '')
           .replace(/<\/?em>/g, '')
@@ -171,9 +171,35 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
           .replace(/<\/?ul>/g, '')
           .replace(/<li>/g, '• ')
           .replace(/<\/li>/g, '\n')
-          .replace(/<\/?ol>/g, '')
           .split('\n')
           .filter(line => line.trim() !== '');
+        
+        // Deteksi dan ganti format <ol> menjadi nomor urut
+        // Jika terdapat <ol> dan </ol>, beri nomor urut
+        if (data.certCriteriaText.includes('<ol>') && data.certCriteriaText.includes('</ol>')) {
+          criteriaParagraphs = data.certCriteriaText
+            .replace(/<\/?p>/g, '')
+            .replace(/<\/?strong>/g, '')
+            .replace(/<\/?em>/g, '')
+            .replace(/<br\s*\/?>/g, '\n')
+            .replace(/<\/?ul>/g, '')
+            .replace(/<li>/g, '')
+            .replace(/<\/li>/g, '\n')
+            .split('\n')
+            .filter(line => line.trim() !== '');
+          
+          // Hapus tag <ol> dan </ol> dari array
+          criteriaParagraphs = criteriaParagraphs.filter(line => 
+            !line.trim().startsWith('<ol>') && !line.trim().startsWith('</ol>'));
+          
+          // Beri nomor urut
+          criteriaParagraphs = criteriaParagraphs.map((line, idx) => {
+            if (line.trim()) {
+              return `${idx + 1}. ${line.trim()}`;
+            }
+            return line;
+          });
+        }
           
         // Tambahkan judul Kriteria sebelum list
         doc.font('Helvetica').fontSize(11); // Lebih kecil dari 12
@@ -200,8 +226,8 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
         y += doc.heightOfString('Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.', { width: textWidth }) + 10; // Lebih kecil dari 15
         
         const defaultCriteria = [
-          `• Surat Kepala Dinas Pendidikan Provinsi ${data.provinceName} Nomor : 400.14.4.3/1107/PSMA/DISDIK-2024 tanggal 18 April 2025 tentang Kelulusan SMA/SMK/SLB Tahun Ajaran ${data.academicYear}`,
-          `• Ketuntasan dari seluruh program pembelajaran sesuai kurikulum yang berlaku, termasuk Ekstrakurikuler dan Prestasi lainnya.`
+          `1. Surat Kepala Dinas Pendidikan Provinsi ${data.provinceName} Nomor : 400.14.4.3/1107/PSMA/DISDIK-2024 tanggal 18 April 2025 tentang Kelulusan SMA/SMK/SLB Tahun Ajaran ${data.academicYear}`,
+          `2. Ketuntasan dari seluruh program pembelajaran sesuai kurikulum yang berlaku, termasuk Ekstrakurikuler dan Prestasi lainnya.`
         ];
         
         for (const line of defaultCriteria) {
@@ -506,10 +532,35 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       const signatureX = doc.page.width - doc.page.margins.right - 200;
       doc.text(`${data.cityName}, ${formatDateForCertificate(data.issueDate)}`, signatureX, y);
       doc.text('Kepala,', signatureX, y + 20);
-      doc.moveDown(4); // Space for signature
       
-      // Tanda tangan dan stamp tidak dapat ditambahkan secara langsung
-      // Karena ini perlu gambar asli, kita skip dulu
+      // Tambahkan stempel jika ada
+      if (data.schoolStamp) {
+        try {
+          // Posisikan stempel di tengah tanda tangan, dengan opacity
+          doc.opacity(0.8);
+          doc.image(data.schoolStamp, signatureX + 20, y + 30, {
+            width: 100,
+            height: 100
+          });
+          doc.opacity(1); // Reset opacity
+        } catch (e) {
+          console.error("Error loading school stamp:", e);
+        }
+      }
+      
+      // Tambahkan tanda tangan jika ada
+      if (data.headmasterSignature) {
+        try {
+          doc.image(data.headmasterSignature, signatureX + 30, y + 40, {
+            width: 80
+          });
+        } catch (e) {
+          console.error("Error loading headmaster signature:", e);
+        }
+      } else {
+        // Jika tidak ada tanda tangan, beri space
+        doc.moveDown(4);
+      }
       
       // Nama kepala sekolah dengan garis bawah
       doc.fontSize(12).font('Helvetica-Bold');
