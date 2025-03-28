@@ -586,23 +586,23 @@ export default function StudentDashboard() {
                             <ul className="space-y-2">
                               <li className="flex justify-between text-sm border-b pb-2">
                                 <span>Pendidikan Agama</span>
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">2 SKS</span>
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">Wajib</span>
                               </li>
                               <li className="flex justify-between text-sm border-b pb-2">
                                 <span>PKN</span>
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">2 SKS</span>
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">Wajib</span>
                               </li>
                               <li className="flex justify-between text-sm border-b pb-2">
                                 <span>Bahasa Indonesia</span>
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">4 SKS</span>
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">Wajib</span>
                               </li>
                               <li className="flex justify-between text-sm border-b pb-2">
                                 <span>Matematika</span>
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">4 SKS</span>
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">Wajib</span>
                               </li>
                               <li className="flex justify-between text-sm">
                                 <span>Bahasa Inggris</span>
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">4 SKS</span>
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded dark:bg-blue-900/30 dark:text-blue-300">Wajib</span>
                               </li>
                             </ul>
                           </CardContent>
@@ -617,30 +617,30 @@ export default function StudentDashboard() {
                             <ul className="space-y-2">
                               <li className="flex justify-between text-sm border-b pb-2">
                                 <span>Pemrograman Web</span>
-                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">4 SKS</span>
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">Kejuruan</span>
                               </li>
                               <li className="flex justify-between text-sm border-b pb-2">
                                 <span>Basis Data</span>
-                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">4 SKS</span>
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">Kejuruan</span>
                               </li>
                               <li className="flex justify-between text-sm border-b pb-2">
                                 <span>Jaringan Komputer</span>
-                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">4 SKS</span>
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">Kejuruan</span>
                               </li>
                               <li className="flex justify-between text-sm border-b pb-2">
                                 <span>Algoritma & Pemrograman</span>
-                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">4 SKS</span>
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">Kejuruan</span>
                               </li>
                               <li className="flex justify-between text-sm">
                                 <span>Desain Grafis</span>
-                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">2 SKS</span>
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">Kejuruan</span>
                               </li>
                             </ul>
                           </CardContent>
                         </Card>
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
-                        <p className="text-sm text-gray-600 dark:text-gray-300">Total SKS: <span className="font-medium">30 SKS</span></p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">Total Mata Pelajaran: <span className="font-medium">10</span></p>
                       </div>
                     </div>
                   </div>
