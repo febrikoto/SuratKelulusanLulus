@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import StudentHeader from '@/components/StudentHeader';
 import { Certificate } from '@/components/Certificate';
+import CertificateLoading from '@/components/CertificateLoading';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/queryClient';
@@ -23,6 +24,34 @@ export default function StudentDashboard() {
   const [showCertificatePopup, setShowCertificatePopup] = useState(false);
   const [showGradesInPopup, setShowGradesInPopup] = useState(false);
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
+  const [showLoadingDialog, setShowLoadingDialog] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingStep, setLoadingStep] = useState('');
+  const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  
+  // Define type for loading step status
+  type LoadingStepStatus = 'pending' | 'loading' | 'success' | 'error';
+  
+  // Define steps for certificate generation process
+  const loadingSteps = [
+    {
+      label: 'Menyiapkan elemen sertifikat',
+      status: 'pending' as LoadingStepStatus,
+    },
+    {
+      label: 'Membuat gambar sertifikat',
+      status: 'pending' as LoadingStepStatus,
+    },
+    {
+      label: 'Mengoptimasi dan mengonversi',
+      status: 'pending' as LoadingStepStatus,
+    },
+    {
+      label: 'Menyimpan file sertifikat',
+      status: 'pending' as LoadingStepStatus,
+    }
+  ];
   
   // Fetch user data
   const { data: userData, isLoading: userLoading } = useQuery<UserInfo>({
@@ -119,16 +148,76 @@ export default function StudentDashboard() {
       ? `SKL_Dengan_Nilai_${certificateData.nisn}.pdf` 
       : `SKL_Tanpa_Nilai_${certificateData.nisn}.pdf`;
     
+    // Reset the loading dialog state
+    setLoadingProgress(0);
+    setCurrentStep(0);
+    setLoadingError(null);
+    setLoadingStep('');
+    
+    // Update steps to pending
+    const updatedSteps = loadingSteps.map(step => ({
+      ...step,
+      status: 'pending' as LoadingStepStatus
+    }));
+    
+    // Show loading dialog
+    setShowLoadingDialog(true);
+    
     // Slight delay to ensure state update is applied
     setTimeout(() => {
-      generatePdf('certificate-container', filename)
+      // Start tracking progress, update steps
+      const handleProgress = (step: string, progress: number) => {
+        setLoadingStep(step);
+        setLoadingProgress(progress);
+        
+        // Find step index
+        if (progress <= 30) {
+          setCurrentStep(0);
+          updatedSteps[0].status = 'loading' as LoadingStepStatus;
+        } else if (progress <= 60) {
+          setCurrentStep(1);
+          updatedSteps[0].status = 'success' as LoadingStepStatus;
+          updatedSteps[1].status = 'loading' as LoadingStepStatus;
+        } else if (progress <= 90) {
+          setCurrentStep(2);
+          updatedSteps[0].status = 'success' as LoadingStepStatus;
+          updatedSteps[1].status = 'success' as LoadingStepStatus;
+          updatedSteps[2].status = 'loading' as LoadingStepStatus;
+        } else {
+          setCurrentStep(3);
+          updatedSteps[0].status = 'success' as LoadingStepStatus;
+          updatedSteps[1].status = 'success' as LoadingStepStatus;
+          updatedSteps[2].status = 'success' as LoadingStepStatus;
+          updatedSteps[3].status = 'loading' as LoadingStepStatus;
+          
+          if (progress === 100) {
+            updatedSteps[3].status = 'success' as LoadingStepStatus;
+          }
+        }
+      };
+      
+      generatePdf('certificate-container', filename, handleProgress)
         .then(() => {
-          toast({
-            title: "Success",
-            description: `SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil diunduh`,
-          });
+          // Wait a moment to show the success state
+          setTimeout(() => {
+            // Hide loading dialog
+            setShowLoadingDialog(false);
+            
+            toast({
+              title: "Success",
+              description: `SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil diunduh`,
+            });
+          }, 1000);
         })
         .catch((error) => {
+          // Show error in dialog
+          setLoadingError("Terjadi kesalahan saat mengunduh SKL. Silakan coba lagi.");
+          
+          // Mark current step as error
+          if (currentStep < updatedSteps.length) {
+            updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
+          }
+          
           toast({
             title: "Error",
             description: "Gagal mengunduh SKL",
@@ -434,6 +523,22 @@ export default function StudentDashboard() {
           </div>
         </div>
       </div>
+      
+      {/* Loading Dialog */}
+      <Dialog.Root open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] max-h-[85vh] w-[90vw] max-w-[500px] translate-x-[-50%] translate-y-[-50%] bg-white dark:bg-gray-900 rounded-lg shadow-lg z-50 overflow-y-auto">
+            <CertificateLoading
+              steps={loadingSteps}
+              currentStep={currentStep}
+              error={loadingError}
+              onClose={() => setShowLoadingDialog(false)}
+              progress={loadingProgress}
+            />
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }

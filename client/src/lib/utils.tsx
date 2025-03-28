@@ -2,14 +2,26 @@ import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import { CertificateData } from "@shared/types";
 
-export async function generatePdf(elementId: string, filename: string): Promise<void> {
+type ProgressCallback = (step: string, progress: number) => void;
+
+export async function generatePdf(
+  elementId: string, 
+  filename: string, 
+  onProgress?: ProgressCallback
+): Promise<void> {
   try {
+    // Report initial progress
+    onProgress && onProgress('Memulai proses', 5);
+    
     console.log(`Generating PDF for element with ID: ${elementId}`);
     const element = document.getElementById(elementId);
     if (!element) {
       console.error(`Element with ID "${elementId}" not found`);
       throw new Error(`Element with ID "${elementId}" not found`);
     }
+    
+    // Progress: Element ditemukan
+    onProgress && onProgress('Menyiapkan elemen sertifikat', 10);
     
     // Pendekatan baru yang lebih sederhana - buat gambar saja dulu
     console.log('Menggunakan pendekatan alternatif untuk PDF...');
@@ -22,6 +34,9 @@ export async function generatePdf(elementId: string, filename: string): Promise<
       backgroundColor: '#FFFFFF',
       logging: true,
       removeContainer: true,
+      onclone: (doc: Document) => {
+        onProgress && onProgress('Memproses konten sertifikat', 30);
+      },
       ignoreElements: (element: Element) => {
         // Ignore any problematic elements
         return element.tagName === 'IFRAME' || element.tagName === 'VIDEO';
@@ -29,9 +44,19 @@ export async function generatePdf(elementId: string, filename: string): Promise<
     };
     
     try {
+      // Progress: Mulai render
+      onProgress && onProgress('Membuat gambar sertifikat', 40);
+      
       // Coba dengan metode 1
       const canvas = await html2canvas(element, options);
+      
+      // Progress: Render canvas selesai
+      onProgress && onProgress('Mengoptimasi gambar', 60);
+      
       const imgData = canvas.toDataURL('image/jpeg', 0.8); // JPEG bukan PNG untuk file lebih kecil
+      
+      // Progress: Optimasi selesai
+      onProgress && onProgress('Membuat file PDF', 70);
       
       // Buat file PDF dengan ukuran A4
       const pdf = new jsPDF({
@@ -44,19 +69,28 @@ export async function generatePdf(elementId: string, filename: string): Promise<
       const imgWidth = 210; // A4 width
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
+      // Progress: Persiapan PDF
+      onProgress && onProgress('Memasukkan gambar ke PDF', 80);
+      
       // Tambahkan gambar ke PDF
       pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
       
+      // Progress: Siap untuk save
+      onProgress && onProgress('Menyimpan file PDF', 90);
+      
       // Simpan PDF
       pdf.save(`${filename}.pdf`);
+      
+      // Progress: Selesai
+      onProgress && onProgress('Berhasil membuat sertifikat', 100);
       
       console.log('PDF berhasil dibuat');
       
     } catch (canvasError) {
       console.error('Metode 1 gagal, mencoba metode alternatif:', canvasError);
       
-      // Jika metode 1 gagal, beritahu pengguna
-      alert('Maaf, terjadi masalah saat membuat PDF. Silakan gunakan screenshot untuk menyimpan sertifikat.');
+      // Progress: Error terjadi, mencoba alternatif
+      onProgress && onProgress('Terjadi kesalahan, mencoba metode alternatif', 50);
       
       // Tetap berikan image jika memungkinkan
       const dataUrl = await html2canvas(element, {
@@ -65,6 +99,9 @@ export async function generatePdf(elementId: string, filename: string): Promise<
         logging: false
       }).then(canvas => canvas.toDataURL('image/jpeg'));
       
+      // Progress: Alternatif berhasil
+      onProgress && onProgress('Membuat file JPG sebagai alternatif', 80);
+      
       // Buat link untuk download image sebagai alternatif
       const a = document.createElement('a');
       a.href = dataUrl;
@@ -72,12 +109,15 @@ export async function generatePdf(elementId: string, filename: string): Promise<
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      
+      // Progress: Selesai dengan alternatif
+      onProgress && onProgress('Berhasil membuat gambar sertifikat', 100);
     }
     
     return Promise.resolve();
   } catch (error) {
     console.error('Error generating PDF (outer):', error);
-    alert('Terjadi kesalahan saat mengunduh sertifikat. Silakan coba lagi atau gunakan screenshot.');
+    onProgress && onProgress('Terjadi kesalahan saat membuat sertifikat', 100);
     return Promise.reject(error);
   }
 }
