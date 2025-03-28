@@ -162,43 +162,68 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       // Teks kriteria kelulusan
       if (data.certCriteriaText) {
         // Kriteria dari database - format yang disimpan dari editor
-        // Karena kita tidak bisa langsung parse HTML, kita harus membuat parsing teks sederhana
-        let criteriaParagraphs = data.certCriteriaText
-          .replace(/<\/?p>/g, '')
-          .replace(/<\/?strong>/g, '')
-          .replace(/<\/?em>/g, '')
-          .replace(/<br\s*\/?>/g, '\n')
-          .replace(/<\/?ul>/g, '')
-          .replace(/<li>/g, '• ')
-          .replace(/<\/li>/g, '\n')
-          .split('\n')
-          .filter(line => line.trim() !== '');
+        // Untuk debugging, log konten HTML
+        console.log("Original certCriteriaText:", data.certCriteriaText);
         
-        // Deteksi dan ganti format <ol> menjadi nomor urut
-        // Jika terdapat <ol> dan </ol>, beri nomor urut
-        if (data.certCriteriaText.includes('<ol>') && data.certCriteriaText.includes('</ol>')) {
-          criteriaParagraphs = data.certCriteriaText
+        // Kita akan berikan logika khusus untuk numbered list
+        // Pertama, coba cek jika ini adalah ordered list yang menggunakan CKEditor
+        const hasOrderedList = data.certCriteriaText.includes('<ol') || data.certCriteriaText.includes('<oembed');
+        const originalText = data.certCriteriaText;
+        
+        // Kita akan membuat array dari item-item agar bisa diformat
+        let criteriaParagraphs = [];
+        
+        if (hasOrderedList) {
+          // Jika ini adalah ordered list
+          console.log("Processing as ordered list");
+          
+          // Extract semua item <li> dari text
+          const liRegex = /<li[^>]*>(.*?)<\/li>/g;
+          let match;
+          let counter = 1;
+          
+          // Ambil semua konten <li> items dan tambahkan penomoran
+          while ((match = liRegex.exec(originalText)) !== null) {
+            // match[1] adalah konten di dalam tag <li>
+            let itemContent = match[1].trim()
+              .replace(/<\/?p>/g, '')
+              .replace(/<\/?strong>/g, '')
+              .replace(/<\/?em>/g, '')
+              .replace(/<br\s*\/?>/g, '');
+              
+            criteriaParagraphs.push(`${counter}. ${itemContent}`);
+            counter++;
+          }
+          
+          // Jika tidak menemukan <li>, coba alternatif parsing
+          if (criteriaParagraphs.length === 0) {
+            console.log("No <li> tags found, trying alternative parsing");
+            criteriaParagraphs = originalText
+              .replace(/<ol[^>]*>/g, '')
+              .replace(/<\/ol>/g, '')
+              .replace(/<\/?p>/g, '')
+              .replace(/<\/?strong>/g, '')
+              .replace(/<\/?em>/g, '')
+              .replace(/<br\s*\/?>/g, '\n')
+              .replace(/<oembed[^>]*>/g, '')
+              .replace(/<figure[^>]*>.*?<\/figure>/g, '')
+              .split('\n')
+              .filter(line => line.trim() !== '')
+              .map((line, idx) => `${idx + 1}. ${line.trim()}`);
+          }
+        } else {
+          // Jika ini bukan ordered list, proses sebagai unordered list atau teks biasa
+          console.log("Processing as unordered list or plain text");
+          criteriaParagraphs = originalText
             .replace(/<\/?p>/g, '')
             .replace(/<\/?strong>/g, '')
             .replace(/<\/?em>/g, '')
             .replace(/<br\s*\/?>/g, '\n')
             .replace(/<\/?ul>/g, '')
-            .replace(/<li>/g, '')
+            .replace(/<li>/g, '• ')
             .replace(/<\/li>/g, '\n')
             .split('\n')
             .filter(line => line.trim() !== '');
-          
-          // Hapus tag <ol> dan </ol> dari array
-          criteriaParagraphs = criteriaParagraphs.filter(line => 
-            !line.trim().startsWith('<ol>') && !line.trim().startsWith('</ol>'));
-          
-          // Beri nomor urut
-          criteriaParagraphs = criteriaParagraphs.map((line, idx) => {
-            if (line.trim()) {
-              return `${idx + 1}. ${line.trim()}`;
-            }
-            return line;
-          });
         }
           
         // Tambahkan judul Kriteria sebelum list
