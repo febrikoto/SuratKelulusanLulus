@@ -13,8 +13,9 @@ interface CertificateProps {
 
 export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButton = false, downloadContainerId }) => {
   const certificateRef = useRef<HTMLDivElement>(null);
-  const [zoomLevel, setZoomLevel] = useState(1);
   const isMobile = useIsMobile();
+  // Set level zoom default lebih kecil untuk mobile
+  const [zoomLevel, setZoomLevel] = useState(isMobile ? 0.6 : 0.8);
 
   const handleDownload = async () => {
     console.log('Certificate component handleDownload not implemented');
@@ -26,11 +27,11 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
   };
 
   const handleZoomOut = () => {
-    setZoomLevel(prevZoom => Math.max(prevZoom - 0.1, 0.4));
+    setZoomLevel(prevZoom => Math.max(prevZoom - 0.1, 0.3));
   };
 
   const handleResetZoom = () => {
-    setZoomLevel(1);
+    setZoomLevel(isMobile ? 0.6 : 0.8);
   };
 
   // Wrapper style untuk overflow
@@ -40,8 +41,9 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
     overflowY: 'auto' as const,
     maxHeight: isMobile ? '70vh' : '85vh',
     display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    padding: '20px',
   };
 
   return (
@@ -98,8 +100,9 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
             width: '210mm',
             minHeight: '297mm',
             transform: `scale(${zoomLevel})`,
-            transformOrigin: 'top center',
+            transformOrigin: 'top left',
             transition: 'transform 0.2s ease-in-out',
+            marginBottom: '40px',
           }}
         >
         {/* Header dengan logo dan kop surat */}
