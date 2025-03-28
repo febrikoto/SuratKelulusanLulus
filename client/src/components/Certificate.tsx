@@ -14,23 +14,8 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
   const certificateRef = useRef<HTMLDivElement>(null);
 
   const handleDownload = async () => {
-    try {
-      console.log('Download button clicked');
-      if (certificateRef.current) {
-        const containerId = downloadContainerId || 'certificate-container';
-        console.log(`Using container ID: ${containerId}`);
-        await generatePdf(
-          containerId, 
-          `SKL_${data.fullName.replace(/\s+/g, '_')}_${data.nisn}`
-        );
-      } else {
-        console.error('Certificate reference is null');
-        alert('Tidak dapat menemukan elemen sertifikat untuk diunduh');
-      }
-    } catch (error) {
-      console.error('Error in handleDownload:', error);
-      alert('Terjadi kesalahan saat mengunduh sertifikat');
-    }
+    console.log('Certificate component handleDownload not implemented');
+    alert('Fitur ini tidak tersedia dalam pop-up. Silakan gunakan tombol unduh di dashboard utama.');
   };
 
   return (
@@ -49,7 +34,6 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
       )}
       
       <div 
-        id={downloadContainerId || "certificate-container"} 
         ref={certificateRef} 
         className="relative p-8 border border-gray-300 bg-white mx-auto w-[210mm] min-h-[297mm] text-black"
       >

@@ -8,38 +8,55 @@ export type ProgressCallback = (step: string, progress: number) => void;
 export async function generatePdf(
   elementId: string, 
   filename: string, 
-  onProgress?: ProgressCallback
+  onProgress?: ((step: string, progress: number) => void) | undefined
 ): Promise<void> {
   try {
     // Report initial progress
     onProgress && onProgress('Memulai proses', 5);
     
     console.log(`Generating PDF for element with ID: ${elementId}`);
+    
+    // Berikan waktu untuk update DOM dan penemuan elemen
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
     const element = document.getElementById(elementId);
     if (!element) {
       console.error(`Element with ID "${elementId}" not found`);
       throw new Error(`Element with ID "${elementId}" not found`);
     }
     
+    // Log element properties untuk debugging
+    console.log(`Element found: ${element.tagName}, Width: ${element.offsetWidth}, Height: ${element.offsetHeight}`);
+    console.log(`Visibility: ${window.getComputedStyle(element).visibility}, Display: ${window.getComputedStyle(element).display}`);
+    
+    // Make element visible for rendering
+    const parentElement = element.parentElement;
+    if (parentElement) {
+      parentElement.style.display = 'block';
+      parentElement.style.visibility = 'visible';
+      parentElement.style.opacity = '1';
+      parentElement.style.position = 'fixed';
+      parentElement.style.top = '-9999px';
+      parentElement.style.left = '-9999px';
+      parentElement.style.width = '210mm';
+      parentElement.style.height = 'auto';
+      parentElement.style.zIndex = '-1000';
+    }
+    
     // Progress: Element ditemukan
-    onProgress && onProgress('Menyiapkan elemen sertifikat', 10);
+    onProgress && onProgress('Menyiapkan elemen sertifikat', 15);
     
-    // Pendekatan baru yang lebih sederhana - buat gambar saja dulu
-    console.log('Menggunakan pendekatan alternatif untuk PDF...');
+    // Berikan waktu untuk update styling
+    await new Promise(resolve => setTimeout(resolve, 100));
     
-    // Konfigurasi untuk html2canvas
+    // Buat opsi html2canvas yang lebih sederhana
     const options = {
-      scale: 1.5, // Lebih kecil untuk menghindari masalah memori
+      scale: 1.5,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#FFFFFF',
       logging: true,
-      removeContainer: true,
-      onclone: (doc: Document) => {
-        onProgress && onProgress('Memproses konten sertifikat', 30);
-      },
       ignoreElements: (element: Element) => {
-        // Ignore any problematic elements
         return element.tagName === 'IFRAME' || element.tagName === 'VIDEO';
       }
     };
@@ -48,13 +65,13 @@ export async function generatePdf(
       // Progress: Mulai render
       onProgress && onProgress('Membuat gambar sertifikat', 40);
       
-      // Coba dengan metode 1
       const canvas = await html2canvas(element, options);
+      console.log('Canvas created successfully:', canvas.width, 'x', canvas.height);
       
       // Progress: Render canvas selesai
       onProgress && onProgress('Mengoptimasi gambar', 60);
       
-      const imgData = canvas.toDataURL('image/jpeg', 0.8); // JPEG bukan PNG untuk file lebih kecil
+      const imgData = canvas.toDataURL('image/jpeg', 0.85);
       
       // Progress: Optimasi selesai
       onProgress && onProgress('Membuat file PDF', 70);
@@ -84,40 +101,64 @@ export async function generatePdf(
       
       // Progress: Selesai
       onProgress && onProgress('Berhasil membuat sertifikat', 100);
-      
       console.log('PDF berhasil dibuat');
       
     } catch (canvasError) {
-      console.error('Metode 1 gagal, mencoba metode alternatif:', canvasError);
+      console.error('Metode utama gagal, mencoba metode alternatif:', canvasError);
       
       // Progress: Error terjadi, mencoba alternatif
       onProgress && onProgress('Terjadi kesalahan, mencoba metode alternatif', 50);
       
-      // Tetap berikan image jika memungkinkan
-      const dataUrl = await html2canvas(element, {
-        scale: 1,
-        useCORS: true,
-        logging: false
-      }).then(canvas => canvas.toDataURL('image/jpeg'));
-      
-      // Progress: Alternatif berhasil
-      onProgress && onProgress('Membuat file JPG sebagai alternatif', 80);
-      
-      // Buat link untuk download image sebagai alternatif
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = `${filename}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      
-      // Progress: Selesai dengan alternatif
-      onProgress && onProgress('Berhasil membuat gambar sertifikat', 100);
+      try {
+        // Coba dengan pengaturan yang lebih sederhana
+        onProgress && onProgress('Mencoba metode alternatif dengan pengaturan berbeda', 60);
+        
+        // Opsi yang lebih sederhana
+        const simpleOptions = {
+          scale: 1,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#FFFFFF'
+        };
+        
+        const altCanvas = await html2canvas(element, simpleOptions);
+        const altImgData = altCanvas.toDataURL('image/jpeg', 0.8);
+        
+        // Progress: Alternatif berhasil
+        onProgress && onProgress('Membuat file JPG sebagai alternatif', 80);
+        
+        // Buat link untuk download image sebagai alternatif
+        const a = document.createElement('a');
+        a.href = altImgData;
+        a.download = `${filename}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Progress: Selesai dengan alternatif
+        onProgress && onProgress('Berhasil membuat gambar sertifikat sebagai alternatif', 100);
+      } catch (altError) {
+        console.error('Semua metode gagal:', altError);
+        throw altError;
+      }
+    } finally {
+      // Restore parent element properties
+      if (parentElement) {
+        parentElement.style.display = '';
+        parentElement.style.visibility = '';
+        parentElement.style.opacity = '';
+        parentElement.style.position = '';
+        parentElement.style.top = '';
+        parentElement.style.left = '';
+        parentElement.style.width = '';
+        parentElement.style.height = '';
+        parentElement.style.zIndex = '';
+      }
     }
     
     return Promise.resolve();
   } catch (error) {
-    console.error('Error generating PDF (outer):', error);
+    console.error('Error generating PDF:', error);
     onProgress && onProgress('Terjadi kesalahan saat membuat sertifikat', 100);
     return Promise.reject(error);
   }

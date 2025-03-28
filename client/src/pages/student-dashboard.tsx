@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Student, Settings } from '@shared/schema';
 import { UserInfo, CertificateData } from '@shared/types';
 import { generatePdf, prepareCertificateData } from '@/lib/utils';
-import type { ProgressCallback } from '@/lib/utils';
+
+// Define a local type for the progress callback
+type ProgressCallback = (step: string, progress: number) => void;
 import { Download, Loader2, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -539,10 +541,16 @@ export default function StudentDashboard() {
                       </Dialog.Portal>
                     </Dialog.Root>
                     
-                    {/* Hidden certificate for download purposes */}
-                    <div className="hidden">
-                      <div id="certificate-download-container" className="certificate-container-wrapper">
-                        <Certificate data={certificateData} downloadContainerId="certificate-download-container" />
+                    {/* Elemen untuk download PDF - gunakan visibility:hidden daripada display:none */}
+                    <div className="absolute opacity-0 pointer-events-none" style={{
+                      position: 'absolute',
+                      left: '-9999px',
+                      width: '210mm',
+                      height: 'auto',
+                      visibility: 'visible'
+                    }}>
+                      <div id="certificate-download-container" className="certificate-container-wrapper bg-white">
+                        <Certificate data={certificateData} />
                       </div>
                     </div>
                   </>
