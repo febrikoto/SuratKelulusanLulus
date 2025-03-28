@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Student, Settings } from '@shared/schema';
 import { UserInfo, CertificateData, SubjectGrade } from '@shared/types';
@@ -157,7 +158,7 @@ async function generatePdf(
       throw new Error('Tidak dapat membuka jendela cetak');
     }
     
-    // Siapkan dokumen cetak dengan ukuran A4
+    // Siapkan dokumen cetak dengan ukuran F4
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -165,7 +166,7 @@ async function generatePdf(
         <title>Cetak Sertifikat</title>
         <style>
           @page {
-            size: A4;
+            size: 215.9mm 330.2mm; /* Ukuran F4 */
             margin: 0;
           }
           body {
@@ -175,7 +176,7 @@ async function generatePdf(
             overflow-x: hidden;
           }
           .container {
-            width: 210mm;
+            width: 215.9mm; /* Lebar F4 */
             margin: 0 auto;
             padding: 0;
             background-color: white;
@@ -184,7 +185,7 @@ async function generatePdf(
           }
           @media print {
             body {
-              width: 210mm;
+              width: 215.9mm; /* Lebar F4 */
             }
           }
           /* Ensure tables have proper styling */
@@ -458,121 +459,123 @@ export default function StudentDashboard() {
   const handleDownloadSKL = (withGrades: boolean) => {
     if (!certificateData) return;
     
-    // Update certificate data to show/hide grades
-    setCertificateData({...certificateData, showGrades: withGrades});
-    
-    // Ubah ke PNG format untuk keandalan lebih baik
-    const filename = withGrades 
-      ? `SKL_Dengan_Nilai_${certificateData.nisn}.png` 
-      : `SKL_Tanpa_Nilai_${certificateData.nisn}.png`;
+    // Perbarui state sertifikat dengan nilai atau tanpa nilai
+    setCertificateData(prevState => {
+      // Buat salinan data sertifikat dengan showGrades yang benar
+      const updatedData = { ...prevState, showGrades: withGrades };
       
-    // Verifikasi elemen yang akan digunakan untuk PDF
-    console.log("Memeriksa elemen untuk screenshot...");
-    setTimeout(() => {
-      const container = document.getElementById('certificate-download-container');
-      console.log("Container exists:", !!container);
-      if (container) {
-        console.log("Container dimensions:", container.offsetWidth, "x", container.offsetHeight);
-        console.log("Container visibility:", window.getComputedStyle(container.parentElement as Element).display);
-      }
-    }, 50);
+      console.log("Mengunduh SKL dengan nilai:", withGrades);
+      console.log("Status showGrades diset ke:", updatedData.showGrades);
+      
+      // Buat filename berdasarkan jenis SKL
+      const filename = withGrades 
+        ? `SKL_Dengan_Nilai_${updatedData.nisn}.png` 
+        : `SKL_Tanpa_Nilai_${updatedData.nisn}.png`;
     
-    // Reset the loading dialog state
-    setLoadingProgress(0);
-    setCurrentStep(0);
-    setLoadingError(null);
-    setLoadingStep('');
-    
-    // Update steps to pending
-    const updatedSteps = loadingSteps.map(step => ({
-      ...step,
-      status: 'pending' as LoadingStepStatus
-    }));
-    
-    // Show loading dialog
-    setShowLoadingDialog(true);
-    
-    // Slight delay to ensure state update is applied
-    setTimeout(() => {
-      try {
-        // Start tracking progress, update steps
-        const handleProgress = (step: string, progress: number) => {
-          setLoadingStep(step);
-          setLoadingProgress(progress);
-          
-          // Find step index
-          if (progress <= 30) {
-            setCurrentStep(0);
-            updatedSteps[0].status = 'loading' as LoadingStepStatus;
-          } else if (progress <= 60) {
-            setCurrentStep(1);
-            updatedSteps[0].status = 'success' as LoadingStepStatus;
-            updatedSteps[1].status = 'loading' as LoadingStepStatus;
-          } else if (progress <= 90) {
-            setCurrentStep(2);
-            updatedSteps[0].status = 'success' as LoadingStepStatus;
-            updatedSteps[1].status = 'success' as LoadingStepStatus;
-            updatedSteps[2].status = 'loading' as LoadingStepStatus;
-          } else {
-            setCurrentStep(3);
-            updatedSteps[0].status = 'success' as LoadingStepStatus;
-            updatedSteps[1].status = 'success' as LoadingStepStatus;
-            updatedSteps[2].status = 'success' as LoadingStepStatus;
-            updatedSteps[3].status = 'loading' as LoadingStepStatus;
+      // Reset the loading dialog state
+      setLoadingProgress(0);
+      setCurrentStep(0);
+      setLoadingError(null);
+      setLoadingStep('');
+      
+      // Update steps to pending
+      const updatedSteps = loadingSteps.map(step => ({
+        ...step,
+        status: 'pending' as LoadingStepStatus
+      }));
+      
+      // Show loading dialog
+      setShowLoadingDialog(true);
+      
+      // Slight delay to ensure state update is applied
+      setTimeout(() => {
+        try {
+          // Verifikasi bahwa DOM telah diperbarui dengan nilai yang benar
+          const container = document.getElementById('certificate-download-container');
+          const gradeAttribute = container?.querySelector('[data-show-grades]')?.getAttribute('data-show-grades');
+          console.log("Atribut data-show-grades:", gradeAttribute);
             
-            if (progress === 100) {
-              updatedSteps[3].status = 'success' as LoadingStepStatus;
+          // Start tracking progress, update steps
+          const handleProgress = (step: string, progress: number) => {
+            setLoadingStep(step);
+            setLoadingProgress(progress);
+            
+            // Find step index
+            if (progress <= 30) {
+              setCurrentStep(0);
+              updatedSteps[0].status = 'loading' as LoadingStepStatus;
+            } else if (progress <= 60) {
+              setCurrentStep(1);
+              updatedSteps[0].status = 'success' as LoadingStepStatus;
+              updatedSteps[1].status = 'loading' as LoadingStepStatus;
+            } else if (progress <= 90) {
+              setCurrentStep(2);
+              updatedSteps[0].status = 'success' as LoadingStepStatus;
+              updatedSteps[1].status = 'success' as LoadingStepStatus;
+              updatedSteps[2].status = 'loading' as LoadingStepStatus;
+            } else {
+              setCurrentStep(3);
+              updatedSteps[0].status = 'success' as LoadingStepStatus;
+              updatedSteps[1].status = 'success' as LoadingStepStatus;
+              updatedSteps[2].status = 'success' as LoadingStepStatus;
+              updatedSteps[3].status = 'loading' as LoadingStepStatus;
+              
+              if (progress === 100) {
+                updatedSteps[3].status = 'success' as LoadingStepStatus;
+              }
             }
-          }
-        };
-        
-        // Panggil generatePdf dengan container ID yang benar
-        generatePdf('certificate-download-container', filename, handleProgress)
-          .then(() => {
-            // Wait a moment to show the success state
-            setTimeout(() => {
-              // Hide loading dialog
-              setShowLoadingDialog(false);
+          };
+          
+          // Panggil generatePdf dengan container ID yang benar
+          generatePdf('certificate-download-container', filename, handleProgress)
+            .then(() => {
+              // Wait a moment to show the success state
+              setTimeout(() => {
+                // Hide loading dialog
+                setShowLoadingDialog(false);
+                
+                toast({
+                  title: "Success",
+                  description: `SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil diunduh`,
+                });
+              }, 1000);
+            })
+            .catch((error: any) => {
+              // Show error in dialog
+              setLoadingError("Terjadi kesalahan saat mengunduh SKL. Silakan coba lagi.");
+              
+              // Mark current step as error
+              if (currentStep < updatedSteps.length) {
+                updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
+              }
               
               toast({
-                title: "Success",
-                description: `SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil diunduh`,
+                title: "Error",
+                description: "Gagal mengunduh SKL",
+                variant: "destructive",
               });
-            }, 1000);
-          })
-          .catch((error: any) => {
-            // Show error in dialog
-            setLoadingError("Terjadi kesalahan saat mengunduh SKL. Silakan coba lagi.");
-            
-            // Mark current step as error
-            if (currentStep < updatedSteps.length) {
-              updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
-            }
-            
-            toast({
-              title: "Error",
-              description: "Gagal mengunduh SKL",
-              variant: "destructive",
+              console.error(error);
             });
-            console.error(error);
+        } catch (error) {
+          // Show error in dialog
+          console.error("Error dalam proses mengunduh:", error);
+          setLoadingError("Terjadi kesalahan saat memproses SKL. Silakan coba lagi.");
+          
+          // Mark current step as error
+          if (currentStep < updatedSteps.length) {
+            updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
+          }
+          
+          toast({
+            title: "Error",
+            description: "Gagal memproses SKL",
+            variant: "destructive",
           });
-      } catch (error) {
-        // Show error in dialog
-        console.error("Error dalam proses mengunduh:", error);
-        setLoadingError("Terjadi kesalahan saat memproses SKL. Silakan coba lagi.");
-        
-        // Mark current step as error
-        if (currentStep < updatedSteps.length) {
-          updatedSteps[currentStep].status = 'error' as LoadingStepStatus;
         }
-        
-        toast({
-          title: "Error",
-          description: "Gagal memproses SKL",
-          variant: "destructive",
-        });
-      }
-    }, 100);
+      }, 100);
+      
+      return updatedData;
+    });
   };
   
   // Loading state or redirect if not authenticated
@@ -809,8 +812,11 @@ export default function StudentDashboard() {
       
       {/* Container for certificate download - hidden by default but made visible during screenshot */}
       <div id="certificate-container-wrapper" className="fixed top-0 left-0 w-full h-full bg-white z-[-100] opacity-0 pointer-events-none overflow-auto">
-        <div id="certificate-download-container" className="w-[210mm] mx-auto bg-white">
-          {certificateData && <PrintCertificate data={certificateData} />}
+        <div id="certificate-download-container" className="w-[215.9mm] mx-auto bg-white">
+          {certificateData && (
+            /* Membuat dataCopy baru untuk memastikan nilai showGrades diatur dengan benar */
+            <PrintCertificate key={`cert-${certificateData.showGrades ? 'with-grades' : 'no-grades'}`} data={certificateData} />
+          )}
         </div>
       </div>
       

@@ -27,10 +27,12 @@ interface PrintCertificateProps {
 export const PrintCertificate: React.FC<PrintCertificateProps> = ({ data }) => {
   return (
     <div 
-      className="relative p-8 border border-gray-300 bg-white text-black w-[210mm]"
+      className="relative p-8 border border-gray-300 bg-white text-black"
+      data-show-grades={data.showGrades ? "true" : "false"}
       style={{
         fontFamily: 'Arial, sans-serif',
-        minHeight: '297mm', // A4 height
+        width: '215.9mm', // F4 width
+        minHeight: '330.2mm', // F4 height
         paddingBottom: '40px',
       }}
     >
