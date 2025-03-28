@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Student, Settings } from '@shared/schema';
 import { UserInfo, CertificateData } from '@shared/types';
-import { generatePdf, prepareCertificateData, ProgressCallback } from '@/lib/utils';
+import { generatePdf, prepareCertificateData } from '@/lib/utils';
+import type { ProgressCallback } from '@/lib/utils';
 import { Download, Loader2, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -147,6 +148,17 @@ export default function StudentDashboard() {
     const filename = withGrades 
       ? `SKL_Dengan_Nilai_${certificateData.nisn}.pdf` 
       : `SKL_Tanpa_Nilai_${certificateData.nisn}.pdf`;
+      
+    // Verifikasi elemen yang akan digunakan untuk PDF
+    console.log("Memeriksa elemen untuk PDF...");
+    setTimeout(() => {
+      const container = document.getElementById('certificate-download-container');
+      console.log("Container exists:", !!container);
+      if (container) {
+        console.log("Container dimensions:", container.offsetWidth, "x", container.offsetHeight);
+        console.log("Container visibility:", window.getComputedStyle(container.parentElement as Element).display);
+      }
+    }, 50);
     
     // Reset the loading dialog state
     setLoadingProgress(0);
@@ -197,8 +209,8 @@ export default function StudentDashboard() {
           }
         };
         
-        // Panggil generatePdf dengan 3 parameter (termasuk callback handleProgress)
-        generatePdf('certificate-container', filename, handleProgress)
+        // Panggil generatePdf dengan container ID yang benar
+        generatePdf('certificate-download-container', filename, handleProgress)
           .then(() => {
             // Wait a moment to show the success state
             setTimeout(() => {
@@ -529,8 +541,8 @@ export default function StudentDashboard() {
                     
                     {/* Hidden certificate for download purposes */}
                     <div className="hidden">
-                      <div id="certificate-container">
-                        <Certificate data={certificateData} />
+                      <div id="certificate-download-container" className="certificate-container-wrapper">
+                        <Certificate data={certificateData} downloadContainerId="certificate-download-container" />
                       </div>
                     </div>
                   </>

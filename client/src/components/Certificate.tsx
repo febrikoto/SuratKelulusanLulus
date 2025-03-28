@@ -7,17 +7,20 @@ import { Download } from 'lucide-react';
 interface CertificateProps {
   data: CertificateData;
   showDownloadButton?: boolean;
+  downloadContainerId?: string;
 }
 
-export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButton = false }) => {
+export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButton = false, downloadContainerId }) => {
   const certificateRef = useRef<HTMLDivElement>(null);
 
   const handleDownload = async () => {
     try {
       console.log('Download button clicked');
       if (certificateRef.current) {
+        const containerId = downloadContainerId || 'certificate-container';
+        console.log(`Using container ID: ${containerId}`);
         await generatePdf(
-          'certificate-container', 
+          containerId, 
           `SKL_${data.fullName.replace(/\s+/g, '_')}_${data.nisn}`
         );
       } else {
@@ -46,7 +49,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
       )}
       
       <div 
-        id="certificate-container" 
+        id={downloadContainerId || "certificate-container"} 
         ref={certificateRef} 
         className="relative p-8 border border-gray-300 bg-white mx-auto w-[210mm] min-h-[297mm] text-black"
       >
