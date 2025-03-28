@@ -39,23 +39,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user: UserInfo) => {
-      // Set user data in cache
+      // Set user data in cache immediately
       queryClient.setQueryData(["/api/user"], user);
       
-      // Load settings data in advance to reduce loading times
-      fetch('/api/settings')
-        .then(response => response.json())
-        .then(data => {
-          queryClient.setQueryData(["/api/settings"], data);
-        })
-        .catch(err => {
-          console.error("Failed to prefetch settings:", err);
-        });
-      
-      // Invalidate any stale queries
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/dashboard/stats"]
-      });
+      // Preload essential data in parallel to reduce dashboard loading time
+      Promise.all([
+        // Preload settings
+        fetch('/api/settings')
+          .then(response => response.json())
+          .then(data => {
+            queryClient.setQueryData(["/api/settings"], data);
+          })
+          .catch(err => {
+            console.error("Failed to prefetch settings:", err);
+          }),
+        
+        // Preload dashboard stats
+        fetch('/api/dashboard/stats')
+          .then(response => response.json())
+          .then(data => {
+            queryClient.setQueryData(["/api/dashboard/stats"], data);
+          })
+          .catch(err => {
+            console.error("Failed to prefetch dashboard stats:", err);
+          })
+      ]);
       
       toast({
         title: "Login Berhasil",

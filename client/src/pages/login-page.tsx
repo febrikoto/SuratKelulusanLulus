@@ -62,21 +62,32 @@ export default function LoginPage() {
     fetchSettings();
   }, []);
 
+  // Handle login redirect with useEffect
   useEffect(() => {
     // Redirect if user is logged in
     if (user) {
+      // Determine where to redirect based on user role
       const redirectPath = user.role === 'admin' 
         ? '/admin' 
         : user.role === 'guru' 
           ? '/guru' 
           : '/siswa';
-          
-      setLocation(redirectPath);
+      
+      // Use setTimeout to ensure all cached data is available before redirect
+      // This prevents the need for page refresh after login
+      setTimeout(() => {
+        setLocation(redirectPath);
+      }, 50);
     }
   }, [user, setLocation]);
 
-  const onSubmit = (values: LoginFormValues) => {
-    loginMutation.mutate(values);
+  const onSubmit = async (values: LoginFormValues) => {
+    try {
+      // Perform login operation
+      loginMutation.mutate(values);
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
   };
 
   return (
