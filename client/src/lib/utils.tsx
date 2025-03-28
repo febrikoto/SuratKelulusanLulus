@@ -1,4 +1,4 @@
-import { CertificateData } from "@shared/types";
+import { CertificateData, SubjectGrade } from "../../../shared/types";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 

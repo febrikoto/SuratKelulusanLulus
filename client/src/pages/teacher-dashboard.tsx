@@ -21,7 +21,7 @@ import { apiRequest } from '@/lib/queryClient';
 import TeacherHeader from '@/components/TeacherHeader';
 import { Certificate } from '@/components/Certificate';
 import WelcomeAnimation from '@/components/WelcomeAnimation';
-import { prepareCertificateData, generatePdf } from '@/lib/utils';
+import { prepareCertificateData } from '@/lib/utils.tsx';
 
 export default function TeacherDashboard(): React.JSX.Element {
   const { user: authUser, updateWelcomeStatus } = useAuth();
@@ -114,23 +114,15 @@ export default function TeacherDashboard(): React.JSX.Element {
   };
   
   const handleDownloadCertificate = () => {
-    if (!certificateData) return;
+    if (!certificateData || !certificateData.id) return;
     
-    generatePdf('certificate-preview-container', `SKL_${certificateData.nisn}.pdf`)
-      .then(() => {
-        toast({
-          title: "Success",
-          description: "SKL berhasil diunduh",
-        });
-      })
-      .catch((error) => {
-        toast({
-          title: "Error",
-          description: "Gagal mengunduh SKL",
-          variant: "destructive",
-        });
-        console.error(error);
-      });
+    const url = `/api/certificates/${certificateData.id}?showGrades=${showGrades ? 'true' : 'false'}`;
+    window.open(url, '_blank');
+    
+    toast({
+      title: "Success",
+      description: "SKL sedang diproses dan akan terunduh otomatis",
+    });
   };
 
   // Handle logout
