@@ -597,49 +597,51 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       doc.text(`${data.cityName}, ${formatDateForCertificate(data.issueDate)}`, signatureX, y);
       doc.text('Kepala,', signatureX, y + 20);
       
-      // Tambahkan stempel jika ada
-      if (data.schoolStamp) {
+      // Pilih antara tanda tangan digital (TTE) atau tanda tangan biasa + stempel
+      if (data.useDigitalSignature && qrCodeBuffer) {
+        // Jika TTE diaktifkan, tambahkan QR code di atas nama kepala sekolah
         try {
-          // Posisikan stempel di tengah tanda tangan, dengan opacity
-          doc.opacity(0.8);
-          doc.image(data.schoolStamp, signatureX + 20, y + 30, {
-            width: 100,
-            height: 100
-          });
-          doc.opacity(1); // Reset opacity
-        } catch (e) {
-          console.error("Error loading school stamp:", e);
-        }
-      }
-      
-      // Tambahkan tanda tangan jika ada
-      if (data.headmasterSignature) {
-        try {
-          // Ukuran tanda tangan diperbesar 2x lipat (dari 80 menjadi 160)
-          doc.image(data.headmasterSignature, signatureX + 20, y + 40, {
-            width: 160
-          });
-        } catch (e) {
-          console.error("Error loading headmaster signature:", e);
-        }
-      } else {
-        // Jika tidak ada tanda tangan, beri space
-        doc.moveDown(4);
-      }
-
-      // Tambahkan QR code jika telah diproses sebelumnya dan jika fitur TTE diaktifkan
-      if (qrCodeBuffer && data.useDigitalSignature) {
-        try {
-          // Posisikan QR code di kiri bawah sejajar dengan nama kepala sekolah
-          const qrX = doc.page.margins.left;
-          const qrY = y + 100 - 60; // Sejajar dengan posisi nama kepala sekolah
+          // Posisikan QR code di tengah di atas nama kepala sekolah
+          const qrX = signatureX + 20;  // Sesuaikan posisi agar di tengah tanda tangan
+          const qrY = y + 40;  // Sejajar dengan posisi tanda tangan biasa
           doc.image(qrCodeBuffer, qrX, qrY, { width: 100 });
           
-          // Tambahkan teks "Tanda Tangan Digital" di bawah QR
+          // Tambahkan teks "TTE" di bawah QR
           doc.fontSize(8).font('Helvetica');
-          doc.text('Tanda Tangan Digital (TTE)', qrX, qrY + 105, { width: 100, align: 'center' });
+          doc.text('TTE', qrX, qrY + 100, { width: 100, align: 'center' });
         } catch (e) {
           console.error("Error adding QR code to PDF:", e);
+        }
+      } else {
+        // Jika TTE tidak diaktifkan, tampilkan tanda tangan biasa dan stempel
+        // Tambahkan stempel jika ada
+        if (data.schoolStamp) {
+          try {
+            // Posisikan stempel di tengah tanda tangan, dengan opacity
+            doc.opacity(0.8);
+            doc.image(data.schoolStamp, signatureX + 20, y + 30, {
+              width: 100,
+              height: 100
+            });
+            doc.opacity(1); // Reset opacity
+          } catch (e) {
+            console.error("Error loading school stamp:", e);
+          }
+        }
+        
+        // Tambahkan tanda tangan jika ada
+        if (data.headmasterSignature) {
+          try {
+            // Ukuran tanda tangan diperbesar 2x lipat (dari 80 menjadi 160)
+            doc.image(data.headmasterSignature, signatureX + 20, y + 40, {
+              width: 160
+            });
+          } catch (e) {
+            console.error("Error loading headmaster signature:", e);
+          }
+        } else {
+          // Jika tidak ada tanda tangan, beri space
+          doc.moveDown(4);
         }
       }
       
