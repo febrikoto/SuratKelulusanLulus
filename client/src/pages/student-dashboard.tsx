@@ -367,8 +367,18 @@ export default function StudentDashboard() {
                         </svg>
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm text-green-700 dark:text-green-300">SKL Anda telah disetujui dan siap untuk diunduh.</p>
-                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">{student.verificationDate ? new Date(student.verificationDate).toLocaleString() : ''}</p>
+                        <p className="text-sm text-green-700 dark:text-green-300">
+                          SKL Anda telah disetujui dan siap untuk diunduh
+                        </p>
+                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                          {student.verificationDate ? new Date(student.verificationDate).toLocaleString() : ''} 
+                        </p>
+                        {schoolSettings && schoolSettings.graduationDate && (
+                          <p className="text-xs text-green-600 dark:text-green-400 mt-2 font-medium">
+                            Tanggal Pengumuman Kelulusan: {schoolSettings.graduationDate} 
+                            {schoolSettings.graduationTime ? ` pukul ${schoolSettings.graduationTime}` : ''}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -381,8 +391,18 @@ export default function StudentDashboard() {
                         </svg>
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm text-yellow-700 dark:text-yellow-300">SKL Anda sedang dalam proses verifikasi.</p>
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">Harap tunggu konfirmasi dari pihak sekolah.</p>
+                        <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                          SKL Anda sedang dalam proses verifikasi.
+                        </p>
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                          Harap tunggu konfirmasi dari pihak {schoolSettings?.schoolName || 'sekolah'}.
+                        </p>
+                        {schoolSettings && schoolSettings.graduationDate && (
+                          <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2 font-medium">
+                            Pengumuman kelulusan dijadwalkan pada: {schoolSettings.graduationDate}
+                            {schoolSettings.graduationTime ? ` pukul ${schoolSettings.graduationTime}` : ''} 
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -395,9 +415,14 @@ export default function StudentDashboard() {
                         </svg>
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm text-red-700 dark:text-red-300">SKL Anda tidak disetujui.</p>
+                        <p className="text-sm text-red-700 dark:text-red-300">
+                          SKL Anda tidak disetujui.
+                        </p>
                         <p className="text-xs text-red-600 dark:text-red-400 mt-1">
                           {student.verificationNotes || 'Tidak ada catatan tambahan.'}
+                        </p>
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+                          Silakan hubungi pihak administrasi {schoolSettings?.schoolName || 'sekolah'} untuk informasi lebih lanjut.
                         </p>
                       </div>
                     </div>
@@ -411,8 +436,20 @@ export default function StudentDashboard() {
                         </svg>
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm text-blue-700 dark:text-blue-300">Semua siswa kelas XII diharapkan mengecek data SKL.</p>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Hubungi admin jika ada masalah dengan data Anda.</p>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          {schoolSettings?.schoolName ? `Semua siswa ${schoolSettings.schoolName}` : 'Semua siswa'} diharapkan mengecek data SKL.
+                        </p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                          {schoolSettings?.academicYear ? 
+                            `Tahun ajaran: ${schoolSettings.academicYear}` : 
+                            'Hubungi admin jika ada masalah dengan data Anda.'}
+                        </p>
+                        {schoolSettings && schoolSettings.graduationDate && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium">
+                            Pengumuman kelulusan: {schoolSettings.graduationDate}
+                            {schoolSettings.graduationTime ? ` pukul ${schoolSettings.graduationTime}` : ''}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -420,19 +457,36 @@ export default function StudentDashboard() {
                 
                 <Separator className="my-4" />
                 
-                <div className="p-3 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 rounded-md border-l-4 border-blue-500">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-blue-700 dark:text-blue-300">Pengumuman kelulusan tahun ajaran 2024/2025.</p>
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">3 Mei 2024</p>
+                {schoolSettings && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 rounded-md border-l-4 border-blue-500">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                          {schoolSettings.schoolName ? `Pengumuman dari ${schoolSettings.schoolName}` : 'Pengumuman Kelulusan'}
+                        </p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                          {schoolSettings.academicYear ? `Tahun Ajaran ${schoolSettings.academicYear}` : 'Tahun Ajaran Terkini'}
+                        </p>
+                        {schoolSettings.graduationDate && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
+                            Tanggal Pengumuman: {schoolSettings.graduationDate}
+                            {schoolSettings.graduationTime ? ` pukul ${schoolSettings.graduationTime}` : ''}
+                          </p>
+                        )}
+                        {schoolSettings.certBeforeStudentData && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                            Sertifikat akan dikeluarkan sesuai data yang telah diverifikasi
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
