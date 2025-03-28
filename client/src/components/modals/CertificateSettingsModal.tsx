@@ -374,7 +374,7 @@ const CertificateSettingsModal: React.FC<CertificateSettingsModalProps> = ({ isO
                         />
                       </FormControl>
                       <FormDescription>
-                        Contoh: "Kepala SMKN 1 LUBUK SIKAPING berdasarkan ketentuan yang berlaku mempertimbangan kelulusan peserta didik pada Tahun Pelajaran 2024/2025, diantaranya sebagai berikut: ..."
+                        Jika diisi, teks ini akan menggantikan daftar kriteria kelulusan default. Pastikan sudah mencakup semua poin kriteria kelulusan yang diperlukan. Gunakan HTML &lt;ol&gt; dan &lt;li&gt; untuk daftar bernomor jika perlu.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

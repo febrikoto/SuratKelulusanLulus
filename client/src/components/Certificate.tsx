@@ -86,18 +86,28 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
             {data.certRegulationText || "Berdasarkan Peraturan Menteri Pendidikan, Kebudayaan, Riset, dan Teknologi Nomor 21 Tahun 2022 tentang Standar Penilaian Pendidikan pada Pendidikan Anak Usia Dini, Jenjang Pendidikan Dasar, dan Jenjang Pendidikan Menengah."}
           </p>
           
-          <p className="mb-4">
-            {data.certCriteriaText || `Kepala ${data.schoolName} berdasarkan ketentuan yang berlaku mempertimbangan kelulusan peserta didik pada Tahun Pelajaran ${data.academicYear}, diantaranya sebagai berikut:`}
-          </p>
-          
-          <ol className="list-decimal mb-4 pl-8 text-left">
-            <li className="mb-1">Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.</li>
-            <li className="mb-1">Surat Kepala Dinas Pendidikan Provinsi {data.provinceName} Nomor : 400.14.4.3/1107/PSMA/DISDIK-2024 tanggal 18
-               April 2024 tentang Kelulusan SMA/AMK/SLB Tahun Ajaran {data.academicYear}</li>
-            <li className="mb-1">Ketuntasan dari seluruh program pembelajaran sesuai kurikulum yang berlaku, termasuk Ekstrakurikuler dan
-               prestasi lainnya</li>
-            <li className="mb-1">Hasil Rapat Pleno Dewan Guru pada hari Senin, {formatDate(data.graduationDate)} {data.graduationTime && `Pukul ${data.graduationTime}`}.</li>
-          </ol>
+          {/* Jika teks kriteria khusus tersedia, gunakan itu */}
+          {data.certCriteriaText ? (
+            <div 
+              className="mb-4"
+              dangerouslySetInnerHTML={{ __html: data.certCriteriaText }}
+            />
+          ) : (
+            <>
+              <p className="mb-4">
+                {`Kepala ${data.schoolName} berdasarkan ketentuan yang berlaku mempertimbangan kelulusan peserta didik pada Tahun Pelajaran ${data.academicYear}, diantaranya sebagai berikut:`}
+              </p>
+              
+              <ol className="list-decimal mb-4 pl-8 text-left">
+                <li className="mb-1">Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.</li>
+                <li className="mb-1">Surat Kepala Dinas Pendidikan Provinsi {data.provinceName} Nomor : 400.14.4.3/1107/PSMA/DISDIK-2024 tanggal 18
+                  April 2024 tentang Kelulusan SMA/AMK/SLB Tahun Ajaran {data.academicYear}</li>
+                <li className="mb-1">Ketuntasan dari seluruh program pembelajaran sesuai kurikulum yang berlaku, termasuk Ekstrakurikuler dan
+                  prestasi lainnya</li>
+                <li className="mb-1">Hasil Rapat Pleno Dewan Guru pada hari Senin, {formatDate(data.graduationDate)} {data.graduationTime && `Pukul ${data.graduationTime}`}.</li>
+              </ol>
+            </>
+          )}
           
           <p className="mb-4">{data.certBeforeStudentData || "Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:"}</p>
           
