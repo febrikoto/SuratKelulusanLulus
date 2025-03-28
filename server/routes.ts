@@ -633,6 +633,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Gagal mengimpor nilai" });
     }
   });
+  
+  // Import grades by class (one row per student with multiple subject columns)
+  app.post("/api/grades/import-class", requireRole(["admin"]), async (req, res) => {
+    try {
+      // Check if we have the required data
+      const { students, subjects, className } = req.body;
+      
+      if (!Array.isArray(students) || students.length === 0) {
+        return res.status(400).json({ message: "Format data siswa tidak valid" });
+      }
+      
+      if (!Array.isArray(subjects) || subjects.length === 0) {
+        return res.status(400).json({ message: "Format data mata pelajaran tidak valid" });
+      }
+      
+      if (!className) {
+        return res.status(400).json({ message: "Kelas harus ditentukan" });
+      }
+      
+      // Prepare grades data for storage
+      const gradesData: any[] = [];
+      let errorCount = 0;
+      let successCount = 0;
+      
+      // Process each student
+      for (const student of students) {
+        // Make sure the student has an ID
+        if (!student.studentId) {
+          errorCount++;
+          continue;
+        }
+        
+        // Process each subject
+        for (const subject of subjects) {
+          // Check if the student has a value for this subject
+          if (student[subject.code] !== undefined) {
+            try {
+              // Find or create the subject if needed
+              let subjectId = subject.id;
+              
+              if (!subjectId) {
+                // Try to find the subject by code
+                const existingSubject = await storage.getSubjectByCode(subject.code);
+                
+                if (existingSubject) {
+                  subjectId = existingSubject.id;
+                } else {
+                  // Create a new subject
+                  const newSubject = await storage.createSubject({
+                    code: subject.code,
+                    name: subject.name,
+                    group: 'Wajib', // Default group
+                    major: null // No specific major
+                  });
+                  
+                  subjectId = newSubject.id;
+                }
+              }
+              
+              // Create the grade entry
+              gradesData.push({
+                studentId: student.studentId,
+                subjectId,
+                value: student[subject.code]
+              });
+              
+              successCount++;
+            } catch (error) {
+              console.error("Error processing grade:", error);
+              errorCount++;
+              continue;
+            }
+          }
+        }
+      }
+      
+      // Save all grades
+      if (gradesData.length > 0) {
+        const savedGrades = await storage.saveGrades(gradesData);
+        
+        res.status(201).json({ 
+          message: 'Nilai kelas berhasil diimport',
+          success: savedGrades.length,
+          total: gradesData.length
+        });
+      } else {
+        res.status(400).json({ message: "Tidak ada nilai yang valid untuk diimport" });
+      }
+    } catch (error: any) {
+      console.error("Error importing class grades:", error);
+      res.status(500).json({ message: "Gagal mengimport nilai kelas: " + error.message });
+    }
+  });
 
   // Settings API endpoints
   app.get("/api/settings", async (req, res) => {

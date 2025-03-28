@@ -25,6 +25,7 @@ import {
 import { GraduationCap, FileSpreadsheet, Search, Filter, Download, Book, Eye } from 'lucide-react';
 import StudentGradesModal from '@/components/modals/StudentGradesModal';
 import GradeImportModal from '@/components/modals/GradeImportModal';
+import ClassGradeImportModal from '@/components/modals/ClassGradeImportModal';
 
 // Dummy data untuk contoh tampilan
 // Memperluas tipe Student untuk data dummy
@@ -150,6 +151,7 @@ const GradesPage: React.FC = () => {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isGradesModalOpen, setIsGradesModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isClassImportModalOpen, setIsClassImportModalOpen] = useState(false);
   
   // Use dummy data for demo
   const students = dummyStudents;
@@ -271,6 +273,11 @@ const GradesPage: React.FC = () => {
                 <span className="hidden sm:inline">Export Nilai</span>
               </Button>
               
+              <Button onClick={() => setIsClassImportModalOpen(true)} className="gap-1 bg-primary/90 hover:bg-primary">
+                <FileSpreadsheet className="h-4 w-4" />
+                <span className="hidden sm:inline">Import Nilai Kelas</span>
+              </Button>
+              
               <Button onClick={() => setIsImportModalOpen(true)} className="gap-1">
                 <FileSpreadsheet className="h-4 w-4" />
                 <span className="hidden sm:inline">Import Nilai</span>
@@ -376,6 +383,11 @@ const GradesPage: React.FC = () => {
       <GradeImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
+      />
+      
+      <ClassGradeImportModal
+        isOpen={isClassImportModalOpen}
+        onClose={() => setIsClassImportModalOpen(false)}
       />
     </div>
   );
