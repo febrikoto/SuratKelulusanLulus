@@ -29,8 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<UserInfo | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    staleTime: 5 * 60 * 1000, // Cache valid for 5 minutes
-    refetchOnWindowFocus: false, // Prevent refetching when window gains focus
+    staleTime: 5 * 1000, // Mengurangi waktu cache menjadi 5 detik
+    refetchOnWindowFocus: true, // Enable refetching when window gains focus for better responsiveness
   });
 
   const loginMutation = useMutation({
@@ -42,61 +42,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Set user data in cache immediately
       queryClient.setQueryData(["/api/user"], user);
       
-      // Optimized preloading logic with better error handling
-      // Use Promise.all to load all data in parallel
-      Promise.all([
-        // Preload settings with error handling
-        fetch('/api/settings')
-          .then(response => {
-            if (!response.ok) throw new Error(`Settings API returned ${response.status}`);
-            return response.json();
-          })
-          .then(data => {
-            queryClient.setQueryData(["/api/settings"], data);
-            return true;
-          })
-          .catch(err => {
-            console.error("Failed to prefetch settings:", err);
-            return false;
-          }),
-        
-        // Preload dashboard stats with error handling
-        fetch('/api/dashboard/stats')
-          .then(response => {
-            if (!response.ok) throw new Error(`Dashboard stats API returned ${response.status}`);
-            return response.json();
-          })
-          .then(data => {
-            queryClient.setQueryData(["/api/dashboard/stats"], data);
-            return true;
-          })
-          .catch(err => {
-            console.error("Failed to prefetch dashboard stats:", err);
-            return false;
-          }),
-          
-        // Preload students data with error handling (for admin and teacher roles)
-        user.role !== 'siswa' ? 
-          fetch('/api/students')
-            .then(response => {
-              if (!response.ok) throw new Error(`Students API returned ${response.status}`);
-              return response.json();
-            })
-            .then(data => {
-              queryClient.setQueryData(["/api/students"], data);
-              return true;
-            })
-            .catch(err => {
-              console.error("Failed to prefetch students:", err);
-              return false;
-            })
-          : Promise.resolve(true) // Skip for student role
-      ]);
+      // Determine redirect path based on user role
+      const redirectPath = user.role === 'admin' 
+        ? '/admin' 
+        : user.role === 'guru' 
+          ? '/guru' 
+          : '/siswa';
       
+      // Menampilkan pesan sukses
       toast({
         title: "Login Berhasil",
         description: `Selamat datang, ${user.fullName}`,
       });
+      
+      // Langsung alihkan ke dashboard yang sesuai
+      console.log("Login berhasil, segera redirect ke:", redirectPath);
+      window.location.href = redirectPath;
     },
     onError: (error: Error) => {
       toast({
