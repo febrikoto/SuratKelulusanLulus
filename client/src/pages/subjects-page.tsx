@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Trash2, PlusCircle, FileUp, RefreshCw } from 'lucide-react';
+import { Pencil, Trash2, PlusCircle, FileUp, RefreshCw, ChevronLeft } from 'lucide-react';
 import { Subject } from '@shared/schema';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from "@/hooks/use-toast";
@@ -80,6 +81,7 @@ export default function SubjectsPage() {
   const { user, logoutMutation } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedMajor, setSelectedMajor] = useState<string | null>(null);
@@ -308,6 +310,16 @@ export default function SubjectsPage() {
       {renderHeader()}
       
       <div className="container mx-auto py-6">
+        <div className="mb-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setLocation('/')}
+            className="flex items-center gap-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Kembali ke Dashboard
+          </Button>
+        </div>
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
