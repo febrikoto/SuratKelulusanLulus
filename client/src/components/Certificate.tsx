@@ -89,7 +89,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
           {/* Jika teks kriteria khusus tersedia, gunakan itu */}
           {data.certCriteriaText ? (
             <div 
-              className="mb-4 text-left" 
+              className="mb-4 text-left prose prose-ol:pl-5 prose-ol:list-decimal prose-ul:pl-5 prose-ul:list-disc" 
               dangerouslySetInnerHTML={{ __html: data.certCriteriaText }}
             />
           ) : (

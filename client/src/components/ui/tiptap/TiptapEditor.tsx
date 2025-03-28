@@ -28,6 +28,16 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, classNam
       StarterKit.configure({
         heading: false,
         horizontalRule: false,
+        bulletList: {
+          HTMLAttributes: {
+            class: 'list-disc pl-5 mb-3'
+          }
+        },
+        orderedList: {
+          HTMLAttributes: {
+            class: 'list-decimal pl-5 mb-3'
+          }
+        },
       }),
       Underline,
     ],
