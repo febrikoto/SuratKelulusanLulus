@@ -150,26 +150,38 @@ async function generatePdf(
             margin: 0;
             padding: 0;
             background-color: white;
+            overflow-x: hidden;
           }
           .container {
             width: 210mm;
-            min-height: 297mm;
             margin: 0 auto;
             padding: 0;
             background-color: white;
-            overflow: hidden;
             position: relative;
+            padding-bottom: 40px;
           }
           @media print {
             body {
               width: 210mm;
-              height: 297mm;
             }
+          }
+          /* Ensure tables have proper styling */
+          table {
+            border-collapse: collapse;
+            width: 100%;
+          }
+          table td, table th {
+            border: 1px solid #ddd;
+            padding: 8px;
+          }
+          /* Extra padding at the bottom to ensure content is visible */
+          .padding-bottom {
+            padding-bottom: 60px;
           }
         </style>
       </head>
       <body>
-        <div class="container" id="print-container">
+        <div class="container padding-bottom" id="print-container">
         </div>
         <script>
           // Akan diisi dengan kode gambar
@@ -204,16 +216,28 @@ async function generatePdf(
       throw new Error('Tidak dapat menemukan kontainer cetak');
     }
     
-    // Ambil screenshot dengan html2canvas
+    // Tunggu sebentar agar konten dirender sepenuhnya
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Ukur elemen yang sebenarnya
+    const actualHeight = contentElement.scrollHeight;
+    const actualWidth = contentElement.scrollWidth;
+    
+    console.log(`Actual element dimensions: ${actualWidth}x${actualHeight}`);
+    
+    // Ambil screenshot dengan html2canvas dengan ukuran yang lebih besar
     const canvas = await html2canvas(contentElement, {
-      scale: 2,
+      scale: 2.5, // Tingkatkan scale untuk kualitas yang lebih baik
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#FFFFFF',
-      width: 793, // ~210mm in px
-      height: 1122, // ~297mm in px
-      windowWidth: 793,
-      windowHeight: 1122
+      height: Math.max(1300, actualHeight), // Pastikan cukup tinggi untuk semua konten
+      windowHeight: Math.max(1300, actualHeight),
+      logging: true,
+      onclone: (doc) => {
+        console.log('Document cloned for rendering');
+        return doc;
+      }
     });
     
     // Dapatkan data gambar

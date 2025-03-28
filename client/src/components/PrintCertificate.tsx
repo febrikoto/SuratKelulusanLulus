@@ -27,9 +27,11 @@ interface PrintCertificateProps {
 export const PrintCertificate: React.FC<PrintCertificateProps> = ({ data }) => {
   return (
     <div 
-      className="relative p-8 border border-gray-300 bg-white text-black w-[210mm] min-h-[297mm]"
+      className="relative p-8 border border-gray-300 bg-white text-black w-[210mm]"
       style={{
         fontFamily: 'Arial, sans-serif',
+        minHeight: '297mm', // A4 height
+        paddingBottom: '40px',
       }}
     >
       {/* Header dengan logo dan kop surat */}
