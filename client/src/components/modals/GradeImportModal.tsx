@@ -1,10 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -20,8 +30,12 @@ import {
   Loader2, 
   FileDown, 
   HelpCircle,
-  Info
+  Info,
+  FileText,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
+import { Subject } from '@shared/schema';
 
 interface GradeImportModalProps {
   isOpen: boolean;
@@ -32,6 +46,12 @@ interface GradeImportData {
   nisn: string;
   subjectName: string;
   value: number;
+}
+
+interface ImportError {
+  nisn: string;
+  error: string;
+  row?: number;
 }
 
 const GradeImportModal: React.FC<GradeImportModalProps> = ({
@@ -45,6 +65,16 @@ const GradeImportModal: React.FC<GradeImportModalProps> = ({
   const [fileError, setFileError] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<GradeImportData[]>([]);
   const [isPreviewReady, setIsPreviewReady] = useState(false);
+  const [activeTab, setActiveTab] = useState('upload');
+  const [importErrors, setImportErrors] = useState<ImportError[]>([]);
+  const [subjectStats, setSubjectStats] = useState<{[key: string]: number}>({});
+  const [studentStats, setStudentStats] = useState<{[key: string]: number}>({}); 
+  
+  // Fetch subjects for validation
+  const { data: subjects } = useQuery<Subject[]>({
+    queryKey: ['/api/subjects'],
+    enabled: isOpen
+  });
   
   // Import grades mutation
   const importGradesMutation = useMutation({
@@ -88,6 +118,11 @@ const GradeImportModal: React.FC<GradeImportModalProps> = ({
   
   const parseExcelFile = async (file: File) => {
     try {
+      // Clear previous errors and stats
+      setImportErrors([]);
+      setSubjectStats({});
+      setStudentStats({});
+      
       const reader = new FileReader();
       reader.onload = async (e) => {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
@@ -114,55 +149,84 @@ const GradeImportModal: React.FC<GradeImportModalProps> = ({
         
         // Parse and validate data
         const grades: GradeImportData[] = [];
-        let hasErrors = false;
+        const errors: ImportError[] = [];
+        const subjectCounts: {[key: string]: number} = {};
+        const studentCounts: {[key: string]: number} = {};
         
         rows.forEach((row: any, index: number) => {
           if (!row.nisn || !row.subjectName || row.value === undefined) {
-            toast({
-              title: 'Data tidak lengkap',
-              description: `Baris ${index + 2}: Data nisn, subjectName, atau value tidak lengkap`,
-              variant: 'destructive',
+            errors.push({
+              nisn: row.nisn || 'N/A',
+              error: 'Data tidak lengkap (nisn, subjectName, atau value)',
+              row: index + 2
             });
-            hasErrors = true;
             return;
           }
           
           // Validate NISN
           const nisn = String(row.nisn);
           if (nisn.length < 5) {
-            toast({
-              title: 'NISN tidak valid',
-              description: `Baris ${index + 2}: Format NISN tidak valid`,
-              variant: 'destructive',
+            errors.push({
+              nisn,
+              error: 'Format NISN tidak valid',
+              row: index + 2
             });
-            hasErrors = true;
             return;
           }
           
           // Validate subject name
           const subjectName = String(row.subjectName);
           if (subjectName.trim() === '') {
-            toast({
-              title: 'Nama mata pelajaran kosong',
-              description: `Baris ${index + 2}: Nama mata pelajaran tidak boleh kosong`,
-              variant: 'destructive',
+            errors.push({
+              nisn,
+              error: 'Nama mata pelajaran tidak boleh kosong',
+              row: index + 2
             });
-            hasErrors = true;
             return;
+          }
+          
+          // Optional: Validate against registered subjects
+          if (subjects && subjects.length > 0) {
+            const subjectExists = subjects.some(s => 
+              s.name.toLowerCase() === subjectName.toLowerCase() ||
+              (s.code && s.code.toLowerCase() === subjectName.toLowerCase())
+            );
+            
+            if (!subjectExists) {
+              // Add warning but still include the data
+              errors.push({
+                nisn,
+                error: `Mata pelajaran "${subjectName}" tidak terdaftar dalam database (akan dibuat otomatis)`,
+                row: index + 2
+              });
+            }
           }
           
           // Validate value
           const value = Number(row.value);
           if (isNaN(value) || value < 0 || value > 100) {
-            toast({
-              title: 'Nilai tidak valid',
-              description: `Baris ${index + 2}: Nilai harus berupa angka 0-100`,
-              variant: 'destructive',
+            errors.push({
+              nisn,
+              error: 'Nilai harus berupa angka 0-100',
+              row: index + 2
             });
-            hasErrors = true;
             return;
           }
           
+          // Track statistics
+          if (subjectCounts[subjectName]) {
+            subjectCounts[subjectName]++;
+          } else {
+            subjectCounts[subjectName] = 1;
+          }
+          
+          if (studentCounts[nisn]) {
+            studentCounts[nisn]++;
+          } else {
+            studentCounts[nisn] = 1;
+          }
+          
+          // Add valid data
           grades.push({
             nisn: String(row.nisn),
             subjectName: String(row.subjectName),
@@ -170,17 +234,38 @@ const GradeImportModal: React.FC<GradeImportModalProps> = ({
           });
         });
         
-        if (!hasErrors) {
-          setPreviewData(grades);
-          setIsPreviewReady(true);
-          
-          if (grades.length === 0) {
-            toast({
-              title: 'File kosong',
-              description: 'Tidak ada data nilai yang valid untuk diimport',
-              variant: 'destructive',
-            });
-          }
+        // Set all data
+        setPreviewData(grades);
+        setImportErrors(errors);
+        setSubjectStats(subjectCounts);
+        setStudentStats(studentCounts);
+        setIsPreviewReady(true);
+        
+        // Show summary toast notification
+        if (errors.length > 0) {
+          toast({
+            title: 'Validasi selesai dengan peringatan',
+            description: `${grades.length} data siap di-import, ${errors.length} data memiliki masalah. Silahkan cek tab Peringatan.`,
+            variant: 'default' // Changed from 'warning' to fix type error
+          });
+        } else if (grades.length > 0) {
+          toast({
+            title: 'Validasi berhasil',
+            description: `${grades.length} data nilai siap di-import untuk ${Object.keys(studentCounts).length} siswa.`,
+          });
+        } else {
+          toast({
+            title: 'Tidak ada data valid',
+            description: 'Tidak ada data nilai yang valid untuk diimport',
+            variant: 'destructive'
+          });
+        }
+        
+        // Switch to preview tab if we have data
+        if (grades.length > 0) {
+          setActiveTab('preview');
+        } else if (errors.length > 0) {
+          setActiveTab('errors');
         }
       };
       
@@ -297,9 +382,22 @@ const GradeImportModal: React.FC<GradeImportModalProps> = ({
     }
   };
 
+  // Helper function to generate badge for number of items
+  const getCountBadge = (count: number) => {
+    if (count === 0) return null;
+    return (
+      <Badge 
+        variant={count > 0 ? "secondary" : "outline"} 
+        className="ml-1.5"
+      >
+        {count}
+      </Badge>
+    );
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>Import Nilai dari Excel</DialogTitle>
           <DialogDescription>
@@ -307,31 +405,31 @@ const GradeImportModal: React.FC<GradeImportModalProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 mb-3">
-            <div className="flex items-start space-x-3">
-              <Info className="h-5 w-5 text-blue-500 mt-0.5" />
-              <div className="flex-1 text-sm text-blue-700 dark:text-blue-300">
-                <p className="font-semibold mb-1">Format Import Nilai Excel</p>
-                <p className="text-xs">1. NISN: Nomor Induk Siswa Nasional yang terdaftar</p>
-                <p className="text-xs">2. SubjectName: Nama mata pelajaran</p>
-                <p className="text-xs">3. Value: Nilai dalam bentuk angka (0-100)</p>
-                <div className="flex justify-end mt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={generateExcelTemplate}
-                    className="flex items-center bg-white dark:bg-gray-800"
-                  >
-                    <FileDown className="h-4 w-4 mr-1" />
-                    <span>Download Template</span>
-                  </Button>
+        {!file && (
+          <div className="space-y-4 py-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 mb-3">
+              <div className="flex items-start space-x-3">
+                <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+                <div className="flex-1 text-sm text-blue-700 dark:text-blue-300">
+                  <p className="font-semibold mb-1">Format Import Nilai Excel</p>
+                  <p className="text-xs">1. NISN: Nomor Induk Siswa Nasional yang terdaftar</p>
+                  <p className="text-xs">2. SubjectName: Nama mata pelajaran</p>
+                  <p className="text-xs">3. Value: Nilai dalam bentuk angka (0-100)</p>
+                  <div className="flex justify-end mt-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={generateExcelTemplate}
+                      className="flex items-center bg-white dark:bg-gray-800"
+                    >
+                      <FileDown className="h-4 w-4 mr-1" />
+                      <span>Download Template</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {!file && (
             <div 
               className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
                 fileError ? 'border-red-300' : 'border-gray-300'
@@ -368,47 +466,212 @@ const GradeImportModal: React.FC<GradeImportModalProps> = ({
                 </p>
               </div>
             </div>
-          )}
-          
-          {file && (
-            <div className="rounded-lg border p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  {isPreviewReady ? (
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                  ) : (
-                    <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
-                  )}
-                  <span className="text-sm font-medium">{file.name}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setFile(null);
-                    setPreviewData([]);
-                    setIsPreviewReady(false);
-                  }}
-                >
-                  Ganti File
-                </Button>
+          </div>
+        )}
+        
+        {file && (
+          <div className="py-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                {isPreviewReady ? (
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                ) : (
+                  <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
+                )}
+                <span className="text-sm font-medium">{file.name}</span>
               </div>
-              
-              {isPreviewReady && (
-                <div>
-                  <p className="text-sm mb-2">
-                    Jumlah data: <span className="font-medium">{previewData.length}</span> nilai
-                  </p>
-                  <div className="text-xs text-gray-500">
-                    {previewData.length > 0 && (
-                      <p>File berisi nilai untuk {new Set(previewData.map(d => d.nisn)).size} siswa</p>
-                    )}
-                  </div>
-                </div>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setFile(null);
+                  setPreviewData([]);
+                  setImportErrors([]);
+                  setIsPreviewReady(false);
+                  setActiveTab('upload');
+                }}
+              >
+                Ganti File
+              </Button>
             </div>
-          )}
-        </div>
+            
+            {isPreviewReady && (
+              <>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid grid-cols-3 mb-4">
+                    <TabsTrigger value="preview" disabled={previewData.length === 0}>
+                      Data Nilai {getCountBadge(previewData.length)}
+                    </TabsTrigger>
+                    <TabsTrigger value="errors" disabled={importErrors.length === 0}>
+                      Peringatan {getCountBadge(importErrors.length)}
+                    </TabsTrigger>
+                    <TabsTrigger value="stats" disabled={previewData.length === 0}>
+                      Statistik
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="preview" className="mt-0">
+                    <div className="rounded-md border h-60 overflow-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[100px]">NISN</TableHead>
+                            <TableHead>Mata Pelajaran</TableHead>
+                            <TableHead className="text-right w-[80px]">Nilai</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {previewData.length > 0 ? (
+                            previewData.slice(0, 100).map((grade, index) => (
+                              <TableRow key={index}>
+                                <TableCell className="font-mono">{grade.nisn}</TableCell>
+                                <TableCell>{grade.subjectName}</TableCell>
+                                <TableCell className="text-right">{grade.value}</TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center text-muted-foreground py-6">
+                                Tidak ada data yang valid
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          {previewData.length > 100 && (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                ...dan {previewData.length - 100} data lainnya
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    
+                    <div className="flex justify-between items-center mt-2 text-sm text-muted-foreground">
+                      <span>Total {previewData.length} nilai untuk {Object.keys(studentStats).length} siswa</span>
+                      {previewData.length > 0 && (
+                        <Button size="sm" variant="ghost" className="h-8">
+                          <Download className="h-4 w-4 mr-1" />
+                          Export Nilai
+                        </Button>
+                      )}
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="errors" className="mt-0">
+                    <div className="rounded-md border h-60 overflow-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[80px]">Baris</TableHead>
+                            <TableHead className="w-[100px]">NISN</TableHead>
+                            <TableHead>Pesan Error</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {importErrors.length > 0 ? (
+                            importErrors.map((error, index) => (
+                              <TableRow key={index}>
+                                <TableCell>{error.row || '-'}</TableCell>
+                                <TableCell className="font-mono">{error.nisn}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center">
+                                    <AlertCircle className="h-4 w-4 text-amber-500 mr-2" />
+                                    {error.error}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center text-muted-foreground py-6">
+                                Tidak ada error atau peringatan
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    
+                    {importErrors.length > 0 && (
+                      <div className="mt-2 text-sm text-amber-600">
+                        Peringatan: Data dengan error ringan tetap akan diimpor. Perbaiki file Excel jika terdapat error yang perlu diperbaiki.
+                      </div>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="stats" className="mt-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="rounded-md border p-4">
+                        <h4 className="font-medium mb-2 text-sm">Statistik Mata Pelajaran</h4>
+                        <div className="h-40 overflow-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Mata Pelajaran</TableHead>
+                                <TableHead className="text-right">Jumlah Nilai</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {Object.keys(subjectStats).length > 0 ? (
+                                Object.entries(subjectStats)
+                                  .sort(([, countA], [, countB]) => countB - countA)
+                                  .map(([subject, count]) => (
+                                    <TableRow key={subject}>
+                                      <TableCell>{subject}</TableCell>
+                                      <TableCell className="text-right">{count}</TableCell>
+                                    </TableRow>
+                                  ))
+                              ) : (
+                                <TableRow>
+                                  <TableCell colSpan={2} className="text-center text-muted-foreground">
+                                    Tidak ada data
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                      
+                      <div className="rounded-md border p-4">
+                        <h4 className="font-medium mb-2 text-sm">Statistik Siswa</h4>
+                        <div className="h-40 overflow-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>NISN</TableHead>
+                                <TableHead className="text-right">Jumlah Nilai</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {Object.keys(studentStats).length > 0 ? (
+                                Object.entries(studentStats)
+                                  .sort(([, countA], [, countB]) => countB - countA)
+                                  .map(([nisn, count]) => (
+                                    <TableRow key={nisn}>
+                                      <TableCell className="font-mono">{nisn}</TableCell>
+                                      <TableCell className="text-right">{count}</TableCell>
+                                    </TableRow>
+                                  ))
+                              ) : (
+                                <TableRow>
+                                  <TableCell colSpan={2} className="text-center text-muted-foreground">
+                                    Tidak ada data
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </>
+            )}
+          </div>
+        )}
         
         <DialogFooter className="flex flex-col sm:flex-row sm:justify-between">
           <Button
@@ -425,10 +688,13 @@ const GradeImportModal: React.FC<GradeImportModalProps> = ({
             {importGradesMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Importing...
+                Mengimpor...
               </>
             ) : (
-              'Import Nilai'
+              <>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Import {previewData.length} Nilai
+              </>
             )}
           </Button>
         </DialogFooter>
