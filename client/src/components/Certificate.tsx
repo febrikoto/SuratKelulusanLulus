@@ -35,12 +35,13 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
       
       <div 
         ref={certificateRef} 
-        className="relative border border-gray-300 bg-white mx-auto w-[215mm] min-h-[330mm] text-black font-serif"
+        className="relative border border-gray-300 bg-white mx-auto w-[215mm] min-h-[330mm] text-black"
         style={{ 
           padding: '20mm', /* 2cm margin di semua sisi */
-          fontFamily: 'Times New Roman, serif',
+          fontFamily: 'Arial, sans-serif',
           fontSize: '12pt',
           lineHeight: '1.5',
+          color: '#000',
         }}
       >
         {/* Header dengan logo dan kop surat */}
@@ -98,9 +99,11 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
               style={{ 
                 fontSize: '12pt',
                 lineHeight: '1.5',
-                fontFamily: 'Times New Roman, serif',
+                fontFamily: 'Arial, sans-serif',
                 maxWidth: '100%', /* Agar lebarnya sama dengan paragraf lainnya */
-                textAlign: 'justify' /* Untuk konsistensi dengan teks lainnya */
+                textAlign: 'justify', /* Untuk konsistensi dengan teks lainnya */
+                color: '#000', /* Hitam solid */
+                fontWeight: '400' /* Memastikan ketebalan huruf normal */
               }}
               dangerouslySetInnerHTML={{ __html: data.certCriteriaText }}
             />
@@ -110,7 +113,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
                 {`Kepala ${data.schoolName} berdasarkan ketentuan yang berlaku mempertimbangan kelulusan peserta didik pada Tahun Pelajaran ${data.academicYear}, diantaranya sebagai berikut:`}
               </p>
               
-              <ol className="list-decimal mb-4 pl-8 text-left">
+              <ol className="list-decimal mb-4 pl-8 text-left" style={{ color: '#000', fontFamily: 'Arial, sans-serif' }}>
                 <li className="mb-1">Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.</li>
                 <li className="mb-1">Surat Kepala Dinas Pendidikan Provinsi {data.provinceName} Nomor : 400.14.4.3/1107/PSMA/DISDIK-2024 tanggal 18
                   April 2024 tentang Kelulusan SMA/AMK/SLB Tahun Ajaran {data.academicYear}</li>

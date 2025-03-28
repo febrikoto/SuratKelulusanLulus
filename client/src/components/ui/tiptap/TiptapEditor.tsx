@@ -30,12 +30,14 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, classNam
         horizontalRule: false,
         bulletList: {
           HTMLAttributes: {
-            class: 'list-disc pl-5 mb-3'
+            class: 'list-disc pl-5 mb-3',
+            style: 'font-family: Arial, sans-serif; color: #000;'
           }
         },
         orderedList: {
           HTMLAttributes: {
-            class: 'list-decimal pl-5 mb-3'
+            class: 'list-decimal pl-5 mb-3',
+            style: 'font-family: Arial, sans-serif; color: #000;'
           }
         },
       }),
@@ -125,7 +127,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, classNam
             // Wrap selected text with left-aligned div
             const selectedText = editor.state.selection.content().content;
             if (selectedText && selectedText.size > 0) {
-              const html = `<div style="text-align: left;">${editor.state.selection.content().content.toJSON().map((node: any) => node.text).join('')}</div>`;
+              const html = `<div style="text-align: left; font-family: Arial, sans-serif; color: #000;">${editor.state.selection.content().content.toJSON().map((node: any) => node.text).join('')}</div>`;
               editor.chain().focus().insertContent(html).run();
             }
           }}
@@ -142,7 +144,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, classNam
             // Wrap selected text with center-aligned div
             const selectedText = editor.state.selection.content().content;
             if (selectedText && selectedText.size > 0) {
-              const html = `<div style="text-align: center;">${editor.state.selection.content().content.toJSON().map((node: any) => node.text).join('')}</div>`;
+              const html = `<div style="text-align: center; font-family: Arial, sans-serif; color: #000;">${editor.state.selection.content().content.toJSON().map((node: any) => node.text).join('')}</div>`;
               editor.chain().focus().insertContent(html).run();
             }
           }}
@@ -159,7 +161,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, classNam
             // Wrap selected text with right-aligned div
             const selectedText = editor.state.selection.content().content;
             if (selectedText && selectedText.size > 0) {
-              const html = `<div style="text-align: right;">${editor.state.selection.content().content.toJSON().map((node: any) => node.text).join('')}</div>`;
+              const html = `<div style="text-align: right; font-family: Arial, sans-serif; color: #000;">${editor.state.selection.content().content.toJSON().map((node: any) => node.text).join('')}</div>`;
               editor.chain().focus().insertContent(html).run();
             }
           }}
@@ -176,6 +178,8 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, classNam
         style={{
           fontSize: '14px',
           lineHeight: '1.5',
+          fontFamily: 'Arial, sans-serif',
+          color: '#000'
         }}
       />
     </div>
