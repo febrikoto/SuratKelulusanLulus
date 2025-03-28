@@ -86,13 +86,13 @@ export const WelcomeAnimation: React.FC<WelcomeAnimationProps> = ({ user, onClos
                   transition={{ delay: 0.2, duration: 0.5 }}
                   className="text-5xl mb-4"
                 >
-                  {steps[step].icon}
+                  {steps[step]?.icon || '🎓'}
                 </motion.div>
                 <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-gray-100">
-                  {steps[step].title}
+                  {steps[step]?.title || 'Selamat Datang!'}
                 </h2>
                 <p className="text-gray-600 dark:text-gray-300 mb-8">
-                  {steps[step].description}
+                  {steps[step]?.description || 'Terima kasih telah menggunakan aplikasi SKL kami.'}
                 </p>
                 
                 <div className="flex items-center justify-between w-full">
