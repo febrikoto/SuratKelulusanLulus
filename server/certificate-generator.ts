@@ -114,12 +114,12 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       }
       
       // Kop surat dengan teks (di tengah antara kedua logo)
-      doc.fontSize(13).font('Helvetica-Bold');
+      doc.fontSize(11).font('Helvetica-Bold'); // Lebih kecil dari 13
       addCenteredText(`PEMERINTAH PROVINSI ${data.provinceName.toUpperCase()}`, headerY);
-      addCenteredText('DINAS PENDIDIKAN', headerY + 16);
-      addCenteredText(data.schoolName.toUpperCase(), headerY + 32, 14);
-      doc.fontSize(10).font('Helvetica');
-      addCenteredText(`Jalan: ${data.schoolAddress}`, headerY + 50);
+      addCenteredText('DINAS PENDIDIKAN', headerY + 14); // Jarak lebih kecil
+      addCenteredText(data.schoolName.toUpperCase(), headerY + 28, 12); // Lebih kecil dari 14
+      doc.fontSize(9).font('Helvetica'); // Lebih kecil dari 10
+      addCenteredText(`Jalan: ${data.schoolAddress}`, headerY + 42); // Jarak lebih kecil
       
       if (data.schoolEmail || data.schoolWebsite) {
         let contactText = '';
@@ -137,13 +137,13 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
          .stroke();
 
       // Title
-      const titleY = lineY + 30;
-      addCenteredText('SURAT KETERANGAN', titleY, 16, true);
-      addCenteredText(`No. ${data.certNumberPrefix || data.certNumber}`, titleY + 25);
+      const titleY = lineY + 20; // Lebih kecil dari 30
+      addCenteredText('SURAT KETERANGAN', titleY, 14, true); // Lebih kecil dari 16
+      addCenteredText(`No. ${data.certNumberPrefix || data.certNumber}`, titleY + 20); // Lebih kecil dari 25
 
       // Paragraf regulasi/peraturan
-      let y = titleY + 60;
-      doc.font('Helvetica').fontSize(12);
+      let y = titleY + 45; // Lebih kecil dari 60
+      doc.font('Helvetica').fontSize(11); // Lebih kecil dari 12
       
       // Teks regulasi
       const regulationText = data.certRegulationText || 
@@ -152,7 +152,7 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       // Ukur dan tulis teks regulasi dengan alignment justify
       const textWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
       y += doc.heightOfString(regulationText, { width: textWidth, align: 'justify' });
-      doc.text(regulationText, doc.page.margins.left, titleY + 60, {
+      doc.text(regulationText, doc.page.margins.left, titleY + 45, { // Sesuaikan dengan y baru (45)
         width: textWidth,
         align: 'justify'
       });
@@ -176,28 +176,28 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
           .filter(line => line.trim() !== '');
           
         // Tambahkan judul Kriteria sebelum list
-        doc.font('Helvetica').fontSize(12);
+        doc.font('Helvetica').fontSize(11); // Lebih kecil dari 12
         doc.text('Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.', doc.page.margins.left, y, { 
           width: textWidth, 
           align: 'left'
         });
-        y += doc.heightOfString('Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.', { width: textWidth }) + 15;
+        y += doc.heightOfString('Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.', { width: textWidth }) + 10; // Lebih kecil dari 15
         
         for (const paragraph of criteriaParagraphs) {
-          doc.text(paragraph.trim(), doc.page.margins.left + 20, y, {
-            width: textWidth - 20,
+          doc.text(paragraph.trim(), doc.page.margins.left + 15, y, { // Mengurangi indentasi
+            width: textWidth - 15, // Sesuaikan dengan indentasi
             align: 'left'
           });
-          y += doc.heightOfString(paragraph.trim(), { width: textWidth - 20 }) + 10;
+          y += doc.heightOfString(paragraph.trim(), { width: textWidth - 15 }) + 8; // Mengurangi spasi
         }
       } else {
         // Kriteria default - format sesuai gambar dari user
-        doc.font('Helvetica').fontSize(12);
+        doc.font('Helvetica').fontSize(11); // Lebih kecil dari 12
         doc.text('Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.', doc.page.margins.left, y, { 
           width: textWidth, 
           align: 'left'
         });
-        y += doc.heightOfString('Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.', { width: textWidth }) + 15;
+        y += doc.heightOfString('Kriteria Lulus dari Satuan Pendidikan sesuai dengan peraturan perundang-undangan.', { width: textWidth }) + 10; // Lebih kecil dari 15
         
         const defaultCriteria = [
           `• Surat Kepala Dinas Pendidikan Provinsi ${data.provinceName} Nomor : 400.14.4.3/1107/PSMA/DISDIK-2024 tanggal 18 April 2025 tentang Kelulusan SMA/SMK/SLB Tahun Ajaran ${data.academicYear}`,
@@ -205,11 +205,11 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
         ];
         
         for (const line of defaultCriteria) {
-          doc.text(line, doc.page.margins.left + 20, y, {
-            width: textWidth - 20,
+          doc.text(line, doc.page.margins.left + 15, y, { // Mengurangi indentasi
+            width: textWidth - 15, // Sesuaikan dengan indentasi
             align: 'left'
           });
-          y += doc.heightOfString(line, { width: textWidth - 20 }) + 10;
+          y += doc.heightOfString(line, { width: textWidth - 15 }) + 8; // Mengurangi spasi
         }
       }
       
@@ -236,15 +236,16 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       
       const labelWidth = 150;
       const colonWidth = 10;
+      doc.fontSize(11); // Ukuran font lebih kecil
       
       for (const info of studentInfo) {
-        doc.font('Helvetica').text(info.label, doc.page.margins.left + 20, y);
-        doc.text(':', doc.page.margins.left + labelWidth + 20, y);
+        doc.font('Helvetica').text(info.label, doc.page.margins.left + 15, y); // Mengurangi indentasi
+        doc.text(':', doc.page.margins.left + labelWidth + 15, y);
         if (info.label === 'Nama Siswa') {
           doc.font('Helvetica-Bold');
         }
-        doc.text(info.value, doc.page.margins.left + labelWidth + 20 + colonWidth, y);
-        y += 25;
+        doc.text(info.value, doc.page.margins.left + labelWidth + 15 + colonWidth, y);
+        y += 20; // Mengurangi jarak antar baris
       }
       
       y += 5;
@@ -259,15 +260,15 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       y += 30;
       
       // LULUS box
-      const boxWidth = 200;
-      const boxHeight = 40;
+      const boxWidth = 150; // Lebih kecil dari 200
+      const boxHeight = 30; // Lebih kecil dari 40
       const boxX = (doc.page.width - boxWidth) / 2;
       doc.rect(boxX, y, boxWidth, boxHeight)
-         .lineWidth(2)
+         .lineWidth(1.5) // Sedikit lebih tipis
          .stroke();
       
-      doc.font('Helvetica-Bold').fontSize(16);
-      addCenteredText('LULUS', y + 10, 16, true);
+      doc.font('Helvetica-Bold').fontSize(12); // Lebih kecil dari 16
+      addCenteredText('LULUS', y + 8, 12, true);
       
       y += boxHeight + 20;
       
