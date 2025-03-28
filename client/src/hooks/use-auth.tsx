@@ -29,6 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<UserInfo | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    staleTime: 5 * 60 * 1000, // Cache valid for 5 minutes
+    refetchOnWindowFocus: false, // Prevent refetching when window gains focus
   });
 
   const loginMutation = useMutation({
@@ -37,7 +39,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user: UserInfo) => {
+      // Set user data in cache
       queryClient.setQueryData(["/api/user"], user);
+      
+      // Load settings data in advance to reduce loading times
+      fetch('/api/settings')
+        .then(response => response.json())
+        .then(data => {
+          queryClient.setQueryData(["/api/settings"], data);
+        })
+        .catch(err => {
+          console.error("Failed to prefetch settings:", err);
+        });
+      
+      // Invalidate any stale queries
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/dashboard/stats"]
+      });
+      
       toast({
         title: "Login Berhasil",
         description: `Selamat datang, ${user.fullName}`,
@@ -57,7 +76,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/logout");
     },
     onSuccess: () => {
+      // Clear user data in cache
       queryClient.setQueryData(["/api/user"], null);
+      
+      // Clear all query caches on logout
+      queryClient.clear();
+      
       toast({
         title: "Logout Berhasil",
         description: "Anda telah keluar dari sistem",

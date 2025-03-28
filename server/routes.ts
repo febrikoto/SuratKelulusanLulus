@@ -229,12 +229,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard stats API
+  // Dashboard stats API with caching
+  let cachedStats: any = null;
+  let statsCacheTime = 0;
+  const STATS_CACHE_TTL = 1 * 60 * 1000; // 1 minute in milliseconds
+  
   app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
     try {
+      const now = Date.now();
+      
+      // Return cached stats if valid
+      if (cachedStats && (now - statsCacheTime < STATS_CACHE_TTL)) {
+        return res.json(cachedStats);
+      }
+      
+      // Cache expired or doesn't exist, fetch fresh data
       const stats = await storage.getDashboardStats();
+      
+      // Update cache
+      cachedStats = stats;
+      statsCacheTime = now;
+      
       res.json(stats);
     } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
     }
   });
@@ -727,9 +745,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Settings API endpoints
+  // Settings API endpoints with caching
+  let cachedSettings: any = null;
+  let settingsCacheTime = 0;
+  const SETTINGS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+  
   app.get("/api/settings", async (req, res) => {
     try {
+      const now = Date.now();
+      
+      // Return cached settings if valid
+      if (cachedSettings && (now - settingsCacheTime < SETTINGS_CACHE_TTL)) {
+        return res.json(cachedSettings);
+      }
+      
+      // Cache expired or doesn't exist, fetch fresh data
       let settings = await storage.getSettings();
       if (!settings) {
         // Create default settings if none exists
@@ -759,8 +789,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         settings = await storage.saveSettings(defaultSettings);
       }
       
+      // Update cache
+      cachedSettings = settings;
+      settingsCacheTime = now;
+      
       res.json(settings);
     } catch (error) {
+      console.error("Error fetching settings:", error);
       res.status(500).json({ message: "Failed to fetch settings" });
     }
   });
@@ -778,6 +813,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const savedSettings = await storage.saveSettings(parsedData.data);
+      
+      // Invalidate settings cache
+      cachedSettings = savedSettings;
+      settingsCacheTime = Date.now();
+      
       res.status(201).json(savedSettings);
     } catch (error) {
       console.error("Save settings error:", error);
@@ -801,6 +841,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedSettings) {
         return res.status(404).json({ message: "Settings not found" });
       }
+      
+      // Invalidate settings cache
+      cachedSettings = updatedSettings;
+      settingsCacheTime = Date.now();
       
       res.json(updatedSettings);
     } catch (error) {

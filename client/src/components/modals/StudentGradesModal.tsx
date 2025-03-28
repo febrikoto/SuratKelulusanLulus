@@ -193,7 +193,7 @@ const StudentGradesModal: React.FC<StudentGradesModalProps> = ({
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
               <div className="text-sm text-gray-500 dark:text-gray-400">Status Kelulusan</div>
               <div className="flex items-center mt-1">
-                <Badge variant={averageGrade >= 75 ? "success" : "destructive"} className="text-xs py-1">
+                <Badge variant={averageGrade >= 75 ? "default" : "destructive"} className={`text-xs py-1 ${averageGrade >= 75 ? "bg-green-500 hover:bg-green-600" : ""}`}>
                   {averageGrade >= 75 ? "LULUS" : "BELUM LULUS"}
                 </Badge>
               </div>
