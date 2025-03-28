@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'wouter';
 import { LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -24,6 +25,26 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ user, onLogout }) => {
         <h1 className="text-2xl md:text-3xl font-bold text-primary">Aplikasi SKL</h1>
         <div className="text-sm md:text-base text-gray-500 dark:text-gray-400">Surat Keterangan Lulus</div>
         <div className="text-sm md:text-base font-medium text-primary mt-1">Tahun Ajaran 2024/2025</div>
+      </div>
+      
+      <div className="flex justify-center mb-4">
+        <nav className="flex items-center gap-2 p-1 rounded-lg bg-muted/50">
+          <Link href="/admin">
+            <Button variant="ghost" className="text-sm">
+              Dashboard
+            </Button>
+          </Link>
+          <Link href="/grades">
+            <Button variant="ghost" className="text-sm">
+              Nilai
+            </Button>
+          </Link>
+          <Link href="/subjects">
+            <Button variant="ghost" className="text-sm">
+              Mata Pelajaran
+            </Button>
+          </Link>
+        </nav>
       </div>
       
       {user && (

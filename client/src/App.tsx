@@ -6,6 +6,7 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import TeacherDashboard from "@/pages/teacher-dashboard";
 import StudentDashboard from "@/pages/student-dashboard";
 import SubjectsPage from "@/pages/subjects-page";
+import GradesPage from "@/pages/grades-page";
 import { Loader2 } from "lucide-react";
 import { AuthProvider } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
@@ -30,6 +31,7 @@ function AppRoutes() {
       <Route path="/guru" component={TeacherDashboard} />
       <Route path="/siswa" component={StudentDashboard} />
       <Route path="/subjects" component={SubjectsPage} />
+      <Route path="/grades" component={GradesPage} />
       <Route component={NotFound} />
     </Switch>
   );

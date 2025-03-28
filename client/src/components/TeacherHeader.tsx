@@ -37,8 +37,26 @@ export const TeacherHeader: React.FC<TeacherHeaderProps> = ({ user, onLogout }) 
         </span>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="text-sm text-right">
+      <div className="flex items-center gap-2 sm:gap-4">
+        <nav className="flex items-center gap-1">
+          <Link href="/guru">
+            <Button variant="ghost" className="text-sm">
+              Dashboard
+            </Button>
+          </Link>
+          <Link href="/grades">
+            <Button variant="ghost" className="text-sm">
+              Nilai
+            </Button>
+          </Link>
+          <Link href="/subjects">
+            <Button variant="ghost" className="text-sm">
+              Mata Pelajaran
+            </Button>
+          </Link>
+        </nav>
+        
+        <div className="text-sm text-right hidden sm:block">
           <div className="font-medium">{user.fullName}</div>
           <div className="text-gray-500 dark:text-gray-400">{user.username}</div>
         </div>
