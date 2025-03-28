@@ -8,7 +8,8 @@ export type ProgressCallback = (step: string, progress: number) => void;
 export async function generatePdf(
   elementId: string, 
   filename: string, 
-  onProgress?: ((step: string, progress: number) => void) | undefined
+  onProgress?: ((step: string, progress: number) => void) | undefined,
+  previewInBrowser: boolean = false
 ): Promise<void> {
   try {
     // Report initial progress
@@ -96,8 +97,25 @@ export async function generatePdf(
       // Progress: Siap untuk save
       onProgress && onProgress('Menyimpan file PDF', 90);
       
-      // Simpan PDF
-      pdf.save(`${filename}.pdf`);
+      if (previewInBrowser) {
+        // Tampilkan PDF di tab baru browser
+        const pdfOutput = pdf.output('dataurlstring');
+        onProgress && onProgress('Menampilkan preview PDF', 95);
+        
+        // Buka preview di tab baru
+        window.open(pdfOutput, '_blank');
+        
+        // Progress: Selesai (preview)
+        onProgress && onProgress('Preview PDF berhasil ditampilkan', 100);
+        console.log('PDF preview berhasil dibuat');
+      } else {
+        // Simpan PDF seperti biasa (unduh)
+        pdf.save(`${filename}.pdf`);
+        
+        // Progress: Selesai (download)
+        onProgress && onProgress('Berhasil mengunduh sertifikat', 100);
+        console.log('PDF berhasil diunduh');
+      }
       
       // Progress: Selesai
       onProgress && onProgress('Berhasil membuat sertifikat', 100);

@@ -141,15 +141,15 @@ export default function StudentDashboard() {
   };
   
   // Fungsi untuk mengunduh SKL dengan atau tanpa nilai
-  const handleDownloadSKL = (withGrades: boolean) => {
+  const handleDownloadSKL = (withGrades: boolean, preview: boolean = true) => {
     if (!certificateData) return;
     
     // Update certificate data to show/hide grades
     setCertificateData({...certificateData, showGrades: withGrades});
     
     const filename = withGrades 
-      ? `SKL_Dengan_Nilai_${certificateData.nisn}.pdf` 
-      : `SKL_Tanpa_Nilai_${certificateData.nisn}.pdf`;
+      ? `SKL_Dengan_Nilai_${certificateData.nisn}` 
+      : `SKL_Tanpa_Nilai_${certificateData.nisn}`;
       
     // Verifikasi elemen yang akan digunakan untuk PDF
     console.log("Memeriksa elemen untuk PDF...");
@@ -212,7 +212,7 @@ export default function StudentDashboard() {
         };
         
         // Panggil generatePdf dengan container ID yang benar
-        generatePdf('certificate-download-container', filename, handleProgress)
+        generatePdf('certificate-download-container', filename, handleProgress, preview)
           .then(() => {
             // Wait a moment to show the success state
             setTimeout(() => {
@@ -221,7 +221,9 @@ export default function StudentDashboard() {
               
               toast({
                 title: "Success",
-                description: `SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil diunduh`,
+                description: preview 
+                  ? `Preview SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil ditampilkan` 
+                  : `SKL ${withGrades ? 'dengan nilai' : 'tanpa nilai'} berhasil diunduh`,
               });
             }, 1000);
           })
@@ -488,7 +490,7 @@ export default function StudentDashboard() {
                     
                     <div className="flex flex-col sm:flex-row justify-center mt-4 space-y-2 sm:space-y-0 sm:space-x-4">
                       <Button 
-                        onClick={() => handleDownloadSKL(false)}
+                        onClick={() => handleDownloadSKL(false, true)}
                         className="bg-green-600 hover:bg-green-700"
                         size="sm"
                       >
@@ -497,7 +499,7 @@ export default function StudentDashboard() {
                       </Button>
                       
                       <Button 
-                        onClick={() => handleDownloadSKL(true)}
+                        onClick={() => handleDownloadSKL(true, true)}
                         className="bg-green-600 hover:bg-green-700"
                         size="sm"
                       >
@@ -529,7 +531,7 @@ export default function StudentDashboard() {
                           </div>
                           <div className="flex justify-center mt-4 sm:mt-6">
                             <Button 
-                              onClick={() => handleDownloadSKL(showGradesInPopup)}
+                              onClick={() => handleDownloadSKL(showGradesInPopup, true)}
                               className="bg-green-600 hover:bg-green-700"
                               size="sm"
                             >
