@@ -546,14 +546,20 @@ export default function StudentDashboard() {
                       position: 'absolute',
                       left: '-9999px',
                       width: '210mm',
-                      height: 'auto',
+                      height: '297mm',
                       visibility: 'visible',
                       backgroundColor: 'white',
-                      padding: '10px',
-                      zIndex: '-1000'
+                      padding: '0',
+                      zIndex: '-1000',
+                      overflow: 'hidden'
                     }}>
-                      <div id="certificate-download-container" className="certificate-container-wrapper bg-white" style={{width: '210mm', backgroundColor: 'white'}}>
-                        <Certificate data={certificateData} showDownloadButton={false} />
+                      <div id="certificate-download-container" className="certificate-container-wrapper bg-white" style={{
+                        width: '210mm', 
+                        height: '297mm',
+                        backgroundColor: 'white',
+                        position: 'relative'
+                      }}>
+                        <Certificate data={{...certificateData, showGrades: certificateData.showGrades}} showDownloadButton={false} />
                       </div>
                     </div>
                   </>

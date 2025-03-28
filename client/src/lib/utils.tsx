@@ -51,11 +51,15 @@ export async function generatePdf(
     
     // Buat opsi html2canvas yang lebih sederhana
     const options = {
-      scale: 1.5,
+      scale: 2, // Tingkatkan kualitas dengan scale 2
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#FFFFFF',
       logging: true,
+      width: 794, // A4 width in px at 96 DPI
+      height: 1123, // A4 height in px at 96 DPI
+      windowWidth: 794,
+      windowHeight: 1123,
       ignoreElements: (element: Element) => {
         return element.tagName === 'IFRAME' || element.tagName === 'VIDEO';
       }
@@ -81,11 +85,18 @@ export async function generatePdf(
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
+        compress: true,
+        hotfixes: ['px_scaling']
       });
       
-      // Hitung rasio tinggi-lebar
-      const imgWidth = 210; // A4 width
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      // A4 dimensions
+      const a4Width = 210;  // width in mm
+      const a4Height = 297; // height in mm
+      
+      // Sesuaikan ukuran gambar agar cocok dengan halaman A4 penuh
+      const imgWidth = a4Width;
+      // Hitung tinggi proporsional dan pastikan selalu mengisi halaman A4 penuh
+      const imgHeight = a4Height;
       
       // Progress: Persiapan PDF
       onProgress && onProgress('Memasukkan gambar ke PDF', 80);
@@ -115,14 +126,18 @@ export async function generatePdf(
         
         // Opsi yang lebih sederhana
         const simpleOptions = {
-          scale: 1,
+          scale: 1.5,
           useCORS: true,
+          allowTaint: true,
           logging: false,
-          backgroundColor: '#FFFFFF'
+          backgroundColor: '#FFFFFF',
+          width: 794,  // A4 width in px at 96 DPI
+          height: 1123  // A4 height in px at 96 DPI
         };
         
         const altCanvas = await html2canvas(element, simpleOptions);
-        const altImgData = altCanvas.toDataURL('image/jpeg', 0.8);
+        console.log('Alt canvas created successfully:', altCanvas.width, 'x', altCanvas.height);
+        const altImgData = altCanvas.toDataURL('image/jpeg', 0.95);
         
         // Progress: Alternatif berhasil
         onProgress && onProgress('Membuat file JPG sebagai alternatif', 80);
