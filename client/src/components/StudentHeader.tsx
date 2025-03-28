@@ -13,7 +13,13 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ user, onLogout }) 
   return (
     <header className="flex flex-col md:flex-row justify-between items-center py-4 mb-6 border-b">
       <div className="flex flex-col md:flex-row items-center mb-4 md:mb-0">
-        <div className="text-2xl font-bold text-primary flex items-center cursor-pointer" onClick={() => window.location.href="/siswa"}>
+        <div 
+          className="text-2xl font-bold text-primary flex items-center cursor-pointer" 
+          onClick={() => {
+            // Gunakan reload halaman untuk memastikan data dimuat ulang dengan benar
+            window.location.href="/siswa";
+          }}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"

@@ -17,7 +17,13 @@ export const TeacherHeader: React.FC<TeacherHeaderProps> = ({ user, onLogout }) 
   return (
     <header className="flex flex-col md:flex-row justify-between items-center py-4 mb-6 border-b">
       <div className="flex flex-col md:flex-row items-center mb-4 md:mb-0">
-        <div className="text-2xl font-bold text-primary flex items-center cursor-pointer" onClick={() => window.location.href="/guru"}>
+        <div 
+          className="text-2xl font-bold text-primary flex items-center cursor-pointer" 
+          onClick={() => {
+            // Gunakan reload halaman untuk memastikan data dimuat ulang dengan benar
+            window.location.href="/guru";
+          }}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
@@ -39,21 +45,27 @@ export const TeacherHeader: React.FC<TeacherHeaderProps> = ({ user, onLogout }) 
 
       <div className="flex items-center gap-2 sm:gap-4">
         <nav className="flex items-center gap-1">
-          <Link href="/guru">
-            <Button variant="ghost" className="text-sm">
-              Dashboard
-            </Button>
-          </Link>
-          <Link href="/grades">
-            <Button variant="ghost" className="text-sm">
-              Nilai
-            </Button>
-          </Link>
-          <Link href="/subjects">
-            <Button variant="ghost" className="text-sm">
-              Mata Pelajaran
-            </Button>
-          </Link>
+          <Button 
+            variant="ghost" 
+            className="text-sm"
+            onClick={() => window.location.href = "/guru"}
+          >
+            Dashboard
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="text-sm"
+            onClick={() => window.location.href = "/grades"}
+          >
+            Nilai
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="text-sm"
+            onClick={() => window.location.href = "/subjects"}
+          >
+            Mata Pelajaran
+          </Button>
         </nav>
         
         <div className="text-sm text-right hidden sm:block">

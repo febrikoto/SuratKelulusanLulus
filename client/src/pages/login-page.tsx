@@ -68,7 +68,7 @@ export default function LoginPage() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [redirectMessage, setRedirectMessage] = useState('');
   
-  // Handle login redirect with useEffect
+  // Perubahan terhadap useEffect untuk redirect
   useEffect(() => {
     // Redirect if user is logged in
     if (user) {
@@ -83,12 +83,13 @@ export default function LoginPage() {
       setIsRedirecting(true);
       setRedirectMessage(`Selamat datang, ${user.fullName}! Sedang mempersiapkan dashboard...`);
       
-      // Use a longer timeout for better user experience and to ensure data is loaded
+      // Use direct window.location.href instead of wouter navigation
+      // to force a complete page reload
       setTimeout(() => {
-        setLocation(redirectPath);
+        window.location.href = redirectPath;
       }, 1000);
     }
-  }, [user, setLocation]);
+  }, [user]);
 
   const onSubmit = async (values: LoginFormValues) => {
     try {
