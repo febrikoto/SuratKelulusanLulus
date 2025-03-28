@@ -215,7 +215,7 @@ export default function StudentDashboard() {
         generatePdf(
           'certificate-download-container', 
           filename, 
-          handleProgress,
+          handleProgress, // progress callback
           preview // boolean untuk menentukan apakah hanya preview atau download
         )
           .then(() => {

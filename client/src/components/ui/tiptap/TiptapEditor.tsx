@@ -170,7 +170,14 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ content, onChange, classNam
         </Button>
       </div>
       
-      <EditorContent editor={editor} className="prose dark:prose-invert max-w-none p-4 min-h-[120px] focus:outline-none" />
+      <EditorContent 
+        editor={editor} 
+        className="prose dark:prose-invert max-w-none p-4 min-h-[120px] focus:outline-none prose-p:my-2 prose-ol:pl-5 prose-ol:list-decimal prose-ul:pl-5 prose-ul:list-disc prose-li:my-1" 
+        style={{
+          fontSize: '14px',
+          lineHeight: '1.5',
+        }}
+      />
     </div>
   );
 };

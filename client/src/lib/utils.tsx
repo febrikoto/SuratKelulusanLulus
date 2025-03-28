@@ -59,11 +59,12 @@ export async function generatePdf(
     
     // Buat opsi html2canvas dengan kualitas tinggi untuk F4
     const options = {
-      scale: 2, // Tingkatkan kualitas (dpi lebih tinggi)
+      scale: 3, // Tingkatkan kualitas (dpi lebih tinggi)
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#FFFFFF',
       logging: true,
+      letterRendering: true, // Meningkatkan kualitas teks
       ignoreElements: (element: Element) => {
         return element.tagName === 'IFRAME' || element.tagName === 'VIDEO';
       }
@@ -174,10 +175,11 @@ export async function generatePdf(
         
         // Opsi alternatif dengan kualitas yang lebih baik
         const simpleOptions = {
-          scale: 1.5, // Tingkatkan kualitas tapi tidak terlalu tinggi
+          scale: 2, // Tingkatkan kualitas tapi tidak terlalu tinggi
           useCORS: true,
           allowTaint: true,
           logging: false,
+          letterRendering: true, // Meningkatkan kualitas teks
           backgroundColor: '#FFFFFF'
         };
         

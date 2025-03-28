@@ -35,8 +35,13 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
       
       <div 
         ref={certificateRef} 
-        className="relative border border-gray-300 bg-white mx-auto w-[215mm] min-h-[330mm] text-black"
-        style={{ padding: '20mm' }} /* 2cm margin di semua sisi */
+        className="relative border border-gray-300 bg-white mx-auto w-[215mm] min-h-[330mm] text-black font-serif"
+        style={{ 
+          padding: '20mm', /* 2cm margin di semua sisi */
+          fontFamily: 'Times New Roman, serif',
+          fontSize: '12pt',
+          lineHeight: '1.5',
+        }}
       >
         {/* Header dengan logo dan kop surat */}
         <div className="flex justify-between items-center mb-2">
@@ -89,7 +94,12 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
           {/* Jika teks kriteria khusus tersedia, gunakan itu */}
           {data.certCriteriaText ? (
             <div 
-              className="mb-4 text-left prose prose-ol:pl-5 prose-ol:list-decimal prose-ul:pl-5 prose-ul:list-disc" 
+              className="mb-4 text-left prose prose-ol:pl-5 prose-ol:list-decimal prose-ul:pl-5 prose-ul:list-disc prose-p:my-2 prose-p:text-[12pt] prose-li:text-[12pt]" 
+              style={{ 
+                fontSize: '12pt',
+                lineHeight: '1.5',
+                fontFamily: 'Times New Roman, serif',
+              }}
               dangerouslySetInnerHTML={{ __html: data.certCriteriaText }}
             />
           ) : (
