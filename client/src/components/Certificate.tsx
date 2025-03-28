@@ -55,8 +55,8 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
             <p className="font-bold text-xl">{data.schoolName.toUpperCase()}</p>
             <p className="text-sm">Jalan: {data.schoolAddress}</p>
             <div className="flex justify-center items-center gap-2 text-sm">
-              <p>E-mail: {data.schoolEmail || "sman1duakoto@gmail.com"}</p>
-              <p>Website: {data.schoolWebsite || "https://www.sman1duakoto.sch.id"}</p>
+              <p>E-mail: {data.schoolEmail || ""}</p>
+              <p>Website: {data.schoolWebsite || ""}</p>
             </div>
           </div>
           <div className="w-20 h-20">
