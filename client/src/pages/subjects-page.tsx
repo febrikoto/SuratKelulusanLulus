@@ -93,6 +93,15 @@ export default function SubjectsPage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Fetch school settings for major list
+  const { data: settings } = useQuery({
+    queryKey: ['/api/settings'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/settings');
+      return await response.json();
+    }
+  });
 
   // Form setup
   const form = useForm<SubjectFormValues>({
@@ -288,8 +297,16 @@ export default function SubjectsPage() {
     : [];
 
   // Get unique majors for filter
+  // If settings.majorList is available, use it as the source of majors
+  // Otherwise, get unique majors from subjects
+  const availableMajors = settings?.majorList 
+    ? settings.majorList.split(',')
+    : [];
+    
   const uniqueMajors = subjects 
-    ? Array.from(new Set(subjects.map(subject => subject.major)))
+    ? availableMajors.length > 0
+      ? availableMajors
+      : Array.from(new Set(subjects.map(subject => subject.major)))
     : [];
 
   // Render the appropriate header based on user role
@@ -659,9 +676,22 @@ export default function SubjectsPage() {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="semua">Semua Jurusan</SelectItem>
-                          <SelectItem value="MIPA">MIPA</SelectItem>
-                          <SelectItem value="IPS">IPS</SelectItem>
-                          <SelectItem value="BAHASA">BAHASA</SelectItem>
+                          {settings?.majorList ? 
+                            settings.majorList.split(',')
+                              .filter(major => major !== 'semua')
+                              .map((major) => (
+                                <SelectItem key={major} value={major}>
+                                  {major}
+                                </SelectItem>
+                              ))
+                            : (
+                              <>
+                                <SelectItem value="MIPA">MIPA</SelectItem>
+                                <SelectItem value="IPS">IPS</SelectItem>
+                                <SelectItem value="BAHASA">BAHASA</SelectItem>
+                              </>
+                            )
+                          }
                         </SelectContent>
                       </Select>
                       <FormMessage />

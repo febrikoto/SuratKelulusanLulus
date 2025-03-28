@@ -47,6 +47,7 @@ const formSchema = z.object({
   certAfterStudentData: z.string().default(''),
   certRegulationText: z.string().default(''),
   certCriteriaText: z.string().default(''),
+  majorList: z.string().default('semua,MIPA,IPS,BAHASA'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -86,6 +87,7 @@ const CertificateSettingsModal: React.FC<CertificateSettingsModalProps> = ({ isO
       certAfterStudentData: '',
       certRegulationText: '',
       certCriteriaText: '',
+      majorList: 'semua,MIPA,IPS,BAHASA',
     },
   });
   
@@ -105,6 +107,7 @@ const CertificateSettingsModal: React.FC<CertificateSettingsModalProps> = ({ isO
         certAfterStudentData: settings.certAfterStudentData || 'telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.',
         certRegulationText: settings.certRegulationText || '',
         certCriteriaText: settings.certCriteriaText || '',
+        majorList: settings.majorList || 'semua,MIPA,IPS,BAHASA',
       });
     }
   }, [settings, form]);
@@ -369,6 +372,35 @@ const CertificateSettingsModal: React.FC<CertificateSettingsModalProps> = ({ isO
                       </FormControl>
                       <FormDescription>
                         Contoh: "Kepala SMKN 1 LUBUK SIKAPING berdasarkan ketentuan yang berlaku mempertimbangan kelulusan peserta didik pada Tahun Pelajaran 2024/2025, diantaranya sebagai berikut: ..."
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="space-y-5 mt-6">
+                <div className="flex items-center space-x-2 mb-2 sticky top-0 bg-background z-10 py-2 border-b">
+                  <Clipboard className="h-5 w-5 text-primary" />
+                  <h3 className="text-md font-semibold">Pengaturan Jurusan</h3>
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="majorList"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Daftar Jurusan</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="semua,MIPA,IPS,BAHASA" 
+                          className="min-h-[80px]"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Daftar jurusan yang tersedia di sekolah. Pisahkan dengan koma (,).
+                        Contoh: semua,MIPA,IPS,BAHASA
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
