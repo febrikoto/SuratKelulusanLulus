@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
+import QRCode from 'qrcode';
 import { CertificateData, SubjectGrade } from '@shared/types';
 import { formatDate } from '../client/src/lib/utils';
 
@@ -18,6 +19,20 @@ function formatDateForCertificate(dateString: string): string {
     // Jika parsing gagal, kembalikan string asli
     return dateString;
   }
+}
+
+// Fungsi untuk menghasilkan QR code sebagai buffer
+function generateQRCode(data: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    QRCode.toBuffer(data, { 
+      errorCorrectionLevel: 'H', 
+      type: 'png', 
+      width: 150 
+    }, (err, buffer) => {
+      if (err) reject(err);
+      else resolve(buffer);
+    });
+  });
 }
 
 // Fungsi utama untuk membuat PDF
@@ -586,6 +601,33 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       } else {
         // Jika tidak ada tanda tangan, beri space
         doc.moveDown(4);
+      }
+
+      // Tambahkan QR code untuk tanda tangan digital
+      try {
+        // Buat data untuk QR code (berisi informasi identitas sertifikat)
+        const qrData = JSON.stringify({
+          nisn: data.nisn,
+          nama: data.fullName,
+          sekolah: data.schoolName,
+          tanggalLulus: data.graduationDate,
+          nomorSurat: data.certNumber
+        });
+        
+        // Buat QR code menggunakan fungsi helper
+        generateQRCode(qrData).then(qrCodeBuffer => {
+          // Posisikan QR code di samping tanda tangan
+          const qrX = signatureX - 180; // Posisi di kiri tanda tangan
+          doc.image(qrCodeBuffer, qrX, y + 40, { width: 100 });
+          
+          // Tambahkan teks "Tanda Tangan Digital" di bawah QR
+          doc.fontSize(8).font('Helvetica');
+          doc.text('Tanda Tangan Digital', qrX, y + 145, { width: 100, align: 'center' });
+        }).catch(e => {
+          console.error("Error generating QR code:", e);
+        });
+      } catch (e) {
+        console.error("Error generating QR code:", e);
       }
       
       // Nama kepala sekolah dengan garis bawah
