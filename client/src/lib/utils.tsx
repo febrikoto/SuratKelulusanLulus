@@ -10,6 +10,9 @@ export async function generatePdf(
   filename: string, 
   onProgress?: ((step: string, progress: number) => void) | undefined
 ): Promise<void> {
+  let clone: HTMLElement | null = null;
+  let altClone: HTMLElement | null = null;
+  
   try {
     // Report initial progress
     onProgress && onProgress('Memulai proses', 5);
@@ -17,7 +20,7 @@ export async function generatePdf(
     console.log(`Generating PDF for element with ID: ${elementId}`);
     
     // Berikan waktu untuk update DOM dan penemuan elemen
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     const element = document.getElementById(elementId);
     if (!element) {
@@ -29,37 +32,51 @@ export async function generatePdf(
     console.log(`Element found: ${element.tagName}, Width: ${element.offsetWidth}, Height: ${element.offsetHeight}`);
     console.log(`Visibility: ${window.getComputedStyle(element).visibility}, Display: ${window.getComputedStyle(element).display}`);
     
-    // Make element visible for rendering
-    const parentElement = element.parentElement;
-    if (parentElement) {
-      parentElement.style.display = 'block';
-      parentElement.style.visibility = 'visible';
-      parentElement.style.opacity = '1';
-      parentElement.style.position = 'fixed';
-      parentElement.style.top = '-9999px';
-      parentElement.style.left = '-9999px';
-      parentElement.style.width = '210mm';
-      parentElement.style.height = 'auto';
-      parentElement.style.zIndex = '-1000';
-    }
+    // Clone element untuk dirender
+    clone = element.cloneNode(true) as HTMLElement;
+    document.body.appendChild(clone);
+    
+    // Set styling untuk clone element
+    clone.style.position = 'fixed';
+    clone.style.top = '-9999px';
+    clone.style.left = '-9999px';
+    clone.style.width = '210mm';
+    clone.style.height = '297mm';
+    clone.style.margin = '0';
+    clone.style.padding = '0';
+    clone.style.border = 'none';
+    clone.style.boxSizing = 'border-box';
+    clone.style.overflow = 'hidden';
+    clone.style.zIndex = '-9999';
+    clone.style.backgroundColor = 'white';
+    clone.style.transform = 'none';
+    clone.style.transformOrigin = 'center top';
+    clone.style.zoom = '1';
+    clone.style.display = 'block';
+    clone.style.visibility = 'visible';
+    clone.style.opacity = '1';
     
     // Progress: Element ditemukan
     onProgress && onProgress('Menyiapkan elemen sertifikat', 15);
     
     // Berikan waktu untuk update styling
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 300));
     
-    // Buat opsi html2canvas yang lebih sederhana
+    // Buat opsi html2canvas yang optimal untuk A4
     const options = {
       scale: 2, // Tingkatkan kualitas dengan scale 2
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#FFFFFF',
       logging: true,
-      width: 794, // A4 width in px at 96 DPI
-      height: 1123, // A4 height in px at 96 DPI
-      windowWidth: 794,
-      windowHeight: 1123,
+      width: 793, // A4 width in px at 96 DPI (minus 1px for safety)
+      height: 1122, // A4 height in px at 96 DPI (minus 1px for safety)
+      windowWidth: 793,
+      windowHeight: 1122,
+      scrollX: 0,
+      scrollY: 0,
+      x: 0,
+      y: 0,
       ignoreElements: (element: Element) => {
         return element.tagName === 'IFRAME' || element.tagName === 'VIDEO';
       }
@@ -69,13 +86,13 @@ export async function generatePdf(
       // Progress: Mulai render
       onProgress && onProgress('Membuat gambar sertifikat', 40);
       
-      const canvas = await html2canvas(element, options);
+      const canvas = await html2canvas(clone, options);
       console.log('Canvas created successfully:', canvas.width, 'x', canvas.height);
       
       // Progress: Render canvas selesai
       onProgress && onProgress('Mengoptimasi gambar', 60);
       
-      const imgData = canvas.toDataURL('image/jpeg', 0.85);
+      const imgData = canvas.toDataURL('image/jpeg', 0.9);
       
       // Progress: Optimasi selesai
       onProgress && onProgress('Membuat file PDF', 70);
@@ -135,18 +152,39 @@ export async function generatePdf(
           height: 1123  // A4 height in px at 96 DPI
         };
         
-        const altCanvas = await html2canvas(element, simpleOptions);
-        console.log('Alt canvas created successfully:', altCanvas.width, 'x', altCanvas.height);
-        const altImgData = altCanvas.toDataURL('image/jpeg', 0.95);
+        // Buat clone baru untuk metode alternatif
+        altClone = element.cloneNode(true) as HTMLElement;
+        document.body.appendChild(altClone);
+        
+        // Set styling untuk clone alternatif
+        altClone.style.position = 'fixed';
+        altClone.style.top = '-9999px';
+        altClone.style.left = '-9999px';
+        altClone.style.width = '210mm';
+        altClone.style.height = '297mm';
+        altClone.style.margin = '0';
+        altClone.style.padding = '0';
+        altClone.style.border = 'none';
+        altClone.style.boxSizing = 'border-box';
+        altClone.style.overflow = 'hidden';
+        altClone.style.backgroundColor = 'white';
         
         // Progress: Alternatif berhasil
-        onProgress && onProgress('Membuat file JPG sebagai alternatif', 80);
+        onProgress && onProgress('Membuat file JPG sebagai alternatif', 70);
+        
+        const altCanvas = await html2canvas(altClone, simpleOptions);
+        console.log('Alt canvas created successfully:', altCanvas.width, 'x', altCanvas.height);
+        const altImgData = altCanvas.toDataURL('image/jpeg', 0.95);
         
         // Buat link untuk download image sebagai alternatif
         const a = document.createElement('a');
         a.href = altImgData;
         a.download = filename.replace('.pdf', '.jpg');
         document.body.appendChild(a);
+        
+        // Progress: Selesai dengan alternatif
+        onProgress && onProgress('Menyimpan file JPG', 90);
+        
         a.click();
         document.body.removeChild(a);
         
@@ -157,17 +195,12 @@ export async function generatePdf(
         throw altError;
       }
     } finally {
-      // Restore parent element properties
-      if (parentElement) {
-        parentElement.style.display = '';
-        parentElement.style.visibility = '';
-        parentElement.style.opacity = '';
-        parentElement.style.position = '';
-        parentElement.style.top = '';
-        parentElement.style.left = '';
-        parentElement.style.width = '';
-        parentElement.style.height = '';
-        parentElement.style.zIndex = '';
+      // Clean up all clones
+      if (clone && clone.parentElement) {
+        document.body.removeChild(clone);
+      }
+      if (altClone && altClone.parentElement) {
+        document.body.removeChild(altClone);
       }
     }
     
@@ -175,6 +208,15 @@ export async function generatePdf(
   } catch (error) {
     console.error('Error generating PDF:', error);
     onProgress && onProgress('Terjadi kesalahan saat membuat sertifikat', 100);
+    
+    // Make sure to clean up any clones that might be left
+    if (clone && clone.parentElement) {
+      document.body.removeChild(clone);
+    }
+    if (altClone && altClone.parentElement) {
+      document.body.removeChild(altClone);
+    }
+    
     return Promise.reject(error);
   }
 }
