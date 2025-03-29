@@ -308,8 +308,17 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       const grades: GradeData[] = [];
       const errors: ImportError[] = [];
       
-      // Get students from the selected class
-      const classStudents = students.filter(s => s.className === selectedClass);
+      // Get students from the selected class - dengan pencocokan yang lebih fleksibel
+      const normalizedSelectedClass = selectedClass ? selectedClass.trim().toUpperCase() : '';
+      const classStudents = students.filter(s => {
+        if (!s.className) return false;
+        const normalizedClassName = s.className.trim().toUpperCase();
+        return normalizedClassName === normalizedSelectedClass || 
+               normalizedClassName.replace(/\s+/g, " ") === normalizedSelectedClass.replace(/\s+/g, " ");
+      });
+      
+      console.log(`Mencari siswa untuk kelas pada saat import: ${selectedClass}`);
+      console.log(`Jumlah siswa ditemukan: ${classStudents.length}`);
       
       for (let i = 0; i < nilaiRows.length; i++) {
         const rowData = nilaiRows[i] as any;
@@ -529,8 +538,17 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       const grades: GradeData[] = [];
       const errors: ImportError[] = [];
       
-      // Get students from the selected class
-      const classStudents = students.filter(s => s.className === selectedClass);
+      // Get students from the selected class - dengan pencocokan yang lebih fleksibel
+      const normalizedSelectedClass = selectedClass ? selectedClass.trim().toUpperCase() : '';
+      const classStudents = students.filter(s => {
+        if (!s.className) return false;
+        const normalizedClassName = s.className.trim().toUpperCase();
+        return normalizedClassName === normalizedSelectedClass || 
+               normalizedClassName.replace(/\s+/g, " ") === normalizedSelectedClass.replace(/\s+/g, " ");
+      });
+      
+      console.log(`Mencari siswa untuk kelas pada saat import single-sheet: ${selectedClass}`);
+      console.log(`Jumlah siswa ditemukan: ${classStudents.length}`);
       
       // Skip header row (start from index 1)
       for (let i = 1; i < rows.length; i++) {
@@ -728,8 +746,20 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
     }
     
     try {
-      // Get students from the selected class
-      const classStudents = students.filter(s => s.className === selectedClass);
+      // Get students from the selected class - dengan pencocokan yang lebih fleksibel
+      // Normalisasi nama kelas untuk perbandingan yang lebih baik
+      const normalizedSelectedClass = selectedClass ? selectedClass.trim().toUpperCase() : '';
+      const classStudents = students.filter(s => {
+        if (!s.className) return false;
+        const normalizedClassName = s.className.trim().toUpperCase();
+        return normalizedClassName === normalizedSelectedClass || 
+               // Coba dengan normalisasi spasi tambahan
+               normalizedClassName.replace(/\s+/g, " ") === normalizedSelectedClass.replace(/\s+/g, " ");
+      });
+      
+      console.log(`Mencari siswa untuk kelas: ${selectedClass}`);
+      console.log(`Jumlah siswa ditemukan: ${classStudents.length}`);
+      console.log(`Nama kelas yang ada: ${students.map(s => s.className).join(', ')}`);
       
       if (classStudents.length === 0) {
         toast({
