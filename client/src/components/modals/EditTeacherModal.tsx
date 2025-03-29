@@ -91,11 +91,17 @@ export const EditTeacherModal: React.FC<EditTeacherModalProps> = ({
     setIsSubmitting(true);
     
     try {
+      // Process form data - convert "null" string to actual null
+      const processedData = {
+        ...data,
+        assignedMajor: data.assignedMajor === "null" ? null : data.assignedMajor
+      };
+      
       // Send patch request to update teacher (user)
       const response = await apiRequest(
         'PATCH',
         `/api/users/${teacher.id}`,
-        data
+        processedData
       );
       
       if (!response.ok) {
@@ -175,7 +181,7 @@ export const EditTeacherModal: React.FC<EditTeacherModalProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">
+                      <SelectItem value="null">
                         <span className="text-muted-foreground">Tidak Ada / Semua Jurusan</span>
                       </SelectItem>
                       {renderMajorOptions()}
