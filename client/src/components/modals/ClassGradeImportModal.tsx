@@ -158,6 +158,18 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       return;
     }
     
+    // Check for students in the selected class first
+    const classStudents = students.filter(s => s.className === selectedClass);
+    if (classStudents.length === 0) {
+      toast({
+        title: 'Tidak ada siswa di kelas ini',
+        description: `Silahkan import data siswa terlebih dahulu untuk kelas ${selectedClass} sebelum mengupload nilai`,
+        variant: 'destructive',
+      });
+      setFileError(`Tidak ada siswa di kelas ${selectedClass}. Silahkan import data siswa terlebih dahulu.`);
+      return;
+    }
+    
     try {
       setIsUploading(true);
       // Clear previous errors and stats
@@ -721,8 +733,8 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       
       if (classStudents.length === 0) {
         toast({
-          title: 'Tidak ada siswa',
-          description: `Tidak ada siswa terdaftar di kelas ${selectedClass}`,
+          title: 'Tidak ada siswa di kelas ini',
+          description: `Silahkan import data siswa terlebih dahulu untuk kelas ${selectedClass} sebelum membuat template nilai`,
           variant: 'destructive',
         });
         return;
