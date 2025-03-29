@@ -23,7 +23,8 @@ import {
   Settings,
   FileBadge,
   BookOpen,
-  DatabaseIcon
+  DatabaseIcon,
+  FileDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -238,7 +239,7 @@ export default function AdminDashboard() {
               variant="secondary"
             >
               <Upload className="mr-2 h-4 w-4" />
-              Import CSV
+              Import Siswa Excel
             </Button>
             <Button 
               onClick={() => setShowGradeImportModal(true)}
@@ -529,22 +530,80 @@ export default function AdminDashboard() {
         onClose={() => setShowAddStudentModal(false)} 
       />
       
-      {/* Import CSV Modal */}
+      {/* Import Excel Modal */}
       <Dialog open={showImportCsvModal} onOpenChange={setShowImportCsvModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Import Data Siswa dari CSV</DialogTitle>
+            <DialogTitle>Import Data Siswa dari Excel</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-gray-500">
-              Form import CSV akan ditampilkan di sini dalam aplikasi lengkap.
+            <p className="text-sm text-gray-500 mb-4">
+              Silahkan unduh template Excel untuk kelas yang diperlukan, isi data siswa dan upload kembali.
             </p>
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Unduh Template</h3>
+              
+              <div className="grid grid-cols-1 gap-2">
+                {[...(uniqueClasses.length > 0 ? uniqueClasses : ['XII MIPA', 'XII IPS', 'XII BAHASA'])].map((className) => (
+                  <div key={className} className="flex items-center justify-between p-3 border rounded-md">
+                    <div className="text-sm">{className}</div>
+                    <Button 
+                      variant="outline" 
+                      className="flex items-center gap-1 text-xs h-8" 
+                      onClick={() => {
+                        // Mengunduh template Excel untuk kelas tertentu
+                        const url = `/api/export/student-template?class=${encodeURIComponent(className)}`;
+                        window.open(url, '_blank');
+                        
+                        toast({
+                          title: "Template Excel",
+                          description: `Template Excel untuk kelas ${className} sedang diunduh`,
+                        });
+                      }}
+                    >
+                      <FileDown className="h-3.5 w-3.5 mr-1" />
+                      Unduh
+                    </Button>
+                  </div>
+                ))}
+                
+                <div className="flex items-center justify-between p-3 border rounded-md">
+                  <div className="text-sm">Template Kelas Baru</div>
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-1 text-xs h-8" 
+                    onClick={() => {
+                      // Mengunduh template kosong untuk kelas baru
+                      const url = `/api/export/student-template`;
+                      window.open(url, '_blank');
+                      
+                      toast({
+                        title: "Template Excel",
+                        description: "Template Excel untuk kelas baru sedang diunduh",
+                      });
+                    }}
+                  >
+                    <FileDown className="h-3.5 w-3.5 mr-1" />
+                    Unduh
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="border-t pt-4 mt-4">
+                <h3 className="text-sm font-medium mb-2">Upload File Excel</h3>
+                <div className="border-dashed border-2 border-gray-300 rounded-md p-4 text-center cursor-pointer hover:bg-gray-50">
+                  <Upload className="h-6 w-6 mx-auto text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-500">Klik untuk upload file atau tarik dan lepaskan file di sini</p>
+                  <p className="text-xs text-gray-400 mt-1">Format: .xlsx, .xls</p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <Button
               variant="outline"
               onClick={() => setShowImportCsvModal(false)}
-              className="mr-2"
             >
               Batal
             </Button>
@@ -553,7 +612,7 @@ export default function AdminDashboard() {
                 setShowImportCsvModal(false);
                 toast({
                   title: "Info",
-                  description: "Fitur import CSV akan diimplementasikan dalam aplikasi lengkap",
+                  description: "Fitur import Excel akan segera diimplementasikan",
                 });
               }}
             >

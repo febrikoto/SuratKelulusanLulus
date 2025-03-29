@@ -12,6 +12,7 @@ import { insertStudentSchema, verificationSchema, insertGradeSchema, insertSetti
 import { CertificateData, SubjectGrade } from "@shared/types";
 import { generateCertificatePDF } from "./certificate-generator"; 
 import { formatDate } from "../client/src/lib/utils";
+import * as XLSX from 'xlsx';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const { requireAuth, requireRole } = setupAuth(app);
@@ -1245,6 +1246,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating certificate:", error);
       res.status(500).json({ message: "Gagal membuat sertifikat" });
+    }
+  });
+
+  // Generate Excel Import Template
+  app.get("/api/students/template/excel", requireRole(["admin"]), async (req, res) => {
+    try {
+      const className = req.query.className as string;
+      
+      if (!className) {
+        return res.status(400).json({ message: "Nama kelas diperlukan" });
+      }
+      
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Create headers and sample data
+      const headers = [
+        "nisn", 
+        "nis", 
+        "fullName", 
+        "birthPlace", 
+        "birthDate", 
+        "parentName", 
+        "className"
+      ];
+      
+      // Create sample rows with explanations
+      const rows = [
+        [
+          // Sample data with explanations
+          "0123456789", // NISN (10 digit)
+          "123456", // NIS (6 digit)
+          "Nama Lengkap Siswa", // Nama lengkap
+          "Jakarta", // Tempat lahir
+          "2005-05-20", // Tanggal lahir (format: YYYY-MM-DD)
+          "Nama Orang Tua", // Nama orang tua
+          className // Kelas
+        ],
+        [
+          // Empty row for user to fill
+          "", "", "", "", "", "", className
+        ]
+      ];
+      
+      // Combine headers and rows
+      const data = [headers, ...rows];
+      
+      // Create worksheet from data
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      
+      // Add column widths for better readability
+      const colWidths = [
+        { wch: 15 }, // nisn
+        { wch: 10 }, // nis
+        { wch: 30 }, // fullName
+        { wch: 15 }, // birthPlace
+        { wch: 15 }, // birthDate
+        { wch: 25 }, // parentName
+        { wch: 10 }  // className
+      ];
+      
+      ws['!cols'] = colWidths;
+      
+      // Add comments/notes to cells
+      ws.A1.c = [{ a: "Guru", t: "NISN harus 10 digit angka" }];
+      ws.B1.c = [{ a: "Guru", t: "NIS harus diisi, minimal 3 karakter" }];
+      ws.C1.c = [{ a: "Guru", t: "Nama lengkap siswa" }];
+      ws.D1.c = [{ a: "Guru", t: "Tempat lahir siswa" }];
+      ws.E1.c = [{ a: "Guru", t: "Format tanggal: YYYY-MM-DD (tahun-bulan-tanggal)" }];
+      ws.F1.c = [{ a: "Guru", t: "Nama orang tua/wali siswa" }];
+      ws.G1.c = [{ a: "Guru", t: "Kelas siswa, sudah terisi otomatis" }];
+      
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, "Data Siswa");
+      
+      // Generate buffer
+      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      
+      // Set response headers
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=Template_Import_Siswa_${className}.xlsx`);
+      
+      // Send buffer as response
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error generating Excel template:", error);
+      res.status(500).json({ message: "Gagal membuat template Excel" });
     }
   });
 

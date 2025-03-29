@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2, Upload, FileSpreadsheet, FileDown } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ImportCsvModalProps {
   isOpen: boolean;
@@ -12,6 +15,7 @@ interface ImportCsvModalProps {
 
 export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({ isOpen, onClose }) => {
   const [file, setFile] = useState<File | null>(null);
+  const [className, setClassName] = useState<string>('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -43,8 +47,8 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({ isOpen, onClose 
     },
     onSuccess: (data) => {
       toast({
-        title: "Success",
-        description: `Successfully imported ${data.imported} students`,
+        title: "Sukses",
+        description: `Berhasil mengimpor ${data.imported} siswa`,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/students'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
@@ -60,7 +64,7 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({ isOpen, onClose 
     },
   });
 
-  const downloadTemplate = () => {
+  const downloadCsvTemplate = () => {
     const headers = ['nisn,nis,fullName,birthPlace,birthDate,parentName,className'];
     const csvContent = headers.join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -68,10 +72,23 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({ isOpen, onClose 
     
     const a = document.createElement('a');
     a.setAttribute('href', url);
-    a.setAttribute('download', 'students_template.csv');
+    a.setAttribute('download', 'template_siswa.csv');
     a.click();
     
     URL.revokeObjectURL(url);
+  };
+  
+  const downloadExcelTemplate = () => {
+    if (!className || className.trim() === '') {
+      toast({
+        title: "Peringatan",
+        description: "Silakan isi nama kelas terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    window.location.href = `/api/students/template/excel?className=${encodeURIComponent(className)}`;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -81,75 +98,121 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({ isOpen, onClose 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>Import Data Siswa (CSV)</DialogTitle>
+          <DialogTitle>Import Data Siswa</DialogTitle>
+          <DialogDescription>
+            Tambahkan data siswa secara massal dengan menggunakan file CSV atau Excel
+          </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-              Upload file CSV dengan format: NISN, NIS, Nama Lengkap, Tempat Lahir, Tanggal Lahir, Nama Orang Tua, Kelas
-            </p>
-            
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md p-6 text-center">
-              <input 
-                type="file" 
-                id="csvFile" 
-                className="hidden" 
-                accept=".csv"
-                onChange={handleFileChange} 
-              />
-              <label htmlFor="csvFile" className="cursor-pointer">
-                <Upload className="h-10 w-10 mx-auto text-gray-400 mb-2" />
+        <Tabs defaultValue="import">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="import">Import File</TabsTrigger>
+            <TabsTrigger value="template">Download Template</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="import">
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                  Upload file CSV dengan format: NISN, NIS, Nama Lengkap, Tempat Lahir, Tanggal Lahir, Nama Orang Tua, Kelas
+                </p>
                 
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Klik untuk memilih file CSV</p>
-                <p className="text-xs text-gray-500 dark:text-gray-500">atau drag & drop file di sini</p>
-              </label>
-              
-              {file && (
-                <div className="mt-2 text-sm text-primary font-medium">
-                  {file.name}
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md p-6 text-center">
+                  <input 
+                    type="file" 
+                    id="csvFile" 
+                    className="hidden" 
+                    accept=".csv"
+                    onChange={handleFileChange} 
+                  />
+                  <label htmlFor="csvFile" className="cursor-pointer">
+                    <Upload className="h-10 w-10 mx-auto text-gray-400 mb-2" />
+                    
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Klik untuk memilih file CSV</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">atau drag & drop file di sini</p>
+                  </label>
+                  
+                  {file && (
+                    <div className="mt-2 text-sm text-primary font-medium">
+                      {file.name}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={onClose}
+                >
+                  Batal
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={!file || importCsvMutation.isPending}
+                >
+                  {importCsvMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Mengimpor...
+                    </>
+                  ) : (
+                    'Import'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </TabsContent>
+          
+          <TabsContent value="template">
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="className">Nama Kelas (untuk Template Excel)</Label>
+                <Input 
+                  id="className" 
+                  placeholder="Contoh: XII MIPA 1" 
+                  value={className}
+                  onChange={(e) => setClassName(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Masukkan nama kelas untuk membuat template Excel per kelas
+                </p>
+              </div>
+              
+              <div className="flex flex-col space-y-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={downloadExcelTemplate}
+                  className="flex items-center"
+                  disabled={!className || className.trim() === ''}
+                >
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Download Template Excel
+                </Button>
+                
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={downloadCsvTemplate}
+                  className="flex items-center"
+                >
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Download Template CSV
+                </Button>
+              </div>
+              
+              <DialogFooter>
+                <Button type="button" onClick={onClose}>
+                  Tutup
+                </Button>
+              </DialogFooter>
             </div>
-          </div>
-          
-          <div className="mb-4">
-            <Button 
-              type="button" 
-              variant="link" 
-              onClick={downloadTemplate}
-              size="sm"
-              className="p-0"
-            >
-              Download template CSV
-            </Button>
-          </div>
-          
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onClose}
-            >
-              Batal
-            </Button>
-            <Button 
-              type="submit"
-              disabled={!file || importCsvMutation.isPending}
-            >
-              {importCsvMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Importing...
-                </>
-              ) : (
-                'Import'
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
