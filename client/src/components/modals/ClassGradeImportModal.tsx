@@ -336,20 +336,36 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       console.log(`Mencari siswa untuk kelas pada saat import: ${selectedClass}`);
       console.log(`Jumlah siswa ditemukan: ${classStudents.length}`);
       
+      // Dapatkan semua kunci kolom yang ada di header
+      // Ini penting untuk format baru dimana kolom bisa menjadi kode singkat mata pelajaran
+      const allKeys = nilaiRows.length > 0 ? Object.keys(nilaiRows[0] as object) : [];
+      
+      // Filter kunci yang mungkin adalah kode mata pelajaran (bukan kunci standar seperti NISN, NIS, NAMA SISWA)
+      const possibleSubjectKeys = allKeys.filter(key => 
+        !['NIS', 'NISN', 'NAMA SISWA', 'NAMA', 'No', 'NO URUT'].includes(key)
+      );
+      
+      console.log('Kemungkinan kolom mata pelajaran dari file:', possibleSubjectKeys);
+      
       for (let i = 0; i < nilaiRows.length; i++) {
         const rowData = nilaiRows[i] as any;
         const rowNum = i + 2; // Excel row number (2-based, accounting for header)
         
+        // Cek ID siswa - untuk format horizontal kita butuh NISN atau setidaknya nama
+        // Untuk format baru, kemungkinan kolomnya bernama NISN dan NAMA SISWA
+        const nisnValue = rowData['NISN'] || rowData['nisn'] || '';
+        const nameValue = rowData['NAMA SISWA'] || rowData['NAMA'] || rowData['nama'] || rowData['subjectName'] || '';
+        
         // Skip rows without student identifiers
-        if (!rowData['NIS'] && !rowData['NISN'] && !rowData['NAMA SISWA']) {
+        if (!nisnValue && !nameValue) {
           continue;
         }
         
         const gradeData: GradeData = {
           studentId: 0,
-          nisn: rowData['NISN'] ? String(rowData['NISN']).trim() : '',
+          nisn: nisnValue ? String(nisnValue).trim() : '',
           nis: rowData['NIS'] ? String(rowData['NIS']).trim() : '',
-          fullName: rowData['NAMA SISWA'] ? String(rowData['NAMA SISWA']).trim() : ''
+          fullName: nameValue ? String(nameValue).trim() : ''
         };
         
         // Find matching student
@@ -389,23 +405,58 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
         // Process subject grades
         let hasGrades = false;
         
+        // Untuk setiap mata pelajaran, coba temukan nilainya di baris saat ini
         for (const subject of subjectCols) {
-          const code = subject.code;
+          const subjectCode = subject.code;
           
-          if (rowData[code] !== undefined && rowData[code] !== '') {
-            const value = Number(rowData[code]);
+          // Pertama, coba cari berdasarkan kode mapel asli
+          if (rowData[subjectCode] !== undefined && rowData[subjectCode] !== '') {
+            const value = Number(rowData[subjectCode]);
             
             if (isNaN(value) || value < 0 || value > 100) {
               errors.push({
                 row: rowNum,
-                column: code,
+                column: subjectCode,
                 studentName: gradeData.fullName,
                 nisn: gradeData.nisn,
-                error: `Nilai ${code} harus berupa angka 0-100, ditemukan: ${rowData[code]}`
+                error: `Nilai ${subjectCode} harus berupa angka 0-100, ditemukan: ${rowData[subjectCode]}`
               });
             } else {
-              gradeData[code] = value;
+              gradeData[subjectCode] = value;
               hasGrades = true;
+            }
+            continue; // Lanjut ke mata pelajaran berikutnya jika sudah ditemukan
+          }
+          
+          // Kedua, coba cari berdasarkan kode singkat di possibleSubjectKeys
+          // Ini untuk mendukung format kode singkat seperti BI, MTK, dll.
+          for (const key of possibleSubjectKeys) {
+            // Coba pencocokkan berdasarkan kesamaan atau substring
+            const isRelated = 
+              key === subjectCode || 
+              subjectCode.includes(key) || 
+              key.includes(subjectCode) ||
+              // Pencocokan khusus untuk beberapa mata pelajaran umum
+              (subjectCode.includes('BIN') && key === 'BI') ||
+              (subjectCode.includes('MAT') && key === 'MTK') ||
+              (subjectCode.includes('ING') && key === 'BING');
+            
+            if (isRelated && rowData[key] !== undefined && rowData[key] !== '') {
+              const value = Number(rowData[key]);
+              
+              if (isNaN(value) || value < 0 || value > 100) {
+                errors.push({
+                  row: rowNum,
+                  column: key,
+                  studentName: gradeData.fullName,
+                  nisn: gradeData.nisn,
+                  error: `Nilai ${key} (${subjectCode}) harus berupa angka 0-100, ditemukan: ${rowData[key]}`
+                });
+              } else {
+                gradeData[subjectCode] = value;
+                hasGrades = true;
+                break; // Keluar dari loop possibleSubjectKeys jika sudah ketemu
+              }
             }
           }
         }
@@ -723,8 +774,28 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
     if (previewData.length > 0 && subjectColumns.length > 0) {
       // Create structured data for import
       const importData = {
-        students: previewData,
-        subjects: subjectColumns,
+        students: previewData.map(student => {
+          // Ekstrak nilai mata pelajaran dan map dengan kode mata pelajaran yang benar
+          const studentSubjects = subjectColumns.map(subject => {
+            const code = subject.code;
+            // Cari nilai untuk mata pelajaran ini dari data siswa
+            const value = student[code]; // Format baru menyimpan nilai dengan kode mapel sebagai kunci
+            
+            return {
+              subjectCode: code,
+              subjectId: subject.id,
+              subjectName: subject.name,
+              value: value !== undefined ? Number(value) : null
+            };
+          }).filter(s => s.value !== null); // Hanya ambil mata pelajaran dengan nilai
+          
+          return {
+            studentId: student.studentId,
+            nisn: student.nisn,
+            fullName: student.fullName,
+            subjects: studentSubjects
+          };
+        }),
         className: selectedClass
       };
       
@@ -842,12 +913,13 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       
       // 3. Create NILAI Worksheet
       // Buat header dengan format yang lebih sederhana sesuai contoh gambar
-      // Hanya kolom nisn, subjectName dan kode mata pelajaran
+      // Format baru: NISN, Nama Siswa, dan setiap mata pelajaran dalam kolom terpisah
       
-      // Buat header yang sangat sederhana sesuai dengan contoh
-      const nilaiHeaders: string[] = ['nisn', 'subjectName'];
+      // Header untuk format horizontal per baris siswa
+      const nilaiHeaders: string[] = ['NISN', 'NAMA SISWA'];
       
       // Gunakan singkatan mata pelajaran seperti BI|MTK|PKN sesuai dengan contoh gambar
+      const subjectCodes: string[] = [];
       subjects.forEach(subject => {
         // Ubah kode mapel menjadi kode singkat yang lebih umum dikenal
         let shortCode;
@@ -867,56 +939,40 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
         }
         
         // Pastikan kodenya unik dengan menambahkan nomor di belakang jika ada duplikat
+        if (subjectCodes.includes(shortCode)) {
+          let counter = 1;
+          while (subjectCodes.includes(`${shortCode}${counter}`)) {
+            counter++;
+          }
+          shortCode = `${shortCode}${counter}`;
+        }
+        
+        subjectCodes.push(shortCode);
         nilaiHeaders.push(shortCode);
       });
       
-      // Buat array untuk menyimpan data nilai
-      let nilaiInfo: string[][] = [];
+      // Array untuk menyimpan data nilai dalam format horizontal
+      const nilaiInfo: any[][] = [nilaiHeaders];
       
-      // Add student rows with format that matches the image example
-      classStudents.forEach((student) => {
-        // Untuk setiap siswa, buat 1 row untuk setiap mata pelajaran
+      // Default nilai yang realistic untuk contoh
+      const defaultValues = [85, 90, 78, 82];
+      
+      // Add student rows with format horizontal (one row per student)
+      classStudents.forEach((student, studentIndex) => {
+        // Satu baris per siswa, dengan kolom untuk setiap mata pelajaran
+        const row: any[] = [
+          student.nisn,        // NISN
+          student.fullName,    // Nama Siswa
+        ];
+        
+        // Tambahkan nilai contoh untuk setiap mata pelajaran
         subjects.forEach((subject, subjectIndex) => {
-          const subjectName = subject.name;
-          let shortCode;
-          
-          // Tentukan kode singkat mata pelajaran (sama dengan logic di atas)
-          if (subject.code.includes('BIN') || subject.code.includes('IND') || subject.name.includes('Indonesia')) {
-            shortCode = 'BI';
-          } else if (subject.code.includes('MAT') || subject.code.includes('MTK') || subject.name.includes('Matematik')) {
-            shortCode = 'MTK';
-          } else if (subject.code.includes('PKN') || subject.name.includes('Pancasila') || subject.name.includes('Kewarga')) {
-            shortCode = 'PKN';
-          } else if (subject.code.includes('BIG') || subject.code.includes('ENG') || subject.name.includes('Inggris')) {
-            shortCode = 'BING';
-          } else {
-            // Gunakan code asli jika tidak match dengan pattern
-            shortCode = subject.code.replace(/\s+/g, '');
-          }
-          
-          // Default nilai yang realistic
-          const defaultValues = [85, 90, 78, 82];
           const defaultValue = defaultValues[subjectIndex % 4];
-          
-          const row = [
-            student.nisn,   // NISN
-            student.fullName,  // Nama siswa sebagai subjectName (sesuai contoh)
-          ];
-          
-          // Tambahkan nilai default untuk tiap mata pelajaran (sesuai kolom di headers)
-          subjects.forEach((s, idx) => {
-            // Jika mata pelajaran saat ini, isi dengan nilai default
-            // Jika bukan, isi dengan nilai kosong
-            if (s.code === subject.code) {
-              row.push(String(defaultValue)); // Konversi ke string untuk menghindari error tipe data
-            } else {
-              row.push('');
-            }
-          });
-          
-          // Tambahkan row ke nilaiInfo
-          nilaiInfo.push(row);
+          row.push(defaultValue);  // Nilai contoh untuk mata pelajaran ini
         });
+        
+        // Tambahkan row ke nilaiInfo
+        nilaiInfo.push(row);
       });
       
       const nilaiWs = XLSX.utils.aoa_to_sheet(nilaiInfo);
