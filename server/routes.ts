@@ -1,4 +1,24 @@
-import type { Express, Request, Response } from "express";
+app.get("/api/backup", async (req, res) => {
+    try {
+        const backupData = {
+            message: "Ini adalah backup dari data website Anda.",
+            // Tambahkan data yang ingin Anda simpan di sini
+        };
+
+        const filePath = resolve(__dirname, 'backup.json');
+        writeFileSync(filePath, JSON.stringify(backupData, null, 2)); // Menyimpan data ke dalam backup.json
+
+        res.download(filePath, 'backup.json', (err) => {
+            if (err) {
+                console.error("Error downloading backup:", err);
+                return res.status(500).send("Gagal mengunduh backup");
+            }
+        });
+    } catch (error) {
+        console.error("Error creating backup:", error);
+        res.status(500).json({ message: "Gagal membuat backup" });
+    }
+});import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import csvParser from "csv-parser";
