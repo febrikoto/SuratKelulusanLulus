@@ -220,24 +220,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           
-          // Convert Excel to JSON (skip first 9 rows which are instructions)
-          const data = XLSX.utils.sheet_to_json(worksheet, { range: 1 });  // Skip header row
+          // Convert Excel to JSON (skip header row)
+          const data = XLSX.utils.sheet_to_json(worksheet, { 
+            range: 1,
+            header: ["nisn", "nis", "fullName", "birthPlace", "birthDate", "parentName", "className"]
+          }) as Record<string, any>[];
+
+          console.log("Excel data parsed:", data);
 
           // Process each row
           for (const row of data) {
-            // Skip empty rows
-            if (!row['nisn'] && !row['nis'] && !row['fullName']) continue;
+            // Safely extract values with type checking
+            const nisn = typeof row.nisn === 'string' || typeof row.nisn === 'number' ? String(row.nisn) : '';
+            const nis = typeof row.nis === 'string' || typeof row.nis === 'number' ? String(row.nis) : '';
+            const fullName = typeof row.fullName === 'string' ? row.fullName : '';
+            
+            // Skip empty rows or header rows
+            if (!nisn && !nis && !fullName) continue;
+            if (nisn === 'nisn' || nis === 'nis' || fullName === 'fullName') continue;
             
             try {
+              // Format tanggal lahir dengan benar (Excel mungkin menyimpan sebagai serial number)
+              const rawBirthDate = row.birthDate;
+              let birthDate = '';
+              
+              if (typeof rawBirthDate === 'string') {
+                birthDate = rawBirthDate;
+              } else if (typeof rawBirthDate === 'number' && !isNaN(rawBirthDate)) {
+                // Jika berupa angka, konversi dari Excel serial number ke tanggal
+                const excelEpoch = new Date(1899, 11, 30);
+                const excelDate = new Date(excelEpoch.getTime() + (rawBirthDate * 24 * 60 * 60 * 1000));
+                birthDate = excelDate.toISOString().split('T')[0]; // Format YYYY-MM-DD
+              }
+
+              const birthPlace = typeof row.birthPlace === 'string' ? row.birthPlace : '';
+              const parentName = typeof row.parentName === 'string' ? row.parentName : '';
+              const className = typeof row.className === 'string' ? row.className : '';
+
               const studentData = {
-                nisn: row['nisn']?.toString() || '',
-                nis: row['nis']?.toString() || '',
-                fullName: row['fullName']?.toString() || '',
-                birthPlace: row['birthPlace']?.toString() || '',
-                birthDate: row['birthDate']?.toString() || '',
-                parentName: row['parentName']?.toString() || '',
-                className: row['className']?.toString() || '',
-                status: 'pending'
+                nisn,
+                nis,
+                fullName,
+                birthPlace,
+                birthDate,
+                parentName,
+                className,
+                status: 'pending' as const
               };
 
               await processStudentData(studentData, results, errors);
@@ -380,7 +408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         schoolLogo: settings.schoolLogo || undefined,
         schoolStamp: settings.schoolStamp || undefined,
         ministryLogo: settings.ministryLogo || undefined,
-        useDigitalSignature: settings.useDigitalSignature !== undefined ? settings.useDigitalSignature : true,
+        useDigitalSignature: typeof settings.useDigitalSignature === 'boolean' ? settings.useDigitalSignature : true,
         cityName: settings.cityName || 'Jakarta',
         provinceName: settings.provinceName || 'DKI Jakarta',
         academicYear: settings.academicYear,
@@ -888,7 +916,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     code: subject.code,
                     name: subject.name,
                     group: 'Wajib', // Default group
-                    major: null // No specific major
+                    major: 'semua', // No specific major
+                    credits: 1, // Default credits value
+                    status: 'aktif' // Default status
                   });
 
                   subjectId = newSubject.id;
@@ -1264,7 +1294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         schoolLogo: settings.schoolLogo || '',
         schoolStamp: settings.schoolStamp || '',
         ministryLogo: settings.ministryLogo || '',
-        useDigitalSignature: settings.useDigitalSignature !== undefined ? settings.useDigitalSignature : true,
+        useDigitalSignature: typeof settings.useDigitalSignature === 'boolean' ? settings.useDigitalSignature : true,
         cityName: settings.cityName || '',
         provinceName: settings.provinceName || '',
         academicYear: settings.academicYear || '',
