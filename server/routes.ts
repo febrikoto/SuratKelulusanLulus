@@ -1250,9 +1250,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate Excel Import Template
-  app.get("/api/students/template/excel", requireRole(["admin"]), async (req, res) => {
+  // Function to generate Excel template
+  const generateExcelTemplate = async (req: Request, res: Response) => {
     try {
-      const className = req.query.className as string;
+      // Support both query parameters: className and class
+      let className = req.query.className as string;
+      if (!className) {
+        className = req.query.class as string;
+      }
       
       if (!className) {
         return res.status(400).json({ message: "Nama kelas diperlukan" });
@@ -1363,7 +1368,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error generating Excel template:", error);
       res.status(500).json({ message: "Gagal membuat template Excel" });
     }
-  });
+  };
+
+  // Set up both endpoints to use the same handler
+  app.get("/api/students/template/excel", requireRole(["admin"]), generateExcelTemplate);
+  
+  // Alias for backward compatibility
+  app.get("/api/export/student-template", requireRole(["admin"]), generateExcelTemplate);
 
   const httpServer = createServer(app);
   return httpServer;
