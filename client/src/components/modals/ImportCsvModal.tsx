@@ -176,6 +176,7 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({ isOpen, onClose 
                   Upload file CSV atau Excel dengan format: NISN, NIS, Nama Lengkap, Tempat Lahir, Tanggal Lahir, Nama Orang Tua, Kelas
                 </p>
                 
+                {/* Upload Area */}
                 <div 
                   className={`border-2 border-dashed rounded-md p-6 text-center transition-colors ${
                     dragActive 
@@ -186,8 +187,8 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({ isOpen, onClose 
                   onDragOver={handleDrag}
                   onDragLeave={handleDrag}
                   onDrop={handleDrop}
-                  onClick={() => inputRef.current?.click()}
                 >
+                  {/* Hidden file input */}
                   <input 
                     type="file" 
                     id="csvFile"
@@ -196,15 +197,22 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({ isOpen, onClose 
                     accept=".csv,.xlsx"
                     onChange={handleFileChange} 
                   />
-                  <div className="cursor-pointer">
+                  
+                  {/* Clickable button */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-full flex flex-col items-center justify-center bg-transparent border-0 hover:bg-primary/5"
+                    onClick={() => inputRef.current?.click()}
+                  >
                     <Upload className="h-10 w-10 mx-auto text-gray-400 mb-2" />
                     
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Klik untuk memilih file CSV atau Excel</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500">atau drag & drop file di sini</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 font-normal">Klik untuk memilih file CSV atau Excel</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 font-normal">atau drag & drop file di sini</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1 font-normal">
                       <span className="font-semibold">Tips:</span> Gunakan template Excel untuk hasil terbaik
                     </p>
-                  </div>
+                  </Button>
                   
                   {file && (
                     <div className="mt-2 text-sm text-primary font-medium flex items-center justify-center">
