@@ -13,7 +13,8 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle
+  CardTitle,
+  CardDescription
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -22,9 +23,10 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Loader2, MoreHorizontal, Pencil } from 'lucide-react';
+import { Loader2, MoreHorizontal, Pencil, PlusCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { EditTeacherModal } from '@/components/modals/EditTeacherModal';
+import AddTeacherModal from '@/components/modals/AddTeacherModal';
 
 export interface Teacher {
   id: number;
@@ -43,6 +45,7 @@ export const TeacherManagementTable: React.FC<TeacherManagementTableProps> = ({ 
   // States for modals
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
   // Fetch teachers
   const { data: teachers, isLoading } = useQuery<Teacher[]>({
@@ -67,8 +70,18 @@ export const TeacherManagementTable: React.FC<TeacherManagementTableProps> = ({ 
   
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Daftar Guru</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Daftar Guru</CardTitle>
+          <CardDescription>Kelola data guru dan jurusan yang diampu</CardDescription>
+        </div>
+        <Button 
+          onClick={() => setIsAddModalOpen(true)}
+          className="bg-primary hover:bg-primary/90"
+        >
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Tambah Guru
+        </Button>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -145,6 +158,12 @@ export const TeacherManagementTable: React.FC<TeacherManagementTableProps> = ({ 
           }}
         />
       )}
+      
+      {/* Add Teacher Modal */}
+      <AddTeacherModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+      />
     </Card>
   );
 };

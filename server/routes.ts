@@ -1183,6 +1183,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Create new user (used for creating teachers)
+  app.post("/api/users", requireRole(["admin"]), async (req, res) => {
+    try {
+      // Validate input data
+      const { username, password, fullName, role, assignedMajor } = req.body;
+      
+      if (!username || !password || !fullName || !role) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      // Create user
+      const newUser = await storage.createUser({
+        username,
+        password: await storage.hashPassword(password),
+        fullName,
+        role,
+        studentId: null,
+        assignedMajor: assignedMajor === "null" ? null : assignedMajor
+      });
+      
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = newUser;
+      
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+  
   // Get teachers list
   app.get("/api/teachers", requireRole(["admin"]), async (req, res) => {
     try {
