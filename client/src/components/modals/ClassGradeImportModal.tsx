@@ -795,21 +795,19 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       XLSX.utils.book_append_sheet(wb, mapelWs, "Mapel");
       
       // 3. Create NILAI Worksheet
-      // Create header row with info about semester and year
+      // Buat header lebih simpel seperti contoh
       const nilaiInfo = [
-        ['DATA NILAI SISWA KELAS ' + selectedClass, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['TINGKAT: ' + selectedClass.substring(0, 3), '', '', '', 'JUMLAH SISWA: ' + classStudents.length, '', '', '', 'JUMLAH MATA PELAJARAN: ' + subjects.length, '', '', '', '', '', '', '', '', '', ''],
-        ['PETUNJUK: ISI NILAI 0-100 PADA SETIAP KOLOM MATA PELAJARAN', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['SEMESTER', '0', '<< ISI SEMESTER DISINI (1/2/3/4/5/6), UNTUK KEPERLUAN SKL SAJA BISA DIISI 0 SAJA'],
-        ['TAHUN LULUS', new Date().getFullYear().toString(), '<< ISI TAHUN LULUS DISINI']
+        ['DATA NILAI SISWA', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['SEME:', '0', '<< ISI SEMESTER DISINI (1/2/3/4/5/6), UNTUK KEPERLUAN SKL SAJA BISA DIISI 0 SAJA'],
+        ['TAHU:', new Date().getFullYear().toString(), '<< ISI TAHUN LULUS DISINI']
       ];
       
       // Create header for subject columns
       const nilaiHeaders = ['No', 'NIS', 'NAMA SISWA', 'KELAS'];
       
-      // Add subject codes as columns with better formatting
+      // Hanya gunakan kode mapel seperti contoh
       subjects.forEach(subject => {
-        nilaiHeaders.push(subject.code + ' - ' + subject.name);
+        nilaiHeaders.push(subject.code);
       });
       
       // Add note
@@ -826,10 +824,11 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
           student.className
         ];
         
-        // Add value cells for each subject (default empty or 0)
-        subjects.forEach(() => {
-          // Use 0 as placeholder
-          row.push(0);
+        // Add value cells for each subject (default to realistic values like 65, 79, 89)
+        subjects.forEach((_, index) => {
+          // Rotasi nilai default realistis (65, 79, 89)
+          const defaultValues = [65, 79, 89];
+          row.push(defaultValues[index % 3]);
         });
         
         nilaiInfo.push(row);
@@ -845,21 +844,28 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
         { wch: 10 }   // Kelas
       ];
       
-      // Add width for each subject column (wider for better display and easier data entry)
+      // Gunakan lebar kolom yang lebih sempit untuk nilai pelajaran
       subjects.forEach(() => {
-        wscols.push({ wch: 20 });
+        wscols.push({ wch: 8 });
       });
       
       nilaiWs['!cols'] = wscols;
       
-      // Add colored header styling
+      // Coba tambahkan styling pada header (baris kuning)
+      // Ini untuk XLSX.js versi baru, mungkin perlu pendekatan yang berbeda
       const headerStyle = {
         fill: { fgColor: { rgb: "FFFF00" } }, // Yellow background
         font: { bold: true }
       };
       
-      // Apply styling to header cells
-      // Note: XLSX styling is complex and may not work in all cases
+      // Coba terapkan styling dengan memberi warna pada header
+      // CATATAN: Kita perlu menentukan range sel untuk styling
+      const headerRange = XLSX.utils.decode_range(nilaiWs['!ref'] || "A1:Z1");
+      const headerAddress = { s: {r: 3, c: 0}, e: {r: 3, c: headerRange.e.c} };
+      
+      // Tambahkan properti !fills jika belum ada
+      if (!nilaiWs['!fills']) nilaiWs['!fills'] = [];
+      nilaiWs['!fills'].push({ fgColor: { rgb: "FFFF00" } });
       
       XLSX.utils.book_append_sheet(wb, nilaiWs, "Nilai");
       
