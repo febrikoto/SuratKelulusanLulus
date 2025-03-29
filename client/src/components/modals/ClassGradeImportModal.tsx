@@ -753,13 +753,13 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
           student.nis,
           student.nisn,
           student.fullName,
-          student.gender || 'L', // Default jenis kelamin
+          'L', // Default jenis kelamin
           student.birthPlace || '',
           student.birthDate ? new Date(student.birthDate).toISOString().split('T')[0] : '',
           '',  // Username
           '',  // Password
           student.className,
-          student.major || '',
+          '',
           student.status || 'LULUS',
           new Date().getFullYear().toString(),
           student.parentName || '',
@@ -797,8 +797,9 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       // 3. Create NILAI Worksheet
       // Create header row with info about semester and year
       const nilaiInfo = [
-        ['DATA NILAI SISWA', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['DATA NILAI SISWA KELAS ' + selectedClass, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['TINGKAT: ' + selectedClass.substring(0, 3), '', '', '', 'JUMLAH SISWA: ' + classStudents.length, '', '', '', 'JUMLAH MATA PELAJARAN: ' + subjects.length, '', '', '', '', '', '', '', '', '', ''],
+        ['PETUNJUK: ISI NILAI 0-100 PADA SETIAP KOLOM MATA PELAJARAN', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
         ['SEMESTER', '0', '<< ISI SEMESTER DISINI (1/2/3/4/5/6), UNTUK KEPERLUAN SKL SAJA BISA DIISI 0 SAJA'],
         ['TAHUN LULUS', new Date().getFullYear().toString(), '<< ISI TAHUN LULUS DISINI']
       ];
@@ -806,9 +807,9 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       // Create header for subject columns
       const nilaiHeaders = ['No', 'NIS', 'NAMA SISWA', 'KELAS'];
       
-      // Add subject codes as columns
+      // Add subject codes as columns with better formatting
       subjects.forEach(subject => {
-        nilaiHeaders.push(subject.code);
+        nilaiHeaders.push(subject.code + ' - ' + subject.name);
       });
       
       // Add note
@@ -844,9 +845,9 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
         { wch: 10 }   // Kelas
       ];
       
-      // Add width for each subject column
+      // Add width for each subject column (wider for better display and easier data entry)
       subjects.forEach(() => {
-        wscols.push({ wch: 8 });
+        wscols.push({ wch: 20 });
       });
       
       nilaiWs['!cols'] = wscols;
@@ -925,8 +926,8 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       }, 0);
       
       toast({
-        title: 'Template Excel Multi-Sheet berhasil dibuat',
-        description: 'Template berisi 3 sheet: Siswa, Mapel, dan Nilai. Silahkan isi sesuai petunjuk.',
+        title: `Template Nilai Kelas ${selectedClass} berhasil dibuat`,
+        description: `Template Excel berisi data ${classStudents.length} siswa dan ${subjects.length} mata pelajaran. Silahkan isi nilai pada kolom mata pelajaran.`,
       });
     } catch (error) {
       console.error('Error generating Excel template:', error);
@@ -967,14 +968,15 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
               <Info className="h-5 w-5 text-blue-500 mt-0.5" />
               <div className="flex-1 text-sm text-blue-700 dark:text-blue-300">
                 <p className="font-semibold mb-1">Format Import Nilai Excel Per Kelas</p>
-                <p className="text-xs">1. Baris pertama berisi nama kolom (NISN, NIS, Nama, dan nama mata pelajaran)</p>
+                <p className="text-xs">1. Baris pertama berisi nama kolom (No, NIS, NISN, Nama Siswa, dan kolom mata pelajaran)</p>
                 <p className="text-xs">2. Setiap baris berikutnya berisi data siswa dan nilai mata pelajaran</p>
                 <p className="text-xs">3. Nilai dalam bentuk angka (0-100)</p>
+                <p className="text-xs">4. Template akan menampilkan semua mata pelajaran secara horizontal untuk memudahkan pengisian</p>
               </div>
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-1 block">Pilih Kelas</label>
               <Select
@@ -992,9 +994,10 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">Kelas yang tersedia: {classList.join(', ')}</p>
             </div>
             
-            <div className="flex items-end">
+            <div>
               <Button 
                 variant="outline" 
                 onClick={generateExcelTemplate}
