@@ -63,16 +63,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/students/profile", requireRole(["siswa"]), async (req, res) => {
     try {
       const user = req.user as Express.User;
-      
+
       if (!user.studentId) {
         return res.status(404).json({ message: "No student profile linked to this account" });
       }
-      
+
       const student = await storage.getStudent(user.studentId);
       if (!student) {
         return res.status(404).json({ message: "Student profile not found" });
       }
-      
+
       res.json(student);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch student profile" });
@@ -85,12 +85,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid student ID" });
       }
-      
+
       const student = await storage.getStudent(id);
       if (!student) {
         return res.status(404).json({ message: "Student not found" });
       }
-      
+
       res.json(student);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch student" });
@@ -100,20 +100,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/students", requireRole(["admin"]), async (req, res) => {
     try {
       const validation = insertStudentSchema.safeParse(req.body);
-      
+
       if (!validation.success) {
         return res.status(400).json({ 
           message: "Invalid student data", 
           errors: validation.error.errors 
         });
       }
-      
+
       // Check if student with NISN already exists
       const existingStudent = await storage.getStudentByNisn(req.body.nisn);
       if (existingStudent) {
         return res.status(409).json({ message: "Student with this NISN already exists" });
       }
-      
+
       const newStudent = await storage.createStudent(req.body);
       res.status(201).json(newStudent);
     } catch (error) {
@@ -127,21 +127,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid student ID" });
       }
-      
+
       const validation = insertStudentSchema.partial().safeParse(req.body);
-      
+
       if (!validation.success) {
         return res.status(400).json({ 
           message: "Invalid student data", 
           errors: validation.error.errors 
         });
       }
-      
+
       const updatedStudent = await storage.updateStudent(id, req.body);
       if (!updatedStudent) {
         return res.status(404).json({ message: "Student not found" });
       }
-      
+
       res.json(updatedStudent);
     } catch (error) {
       res.status(500).json({ message: "Failed to update student" });
@@ -154,12 +154,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid student ID" });
       }
-      
+
       const success = await storage.deleteStudent(id);
       if (!success) {
         return res.status(404).json({ message: "Student not found" });
       }
-      
+
       res.status(204).end();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete student" });
@@ -172,17 +172,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
+
       if (req.file.mimetype !== 'text/csv') {
         return res.status(400).json({ message: "Only CSV files are allowed" });
       }
-      
+
       const results: any[] = [];
       const errors: any[] = [];
-      
+
       // Parse CSV file
       const stream = Readable.from(req.file.buffer.toString());
-      
+
       stream
         .pipe(csvParser())
         .on('data', async (data) => {
@@ -198,21 +198,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
               className: data.className,
               status: 'pending'
             };
-            
+
             const validation = insertStudentSchema.safeParse(studentData);
-            
+
             if (!validation.success) {
               errors.push({ data, errors: validation.error.errors });
               return;
             }
-            
+
             // Check if student already exists
             const existingStudent = await storage.getStudentByNisn(studentData.nisn);
             if (existingStudent) {
               errors.push({ data, error: "Student with this NISN already exists" });
               return;
             }
-            
+
             const newStudent = await storage.createStudent(studentData);
             results.push(newStudent);
           } catch (error) {
@@ -235,21 +235,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/students/verify", requireRole(["guru"]), async (req, res) => {
     try {
       const validation = verificationSchema.safeParse(req.body);
-      
+
       if (!validation.success) {
         return res.status(400).json({ 
           message: "Invalid verification data", 
           errors: validation.error.errors 
         });
       }
-      
+
       const user = req.user as Express.User;
       const updatedStudent = await storage.verifyStudent(req.body, user.id);
-      
+
       if (!updatedStudent) {
         return res.status(404).json({ message: "Student not found" });
       }
-      
+
       res.json(updatedStudent);
     } catch (error) {
       res.status(500).json({ message: "Failed to verify student" });
@@ -261,43 +261,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const studentId = parseInt(req.params.studentId);
       const showGrades = req.query.showGrades === 'true';
-      
+
       if (isNaN(studentId)) {
         return res.status(400).json({ error: 'Invalid student ID' });
       }
-      
+
       // Get the student data
       const student = await storage.getStudent(studentId);
       if (!student) {
         return res.status(404).json({ error: 'Student not found' });
       }
-      
+
       // Get settings
       const settings = await storage.getSettings();
       if (!settings) {
         return res.status(404).json({ error: 'School settings not found' });
       }
-      
+
       // Get grades for the student if needed
       let grades: SubjectGrade[] = [];
       let averageGrade = 0;
-      
+
       if (showGrades) {
         const studentGrades = await storage.getStudentGrades(studentId);
-        
+
         if (studentGrades && studentGrades.length > 0) {
           // Use grade.subjectName directly as we store it in the grade object
           grades = studentGrades.map((grade) => ({
             name: grade.subjectName,
             value: grade.value
           }));
-          
+
           // Calculate average
           const sum = studentGrades.reduce((acc, grade) => acc + grade.value, 0);
           averageGrade = sum / studentGrades.length;
         }
       }
-      
+
       // Compose the certificate data
       const certificateData: CertificateData = {
         id: student.id,
@@ -336,18 +336,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         grades: grades,
         averageGrade: averageGrade
       };
-      
+
       // Generate a PDF file and send it as response
       const filePath = path.join(os.tmpdir(), `certificate-${student.id}.pdf`);
-      
+
       await generateCertificatePDF(certificateData, filePath);
-      
+
       res.download(filePath, `SKL-${student.fullName.replace(/\s+/g, '-')}-${student.nisn}.pdf`, (err) => {
         if (err) {
           console.error('Error sending file:', err);
           res.status(500).json({ error: 'Error sending certificate file' });
         }
-        
+
         // Remove the temporary file after sending
         fs.unlink(filePath, (unlinkErr) => {
           if (unlinkErr) {
@@ -365,23 +365,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let cachedStats: any = null;
   let statsCacheTime = 0;
   const STATS_CACHE_TTL = 1 * 60 * 1000; // 1 minute in milliseconds
-  
+
   app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
     try {
       const now = Date.now();
-      
+
       // Return cached stats if valid
       if (cachedStats && (now - statsCacheTime < STATS_CACHE_TTL)) {
         return res.json(cachedStats);
       }
-      
+
       // Cache expired or doesn't exist, fetch fresh data
       const stats = await storage.getDashboardStats();
-      
+
       // Update cache
       cachedStats = stats;
       statsCacheTime = now;
-      
+
       res.json(stats);
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
@@ -396,7 +396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(studentId)) {
         return res.status(400).json({ message: "Invalid student ID" });
       }
-      
+
       const grades = await storage.getStudentGrades(studentId);
       res.json(grades);
     } catch (error) {
@@ -408,23 +408,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/grades", requireRole(["admin"]), async (req, res) => {
     try {
       const { studentId, subjectName, value } = req.body;
-      
+
       if (!studentId || !subjectName || value === undefined) {
         return res.status(400).json({ message: "Data nilai tidak lengkap" });
       }
-      
+
       // Check if student exists
       const student = await storage.getStudent(studentId);
       if (!student) {
         return res.status(404).json({ message: "Siswa tidak ditemukan" });
       }
-      
+
       const gradeData = {
         studentId,
         subjectName,
         value
       };
-      
+
       const validation = insertGradeSchema.safeParse(gradeData);
       if (!validation.success) {
         return res.status(400).json({
@@ -432,7 +432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           errors: validation.error.errors
         });
       }
-      
+
       const savedGrade = await storage.saveGrade(gradeData);
       return res.status(201).json(savedGrade);
     } catch (error) {
@@ -448,13 +448,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(studentId)) {
         return res.status(400).json({ message: "ID siswa tidak valid" });
       }
-      
+
       // Check if student exists
       const student = await storage.getStudent(studentId);
       if (!student) {
         return res.status(404).json({ message: "Siswa tidak ditemukan" });
       }
-      
+
       // Handle both single grade and multiple grades
       if (Array.isArray(req.body)) {
         // Multiple grades
@@ -462,17 +462,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...grade,
           studentId
         }));
-        
+
         const validations = gradesData.map(grade => insertGradeSchema.safeParse(grade));
         const invalidGrades = validations.filter(v => !v.success);
-        
+
         if (invalidGrades.length > 0) {
           return res.status(400).json({
             message: "Data nilai tidak valid",
             errors: invalidGrades.map(v => (v as any).error.errors)
           });
         }
-        
+
         const savedGrades = await storage.saveGrades(gradesData);
         return res.status(201).json(savedGrades);
       } else {
@@ -481,7 +481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...req.body,
           studentId
         };
-        
+
         const validation = insertGradeSchema.safeParse(gradeData);
         if (!validation.success) {
           return res.status(400).json({
@@ -489,7 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             errors: validation.error.errors
           });
         }
-        
+
         const savedGrade = await storage.saveGrade(gradeData);
         return res.status(201).json(savedGrade);
       }
@@ -504,18 +504,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(id)) {
         return res.status(400).json({ message: "ID nilai tidak valid" });
       }
-      
+
       const success = await storage.deleteGrade(id);
       if (!success) {
         return res.status(404).json({ message: "Nilai tidak ditemukan" });
       }
-      
+
       res.status(204).end();
     } catch (error) {
       res.status(500).json({ message: "Gagal menghapus nilai" });
     }
   });
-  
+
   // Generate Excel template for grade import
   app.get("/api/grades/template", requireAuth, async (req, res) => {
     try {
@@ -535,16 +535,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Gagal membuat template" });
     }
   });
-  
+
   // Subjects API endpoints
-  app.get("/api/subjects", requireAuth, async (req, res) => {
+  app.get("/api/subjects", requireRole(["admin", "guru"]), async (req, res) => {
     try {
       const { major, group } = req.query;
       const query: { major?: string; group?: string } = {};
-      
+
       if (major) query.major = major as string;
       if (group) query.group = group as string;
-      
+
       const subjects = await storage.getSubjects(query);
       res.json(subjects);
     } catch (error) {
@@ -552,43 +552,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Gagal mengambil data mata pelajaran" });
     }
   });
-  
+
   app.get("/api/subjects/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: "ID mata pelajaran tidak valid" });
       }
-      
+
       const subject = await storage.getSubject(id);
       if (!subject) {
         return res.status(404).json({ message: "Mata pelajaran tidak ditemukan" });
       }
-      
+
       res.json(subject);
     } catch (error) {
       console.error("Error fetching subject:", error);
       res.status(500).json({ message: "Gagal mengambil data mata pelajaran" });
     }
   });
-  
+
   app.post("/api/subjects", requireRole(["admin"]), async (req, res) => {
     try {
       const validation = insertSubjectSchema.safeParse(req.body);
-      
+
       if (!validation.success) {
         return res.status(400).json({ 
           message: "Data mata pelajaran tidak valid", 
           errors: validation.error.errors 
         });
       }
-      
+
       // Check if subject with the same code already exists
       const existingSubject = await storage.getSubjectByCode(req.body.code);
       if (existingSubject) {
         return res.status(409).json({ message: "Mata pelajaran dengan kode ini sudah ada" });
       }
-      
+
       const newSubject = await storage.createSubject(req.body);
       res.status(201).json(newSubject);
     } catch (error) {
@@ -596,23 +596,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Gagal membuat mata pelajaran" });
     }
   });
-  
+
   app.put("/api/subjects/:id", requireRole(["admin"]), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: "ID mata pelajaran tidak valid" });
       }
-      
+
       const validation = insertSubjectSchema.partial().safeParse(req.body);
-      
+
       if (!validation.success) {
         return res.status(400).json({ 
           message: "Data mata pelajaran tidak valid", 
           errors: validation.error.errors 
         });
       }
-      
+
       // If we're updating the code, check if it already exists
       if (req.body.code) {
         const existingSubject = await storage.getSubjectByCode(req.body.code);
@@ -620,55 +620,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(409).json({ message: "Mata pelajaran dengan kode ini sudah ada" });
         }
       }
-      
+
       const updatedSubject = await storage.updateSubject(id, req.body);
       if (!updatedSubject) {
         return res.status(404).json({ message: "Mata pelajaran tidak ditemukan" });
       }
-      
+
       res.json(updatedSubject);
     } catch (error) {
       console.error("Error updating subject:", error);
       res.status(500).json({ message: "Gagal memperbarui mata pelajaran" });
     }
   });
-  
+
   app.delete("/api/subjects/:id", requireRole(["admin"]), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: "ID mata pelajaran tidak valid" });
       }
-      
+
       const success = await storage.deleteSubject(id);
       if (!success) {
         return res.status(404).json({ message: "Mata pelajaran tidak ditemukan" });
       }
-      
+
       res.status(204).end();
     } catch (error) {
       console.error("Error deleting subject:", error);
       res.status(500).json({ message: "Gagal menghapus mata pelajaran" });
     }
   });
-  
+
   // Bulk import subjects from Excel/CSV
   app.post("/api/subjects/import", requireRole(["admin"]), upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "Tidak ada file yang diunggah" });
       }
-      
+
       if (req.file.mimetype !== 'text/csv') {
         return res.status(400).json({ message: "Hanya file CSV yang diperbolehkan" });
       }
-      
+
       const results: any[] = [];
       const errors: any[] = [];
-      
+
       // Parse CSV file
       const stream = Readable.from(req.file.buffer.toString());
-      
+
       stream
         .pipe(csvParser())
         .on('data', async (data) => {
@@ -682,21 +682,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
               major: data.major || 'semua',
               status: data.status || 'aktif'
             };
-            
+
             const validation = insertSubjectSchema.safeParse(subjectData);
-            
+
             if (!validation.success) {
               errors.push({ data, errors: validation.error.errors });
               return;
             }
-            
+
             // Check if subject already exists
             const existingSubject = await storage.getSubjectByCode(subjectData.code);
             if (existingSubject) {
               errors.push({ data, error: "Mata pelajaran dengan kode ini sudah ada" });
               return;
             }
-            
+
             const newSubject = await storage.createSubject(subjectData);
             results.push(newSubject);
           } catch (error) {
@@ -715,24 +715,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Gagal mengimpor mata pelajaran" });
     }
   });
-  
+
   // Bulk import grades from Excel
   app.post("/api/grades/import", requireRole(["admin"]), async (req, res) => {
     try {
       const gradesData = req.body;
-      
+
       if (!Array.isArray(gradesData) || gradesData.length === 0) {
         return res.status(400).json({ message: "Format data nilai tidak valid" });
       }
-      
+
       let successCount = 0;
       let errorCount = 0;
       let errors = [];
-      
+
       // Process each grade entry
       for (const gradeEntry of gradesData) {
         const { nisn, subjectName, value } = gradeEntry;
-        
+
         if (!nisn || !subjectName || value === undefined) {
           errorCount++;
           errors.push({
@@ -741,7 +741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           continue;
         }
-        
+
         try {
           // Find student by NISN
           const student = await storage.getStudentByNisn(nisn);
@@ -753,14 +753,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
             continue;
           }
-          
+
           // Save grade for this student
           await storage.saveGrade({
             studentId: student.id,
             subjectName,
             value
           });
-          
+
           successCount++;
         } catch (error) {
           console.error(`Error processing grade for NISN ${nisn}:`, error);
@@ -771,7 +771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       res.status(200).json({
         success: successCount,
         errors: errorCount,
@@ -783,30 +783,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Gagal mengimpor nilai" });
     }
   });
-  
+
   // Import grades by class (one row per student with multiple subject columns)
   app.post("/api/grades/import-class", requireRole(["admin"]), async (req, res) => {
     try {
       // Check if we have the required data
       const { students, subjects, className } = req.body;
-      
+
       if (!Array.isArray(students) || students.length === 0) {
         return res.status(400).json({ message: "Format data siswa tidak valid" });
       }
-      
+
       if (!Array.isArray(subjects) || subjects.length === 0) {
         return res.status(400).json({ message: "Format data mata pelajaran tidak valid" });
       }
-      
+
       if (!className) {
         return res.status(400).json({ message: "Kelas harus ditentukan" });
       }
-      
+
       // Prepare grades data for storage
       const gradesData: any[] = [];
       let errorCount = 0;
       let successCount = 0;
-      
+
       // Process each student
       for (const student of students) {
         // Make sure the student has an ID
@@ -814,7 +814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           errorCount++;
           continue;
         }
-        
+
         // Process each subject
         for (const subject of subjects) {
           // Check if the student has a value for this subject
@@ -822,11 +822,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             try {
               // Find or create the subject if needed
               let subjectId = subject.id;
-              
+
               if (!subjectId) {
                 // Try to find the subject by code
                 const existingSubject = await storage.getSubjectByCode(subject.code);
-                
+
                 if (existingSubject) {
                   subjectId = existingSubject.id;
                 } else {
@@ -837,18 +837,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     group: 'Wajib', // Default group
                     major: null // No specific major
                   });
-                  
+
                   subjectId = newSubject.id;
                 }
               }
-              
+
               // Create the grade entry
               gradesData.push({
                 studentId: student.studentId,
                 subjectId,
                 value: student[subject.code]
               });
-              
+
               successCount++;
             } catch (error) {
               console.error("Error processing grade:", error);
@@ -858,11 +858,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-      
+
       // Save all grades
       if (gradesData.length > 0) {
         const savedGrades = await storage.saveGrades(gradesData);
-        
+
         res.status(201).json({ 
           message: 'Nilai kelas berhasil diimport',
           success: savedGrades.length,
@@ -876,21 +876,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Gagal mengimport nilai kelas: " + error.message });
     }
   });
-  
+
   // Settings API endpoints with caching
   let cachedSettings: any = null;
   let settingsCacheTime = 0;
   const SETTINGS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
-  
+
   app.get("/api/settings", async (req, res) => {
     try {
       const now = Date.now();
-      
+
       // Return cached settings if valid
       if (cachedSettings && (now - settingsCacheTime < SETTINGS_CACHE_TTL)) {
         return res.json(cachedSettings);
       }
-      
+
       // Cache expired or doesn't exist, fetch fresh data
       let settings = await storage.getSettings();
       if (!settings) {
@@ -917,110 +917,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
           majorList: "semua,MIPA,IPS,BAHASA",
           classList: "XII IPA 1,XII IPA 2,XII IPS 1,XII IPS 2"
         };
-        
+
         settings = await storage.saveSettings(defaultSettings);
       }
-      
+
       // Update cache
       cachedSettings = settings;
       settingsCacheTime = now;
-      
+
       res.json(settings);
     } catch (error) {
       console.error("Error fetching settings:", error);
       res.status(500).json({ message: "Failed to fetch settings" });
     }
   });
-  
+
   app.post("/api/settings", requireRole(["admin"]), async (req, res) => {
     try {
       // Validasi input menggunakan schema Zod
       const parsedData = insertSettingsSchema.safeParse(req.body);
-      
+
       if (!parsedData.success) {
         return res.status(400).json({ 
           message: "Invalid settings data", 
           errors: parsedData.error.format() 
         });
       }
-      
+
       const savedSettings = await storage.saveSettings(parsedData.data);
-      
+
       // Invalidate settings cache
       cachedSettings = savedSettings;
       settingsCacheTime = Date.now();
-      
+
       res.status(201).json(savedSettings);
     } catch (error) {
       console.error("Save settings error:", error);
       res.status(500).json({ message: "Failed to save settings" });
     }
   });
-  
+
   app.put("/api/settings", requireRole(["admin"]), async (req, res) => {
     try {
       // Validasi input menggunakan schema Zod
       const parsedData = insertSettingsSchema.partial().safeParse(req.body);
-      
+
       if (!parsedData.success) {
         return res.status(400).json({ 
           message: "Invalid settings data", 
           errors: parsedData.error.format() 
         });
       }
-      
+
       const updatedSettings = await storage.updateSettings(parsedData.data);
       if (!updatedSettings) {
         return res.status(404).json({ message: "Settings not found" });
       }
-      
+
       // Invalidate settings cache
       cachedSettings = updatedSettings;
       settingsCacheTime = Date.now();
-      
+
       res.json(updatedSettings);
     } catch (error) {
       console.error("Update settings error:", error);
       res.status(500).json({ message: "Failed to update settings" });
     }
   });
-  
+
   // Welcome animation status endpoint
   app.post("/api/user/welcome-status", requireAuth, async (req, res) => {
     try {
       const user = req.user as Express.User;
       const hasSeenWelcome = req.body.hasSeenWelcome === true;
-      
+
       const updatedUser = await storage.updateUserWelcomeStatus(user.id, hasSeenWelcome);
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       res.json({ success: true, hasSeenWelcome: updatedUser.hasSeenWelcome });
     } catch (error) {
       res.status(500).json({ message: "Failed to update welcome status" });
     }
   });
-  
+
   // Bulk delete endpoint (admin only)
   app.post("/api/admin/bulk-delete", requireRole(["admin"]), async (req, res) => {
     try {
       const { targets } = req.body;
-      
+
       if (!targets || !Array.isArray(targets) || targets.length === 0) {
         return res.status(400).json({ message: "No targets specified for deletion" });
       }
-      
+
       const results = {
         deleted: 0,
         errors: 0,
         details: {} as Record<string, { success: number, failed: number }>
       };
-      
+
       // Process each target type
       for (const target of targets) {
         results.details[target] = { success: 0, failed: 0 };
-        
+
         if (target === 'students') {
           try {
             const students = await storage.getStudents();
@@ -1087,19 +1087,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Would delete logs here if implemented
         }
       }
-      
+
       res.json(results);
     } catch (error) {
       console.error('Bulk delete error:', error);
       res.status(500).json({ message: "Failed to perform bulk delete operation" });
     }
   });
-  
+
   // Pastikan direktori untuk file sementara PDF ada
   if (!fs.existsSync('uploads/certificates')) {
     fs.mkdirSync('uploads/certificates', { recursive: true });
   }
-  
+
   // Server-side PDF generation endpoint
   app.get("/api/certificates/:studentId", requireAuth, async (req, res) => {
     try {
@@ -1107,56 +1107,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(studentId)) {
         return res.status(400).json({ message: "ID siswa tidak valid" });
       }
-      
+
       // Check user permissions - siswa can only access their own certificate
       const user = req.user as Express.User;
       if (user.role === 'siswa' && user.studentId !== studentId) {
         return res.status(403).json({ message: "Anda tidak berhak mengakses sertifikat siswa lain" });
       }
-      
+
       // Get student data
       const student = await storage.getStudent(studentId);
       if (!student) {
         return res.status(404).json({ message: "Siswa tidak ditemukan" });
       }
-      
+
       // Check if student is verified
       if (student.status !== 'verified') {
         return res.status(403).json({ message: "Siswa belum diverifikasi" });
       }
-      
+
       // Get settings
       const settings = await storage.getSettings();
       if (!settings) {
         return res.status(500).json({ message: "Pengaturan sekolah tidak ditemukan" });
       }
-      
+
       // Get showGrades from query param
       const showGrades = req.query.showGrades === 'true';
-      
+
       // Get grades if needed
       let gradeData: SubjectGrade[] = [];
       let averageGrade: number | undefined = undefined;
-      
+
       if (showGrades) {
         const studentGrades = await storage.getStudentGrades(studentId);
-        
+
         if (studentGrades && studentGrades.length > 0) {
           // Format grades as SubjectGrade format
           gradeData = studentGrades.map(g => ({
             name: g.subjectName,
             value: g.value
           }));
-          
+
           // Calculate average grade
           const sum = studentGrades.reduce((acc, grade) => acc + grade.value, 0);
           averageGrade = Number((sum / studentGrades.length).toFixed(2));
-          
+
           // Log untuk debugging
           console.log(`Grades count: ${gradeData.length}, Average: ${averageGrade}`);
         } else {
           console.log('No grades found for student');
-          
+
           // Jika tidak ada grades di database, gunakan sample data (hanya untuk development)
           gradeData = [
             { name: "Pendidikan Agama dan Budi Pekerti", value: 87.52 },
@@ -1175,13 +1175,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             { name: "Sosiologi Peminatan", value: 89.04 },
             { name: "Bahasa Jepang", value: 87.75 }
           ];
-          
+
           // Calculate average for sample data
           const sum = gradeData.reduce((acc, grade) => acc + grade.value, 0);
           averageGrade = Number((sum / gradeData.length).toFixed(2));
         }
       }
-      
+
       // Prepare certificate data
       const certificateData: CertificateData = {
         id: student.id,
@@ -1220,20 +1220,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         grades: gradeData,
         averageGrade
       };
-      
+
       // Generate a unique filename
       const filename = `certificate_${student.nisn}_${Date.now()}.pdf`;
       const filePath = path.join(process.cwd(), 'uploads', 'certificates', filename);
-      
+
       // Generate PDF
       await generateCertificatePDF(certificateData, filePath);
-      
+
       // Send the file
       res.download(filePath, `SKL_${student.fullName.replace(/\s+/g, '_')}_${showGrades ? 'dengan_nilai' : 'tanpa_nilai'}.pdf`, (err) => {
         if (err) {
           console.error("Error sending PDF:", err);
         }
-        
+
         // Delete the temporary file after sending
         fs.unlink(filePath, (unlinkErr) => {
           if (unlinkErr) {
@@ -1241,13 +1241,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
       });
-      
+
     } catch (error) {
       console.error("Error generating certificate:", error);
       res.status(500).json({ message: "Gagal membuat sertifikat" });
     }
   });
-  
+
   const httpServer = createServer(app);
   return httpServer;
 }
