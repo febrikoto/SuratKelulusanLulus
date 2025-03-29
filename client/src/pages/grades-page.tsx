@@ -371,9 +371,11 @@ const GradesPage: React.FC = () => {
                           variant="ghost" 
                           size="sm"
                           onClick={() => openGradesModal(student)}
+                          className="hover:bg-primary/10"
+                          title="Lihat Nilai Siswa"
                         >
                           <Eye className="h-4 w-4 mr-1" />
-                          <span className="sr-only">Lihat Nilai</span>
+                          <span>Lihat</span>
                         </Button>
                       </TableCell>
                     </TableRow>
