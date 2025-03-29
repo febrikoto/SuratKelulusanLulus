@@ -795,19 +795,57 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       XLSX.utils.book_append_sheet(wb, mapelWs, "Mapel");
       
       // 3. Create NILAI Worksheet
-      // Buat header lebih simpel seperti contoh
+      // Buat header persis seperti contoh yang diberikan
       const nilaiInfo = [
         ['DATA NILAI SISWA', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
         ['SEME:', '0', '<< ISI SEMESTER DISINI (1/2/3/4/5/6), UNTUK KEPERLUAN SKL SAJA BISA DIISI 0 SAJA'],
         ['TAHU:', new Date().getFullYear().toString(), '<< ISI TAHUN LULUS DISINI']
       ];
       
-      // Create header for subject columns
+      // Buat header yang lebih sederhana
       const nilaiHeaders = ['No', 'NIS', 'NAMA SISWA', 'KELAS'];
       
-      // Hanya gunakan kode mapel seperti contoh
+      // Gunakan singkatan mata pelajaran seperti BI|MTK|PKN
       subjects.forEach(subject => {
-        nilaiHeaders.push(subject.code);
+        // Ubah kode mapel menjadi kode singkat seperti BI, MTK, PKN, dsb
+        // Hapus spasi dan convert dua atau tiga huruf pertama menjadi kode mapel
+        let shortCode;
+        
+        // Logic untuk mendapatkan kode singkat yang umum digunakan
+        if (subject.code.includes('BIN') || subject.code.includes('IND') || subject.name.includes('Indonesia')) {
+          shortCode = 'BI';
+        } else if (subject.code.includes('MAT') || subject.code.includes('MTK') || subject.name.includes('Matematik')) {
+          shortCode = 'MTK';
+        } else if (subject.code.includes('PKN') || subject.name.includes('Pancasila') || subject.name.includes('Kewarga')) {
+          shortCode = 'PKN';
+        } else if (subject.code.includes('BIG') || subject.code.includes('ENG') || subject.name.includes('Inggris')) {
+          shortCode = 'BIG';
+        } else if (subject.code.includes('FIS') || subject.name.includes('Fisika')) {
+          shortCode = 'FIS';
+        } else if (subject.code.includes('KIM') || subject.name.includes('Kimia')) {
+          shortCode = 'KIM';
+        } else if (subject.code.includes('BIO') || subject.name.includes('Biologi')) {
+          shortCode = 'BIO';
+        } else if (subject.code.includes('SEJ') || subject.name.includes('Sejarah')) {
+          shortCode = 'SEJ';
+        } else if (subject.code.includes('GEO') || subject.name.includes('Geografi')) {
+          shortCode = 'GEO';
+        } else if (subject.code.includes('EKO') || subject.name.includes('Ekonomi')) {
+          shortCode = 'EKO';
+        } else if (subject.code.includes('SOS') || subject.name.includes('Sosiologi')) {
+          shortCode = 'SOS';
+        } else if (subject.code.includes('SEN') || subject.name.includes('Seni')) {
+          shortCode = 'SBK';
+        } else if (subject.code.includes('ORK') || subject.code.includes('PJK') || subject.name.includes('Olahraga') || subject.name.includes('Jasmani')) {
+          shortCode = 'PJOK';
+        } else if (subject.code.includes('AGM') || subject.code.includes('PAI') || subject.name.includes('Agama')) {
+          shortCode = 'PAI';
+        } else {
+          // Jika tidak ada pola yang cocok, ambil 2-3 huruf pertama
+          shortCode = subject.code.substring(0, Math.min(3, subject.code.length)).replace(/\s+/g, '');
+        }
+        
+        nilaiHeaders.push(shortCode);
       });
       
       // Add note
