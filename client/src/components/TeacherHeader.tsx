@@ -44,30 +44,6 @@ export const TeacherHeader: React.FC<TeacherHeaderProps> = ({ user, onLogout }) 
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
-        <nav className="flex items-center gap-1">
-          <Button 
-            variant="ghost" 
-            className="text-sm"
-            onClick={() => window.location.href = "/guru"}
-          >
-            Dashboard
-          </Button>
-          <Button 
-            variant="ghost" 
-            className="text-sm"
-            onClick={() => window.location.href = "/grades"}
-          >
-            Nilai
-          </Button>
-          <Button 
-            variant="ghost" 
-            className="text-sm"
-            onClick={() => window.location.href = "/subjects"}
-          >
-            Mata Pelajaran
-          </Button>
-        </nav>
-        
         <div className="text-sm text-right hidden sm:block">
           <div className="font-medium">{user?.fullName || 'Guru'}</div>
           <div className="text-gray-500 dark:text-gray-400">{user?.username || ''}</div>
