@@ -745,11 +745,11 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       
       // 1. Create SISWA Worksheet
       const siswaHeaders = ['NO', 'NIS', 'NISN', 'NAMA', 'JENGKEL', 'TEMPAT', 'TANGGAL LAHIR', 'USERNAME', 'PASSWORD', 'KELAS', 'JURUSAN', 'KETERANGAN/NIP', 'TAHUN LULUS', 'NAMA WALI', 'Keterangan'];
-      const siswaData = [siswaHeaders];
+      const siswaData: string[][] = [siswaHeaders];
       
       classStudents.forEach((student, index) => {
         const studentRow = [
-          index + 1,
+          String(index + 1), // Konversi ke string untuk menghindari error tipe
           student.nis,
           student.nisn,
           student.fullName,
@@ -774,17 +774,17 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       
       // 2. Create MAPEL Worksheet
       const mapelHeaders = ['No Urut', 'Kode Mapel', 'Nama Mapel', 'Kelompok Mapel', 'Jurusan', 'STATUS', 'No Urut', 'Keterangan'];
-      const mapelData = [mapelHeaders];
+      const mapelData: string[][] = [mapelHeaders];
       
       subjects.forEach((subject, index) => {
         const mapelRow = [
-          index + 1,
+          String(index + 1), // Konversi ke string untuk menghindari error tipe
           subject.code,
           subject.name,
           subject.group || 'A',
           subject.major || 'semua',
           'aktif',
-          index + 1,
+          String(index + 1), // Konversi ke string untuk menghindari error tipe
           ''  // Keterangan
         ];
         
@@ -795,50 +795,26 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       XLSX.utils.book_append_sheet(wb, mapelWs, "Mapel");
       
       // 3. Create NILAI Worksheet
-      // Buat header persis seperti contoh yang diberikan
-      const nilaiInfo = [
-        ['DATA NILAI SISWA', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['SEMESTER', '0', '<< ISI SEMESTER DISINI (1/2/3/4/5/6), UNTUK KEPERLUAN SKL SAJA BISA DIISI 0 SAJA'],
-        ['TAHUN LULUS', new Date().getFullYear().toString(), '<< ISI TAHUN LULUS DISINI']
-      ];
+      // Buat header dengan format yang lebih sederhana sesuai contoh gambar
+      // Hanya kolom nisn, subjectName dan kode mata pelajaran
       
-      // Buat header yang lebih sederhana seperti di contoh
-      const nilaiHeaders = ['No', 'NIS', 'NAMA SISWA', 'KELAS'];
+      // Buat header yang sangat sederhana sesuai dengan contoh
+      const nilaiHeaders: string[] = ['nisn', 'subjectName'];
       
-      // Gunakan singkatan mata pelajaran seperti BINDO|MTK|PKN sesuai dengan contoh
+      // Gunakan singkatan mata pelajaran seperti BI|MTK|PKN sesuai dengan contoh gambar
       subjects.forEach(subject => {
         // Ubah kode mapel menjadi kode singkat yang lebih umum dikenal
         let shortCode;
         
         // Logic untuk mendapatkan kode singkat yang umum digunakan
         if (subject.code.includes('BIN') || subject.code.includes('IND') || subject.name.includes('Indonesia')) {
-          shortCode = 'BINDO';
+          shortCode = 'BI';
         } else if (subject.code.includes('MAT') || subject.code.includes('MTK') || subject.name.includes('Matematik')) {
           shortCode = 'MTK';
         } else if (subject.code.includes('PKN') || subject.name.includes('Pancasila') || subject.name.includes('Kewarga')) {
           shortCode = 'PKN';
         } else if (subject.code.includes('BIG') || subject.code.includes('ENG') || subject.name.includes('Inggris')) {
           shortCode = 'BING';
-        } else if (subject.code.includes('FIS') || subject.name.includes('Fisika')) {
-          shortCode = 'FISIKA';
-        } else if (subject.code.includes('KIM') || subject.name.includes('Kimia')) {
-          shortCode = 'KIMIA';
-        } else if (subject.code.includes('BIO') || subject.name.includes('Biologi')) {
-          shortCode = 'BIOLOGI';
-        } else if (subject.code.includes('SEJ') || subject.name.includes('Sejarah')) {
-          shortCode = 'SEJARAH';
-        } else if (subject.code.includes('GEO') || subject.name.includes('Geografi')) {
-          shortCode = 'GEOGRAFI';
-        } else if (subject.code.includes('EKO') || subject.name.includes('Ekonomi')) {
-          shortCode = 'EKONOMI';
-        } else if (subject.code.includes('SOS') || subject.name.includes('Sosiologi')) {
-          shortCode = 'SOSIOLOGI';
-        } else if (subject.code.includes('SEN') || subject.name.includes('Seni')) {
-          shortCode = 'SENBUD';
-        } else if (subject.code.includes('ORK') || subject.code.includes('PJK') || subject.name.includes('Olahraga') || subject.name.includes('Jasmani')) {
-          shortCode = 'PJOK';
-        } else if (subject.code.includes('AGM') || subject.code.includes('PAI') || subject.name.includes('Agama')) {
-          shortCode = 'AGAMA';
         } else {
           // Jika tidak ada pola yang cocok, gunakan kode yang sudah ada
           shortCode = subject.code.replace(/\s+/g, '');
@@ -848,28 +824,53 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
         nilaiHeaders.push(shortCode);
       });
       
-      // Add note
-      nilaiHeaders.push('HAPUS KOLOM KODE MAPEL JIKA TIDAK ADA DI SEMESTER INI');
+      // Buat array untuk menyimpan data nilai
+      let nilaiInfo: string[][] = [];
       
-      nilaiInfo.push(nilaiHeaders);
-      
-      // Add student rows
-      classStudents.forEach((student, index) => {
-        const row = [
-          index + 1,
-          student.nis,
-          student.fullName,
-          student.className
-        ];
-        
-        // Add value cells for each subject (default to realistic values like 65, 79, 89)
-        subjects.forEach((_, index) => {
-          // Rotasi nilai default realistis (65, 79, 89)
-          const defaultValues = [65, 79, 89];
-          row.push(defaultValues[index % 3]);
+      // Add student rows with format that matches the image example
+      classStudents.forEach((student) => {
+        // Untuk setiap siswa, buat 1 row untuk setiap mata pelajaran
+        subjects.forEach((subject, subjectIndex) => {
+          const subjectName = subject.name;
+          let shortCode;
+          
+          // Tentukan kode singkat mata pelajaran (sama dengan logic di atas)
+          if (subject.code.includes('BIN') || subject.code.includes('IND') || subject.name.includes('Indonesia')) {
+            shortCode = 'BI';
+          } else if (subject.code.includes('MAT') || subject.code.includes('MTK') || subject.name.includes('Matematik')) {
+            shortCode = 'MTK';
+          } else if (subject.code.includes('PKN') || subject.name.includes('Pancasila') || subject.name.includes('Kewarga')) {
+            shortCode = 'PKN';
+          } else if (subject.code.includes('BIG') || subject.code.includes('ENG') || subject.name.includes('Inggris')) {
+            shortCode = 'BING';
+          } else {
+            // Gunakan code asli jika tidak match dengan pattern
+            shortCode = subject.code.replace(/\s+/g, '');
+          }
+          
+          // Default nilai yang realistic
+          const defaultValues = [85, 90, 78, 82];
+          const defaultValue = defaultValues[subjectIndex % 4];
+          
+          const row = [
+            student.nisn,   // NISN
+            student.fullName,  // Nama siswa sebagai subjectName (sesuai contoh)
+          ];
+          
+          // Tambahkan nilai default untuk tiap mata pelajaran (sesuai kolom di headers)
+          subjects.forEach((s, idx) => {
+            // Jika mata pelajaran saat ini, isi dengan nilai default
+            // Jika bukan, isi dengan nilai kosong
+            if (s.code === subject.code) {
+              row.push(String(defaultValue)); // Konversi ke string untuk menghindari error tipe data
+            } else {
+              row.push('');
+            }
+          });
+          
+          // Tambahkan row ke nilaiInfo
+          nilaiInfo.push(row);
         });
-        
-        nilaiInfo.push(row);
       });
       
       const nilaiWs = XLSX.utils.aoa_to_sheet(nilaiInfo);
@@ -908,7 +909,7 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       XLSX.utils.book_append_sheet(wb, nilaiWs, "Nilai");
       
       // 4. Add instruction sheet
-      const instructionData = [
+      const instructionData: string[][] = [
         ['PETUNJUK PENGGUNAAN TEMPLATE'],
         [''],
         ['Petunjuk Umum:'],
