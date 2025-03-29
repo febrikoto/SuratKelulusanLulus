@@ -167,70 +167,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CSV Import endpoint
+  // CSV/Excel Import endpoint
   app.post("/api/students/import", requireRole(["admin"]), upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-
-      if (req.file.mimetype !== 'text/csv') {
-        return res.status(400).json({ message: "Only CSV files are allowed" });
+        return res.status(400).json({ message: "Tidak ada file yang diupload" });
       }
 
       const results: any[] = [];
       const errors: any[] = [];
 
-      // Parse CSV file
-      const stream = Readable.from(req.file.buffer.toString());
+      // Deteksi format file dan proses sesuai format
+      if (req.file.mimetype === 'text/csv' || req.file.originalname.endsWith('.csv')) {
+        // Parse CSV file
+        const stream = Readable.from(req.file.buffer.toString());
 
-      stream
-        .pipe(csvParser())
-        .on('data', async (data) => {
-          try {
-            // Map CSV columns to student schema
-            const studentData = {
-              nisn: data.nisn,
-              nis: data.nis,
-              fullName: data.fullName,
-              birthPlace: data.birthPlace,
-              birthDate: data.birthDate,
-              parentName: data.parentName,
-              className: data.className,
-              status: 'pending'
-            };
+        stream
+          .pipe(csvParser())
+          .on('data', async (data) => {
+            try {
+              // Map CSV columns to student schema
+              const studentData = {
+                nisn: data.nisn,
+                nis: data.nis,
+                fullName: data.fullName,
+                birthPlace: data.birthPlace,
+                birthDate: data.birthDate,
+                parentName: data.parentName,
+                className: data.className,
+                status: 'pending'
+              };
 
-            const validation = insertStudentSchema.safeParse(studentData);
-
-            if (!validation.success) {
-              errors.push({ data, errors: validation.error.errors });
-              return;
+              await processStudentData(studentData, results, errors);
+            } catch (error) {
+              errors.push({ data, error: "Gagal memproses baris data" });
             }
+          })
+          .on('end', () => {
+            res.json({
+              success: true,
+              imported: results.length,
+              errors: errors.length > 0 ? errors : null
+            });
+          });
+      } else if (
+        req.file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+        req.file.originalname.endsWith('.xlsx')
+      ) {
+        try {
+          // Parse Excel file
+          const workbook = XLSX.read(req.file.buffer);
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          
+          // Convert Excel to JSON (skip first 9 rows which are instructions)
+          const data = XLSX.utils.sheet_to_json(worksheet, { range: 1 });  // Skip header row
 
-            // Check if student already exists
-            const existingStudent = await storage.getStudentByNisn(studentData.nisn);
-            if (existingStudent) {
-              errors.push({ data, error: "Student with this NISN already exists" });
-              return;
+          // Process each row
+          for (const row of data) {
+            // Skip empty rows
+            if (!row['nisn'] && !row['nis'] && !row['fullName']) continue;
+            
+            try {
+              const studentData = {
+                nisn: row['nisn']?.toString() || '',
+                nis: row['nis']?.toString() || '',
+                fullName: row['fullName']?.toString() || '',
+                birthPlace: row['birthPlace']?.toString() || '',
+                birthDate: row['birthDate']?.toString() || '',
+                parentName: row['parentName']?.toString() || '',
+                className: row['className']?.toString() || '',
+                status: 'pending'
+              };
+
+              await processStudentData(studentData, results, errors);
+            } catch (error) {
+              errors.push({ data: row, error: "Gagal memproses baris data" });
             }
-
-            const newStudent = await storage.createStudent(studentData);
-            results.push(newStudent);
-          } catch (error) {
-            errors.push({ data, error: "Failed to process row" });
           }
-        })
-        .on('end', () => {
+          
           res.json({
             success: true,
             imported: results.length,
             errors: errors.length > 0 ? errors : null
           });
-        });
+        } catch (error) {
+          console.error("Error parsing Excel:", error);
+          return res.status(400).json({ message: "Gagal memproses file Excel" });
+        }
+      } else {
+        return res.status(400).json({ message: "Hanya file CSV atau Excel (.xlsx) yang diperbolehkan" });
+      }
     } catch (error) {
-      res.status(500).json({ message: "Failed to import students" });
+      console.error("Import error:", error);
+      res.status(500).json({ message: "Gagal mengimpor data siswa" });
     }
   });
+
+  // Helper function to process student data
+  async function processStudentData(studentData: any, results: any[], errors: any[]) {
+    const validation = insertStudentSchema.safeParse(studentData);
+
+    if (!validation.success) {
+      errors.push({ data: studentData, errors: validation.error.errors });
+      return;
+    }
+
+    // Check if student already exists
+    const existingStudent = await storage.getStudentByNisn(studentData.nisn);
+    if (existingStudent) {
+      errors.push({ data: studentData, error: "Siswa dengan NISN ini sudah ada" });
+      return;
+    }
+
+    const newStudent = await storage.createStudent(studentData);
+    results.push(newStudent);
+  }
 
   // Verification API
   app.post("/api/students/verify", requireRole(["guru"]), async (req, res) => {

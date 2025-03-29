@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -16,14 +16,71 @@ interface ImportCsvModalProps {
 export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({ isOpen, onClose }) => {
   const [file, setFile] = useState<File | null>(null);
   const [className, setClassName] = useState<string>('');
+  const [dragActive, setDragActive] = useState<boolean>(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Validate file type helper
+  const isValidFileType = (file: File): boolean => {
+    const validTypes = [
+      'text/csv',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+    
+    return validTypes.includes(file.type) || 
+           file.name.endsWith('.csv') || 
+           file.name.endsWith('.xlsx');
+  };
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      
+      if (isValidFileType(selectedFile)) {
+        setFile(selectedFile);
+      } else {
+        toast({
+          title: "Format File Salah",
+          description: "Hanya file CSV atau Excel (.xlsx) yang diperbolehkan",
+          variant: "destructive",
+        });
+      }
     }
   };
+  
+  // Handle drag events
+  const handleDrag = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+  
+  // Handle drop event
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const uploadedFile = e.dataTransfer.files[0];
+      
+      if (isValidFileType(uploadedFile)) {
+        setFile(uploadedFile);
+      } else {
+        toast({
+          title: "Format File Salah",
+          description: "Hanya file CSV atau Excel (.xlsx) yang diperbolehkan",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [toast]);
 
   const importCsvMutation = useMutation({
     mutationFn: async () => {
@@ -116,26 +173,41 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({ isOpen, onClose 
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                  Upload file CSV dengan format: NISN, NIS, Nama Lengkap, Tempat Lahir, Tanggal Lahir, Nama Orang Tua, Kelas
+                  Upload file CSV atau Excel dengan format: NISN, NIS, Nama Lengkap, Tempat Lahir, Tanggal Lahir, Nama Orang Tua, Kelas
                 </p>
                 
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md p-6 text-center">
+                <div 
+                  className={`border-2 border-dashed rounded-md p-6 text-center transition-colors ${
+                    dragActive 
+                      ? "border-primary bg-primary/10" 
+                      : "border-gray-300 dark:border-gray-600"
+                  }`}
+                  onDragEnter={handleDrag}
+                  onDragOver={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDrop={handleDrop}
+                >
                   <input 
                     type="file" 
-                    id="csvFile" 
+                    id="csvFile"
+                    ref={inputRef}
                     className="hidden" 
-                    accept=".csv"
+                    accept=".csv,.xlsx"
                     onChange={handleFileChange} 
                   />
-                  <label htmlFor="csvFile" className="cursor-pointer">
+                  <label htmlFor="csvFile" className="cursor-pointer block">
                     <Upload className="h-10 w-10 mx-auto text-gray-400 mb-2" />
                     
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Klik untuk memilih file CSV</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Klik untuk memilih file CSV atau Excel</p>
                     <p className="text-xs text-gray-500 dark:text-gray-500">atau drag & drop file di sini</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                      <span className="font-semibold">Tips:</span> Gunakan template Excel untuk hasil terbaik
+                    </p>
                   </label>
                   
                   {file && (
-                    <div className="mt-2 text-sm text-primary font-medium">
+                    <div className="mt-2 text-sm text-primary font-medium flex items-center justify-center">
+                      <FileSpreadsheet className="h-4 w-4 mr-1" />
                       {file.name}
                     </div>
                   )}
