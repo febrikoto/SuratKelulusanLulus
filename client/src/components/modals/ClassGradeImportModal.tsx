@@ -100,14 +100,29 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
     enabled: isOpen
   });
   
+  // Fetch grade summary to check if students already have grades
+  const { data: gradesSummary = [] } = useQuery<{ studentId: number, count: number }[]>({
+    queryKey: ['/api/grades-summary'],
+    enabled: isOpen && students.length > 0
+  });
+  
   // Fetch class list from settings
   const { data: settings } = useQuery<any>({
     queryKey: ['/api/settings'],
     enabled: isOpen
   });
   
-  // Extract class list
-  const classList = settings?.classList ? settings.classList.split(',') : [];
+  // Extract class list from students data
+  const classList = React.useMemo(() => {
+    // Ambil semua kelas unik dari data siswa
+    const classSet = new Set<string>();
+    students.forEach(student => {
+      if (student.className) {
+        classSet.add(student.className);
+      }
+    });
+    return Array.from(classSet).sort();
+  }, [students]);
   
   // Import grades mutation
   const importGradesMutation = useMutation({
@@ -121,6 +136,7 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
         description: `${data.success} data nilai berhasil disimpan`,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/grades-summary'] });
       handleCloseModal();
     },
     onError: (error: Error) => {
@@ -1177,6 +1193,7 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
                             <TableHead className="w-[40px]">No</TableHead>
                             <TableHead className="w-[100px]">NISN</TableHead>
                             <TableHead>Nama Siswa</TableHead>
+                            <TableHead className="w-[100px]">Status</TableHead>
                             {subjectColumns.slice(0, 3).map((subject) => (
                               <TableHead key={subject.code} className="text-right w-[80px]">
                                 {subject.code}
@@ -1194,6 +1211,17 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
                                 <TableCell>{index + 1}</TableCell>
                                 <TableCell className="font-mono">{grade.nisn}</TableCell>
                                 <TableCell>{grade.fullName}</TableCell>
+                                <TableCell>
+                                  {gradesSummary.some(g => g.studentId === grade.studentId && g.count > 0) ? (
+                                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                      Memiliki Nilai
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                      Belum Ada Nilai
+                                    </Badge>
+                                  )}
+                                </TableCell>
                                 {subjectColumns.slice(0, 3).map((subject) => (
                                   <TableCell key={subject.code} className="text-right">
                                     {grade[subject.code] !== undefined ? grade[subject.code] : '-'}
@@ -1225,6 +1253,18 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
                     <div className="flex justify-between items-center mt-2 text-sm text-muted-foreground">
                       <span>Total {previewData.length} siswa dengan nilai dari kelas {selectedClass}</span>
                     </div>
+                    
+                    {/* Info untuk siswa yang sudah memiliki nilai sebelumnya */}
+                    {previewData.some(grade => gradesSummary.some(g => g.studentId === grade.studentId && g.count > 0)) && (
+                      <div className="mt-2 text-sm text-amber-600">
+                        <p className="flex items-center">
+                          <AlertCircle className="h-4 w-4 mr-1 flex-shrink-0" />
+                          <span>
+                            Beberapa siswa sudah memiliki nilai sebelumnya. Nilai yang baru akan menimpa nilai yang lama.
+                          </span>
+                        </p>
+                      </div>
+                    )}
                   </TabsContent>
                   
                   <TabsContent value="errors" className="mt-0">

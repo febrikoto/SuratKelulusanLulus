@@ -51,6 +51,9 @@ export interface IStorage {
   updateSubject(id: number, data: Partial<InsertSubject>): Promise<Subject | undefined>;
   deleteSubject(id: number): Promise<boolean>;
   
+  // New method for getting summary of grades by student
+  getGradesSummary(): Promise<{ studentId: number; count: number }[]>;
+  
   // Dashboard operations
   getDashboardStats(): Promise<DashboardStats>;
   
@@ -310,6 +313,21 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
+  async getGradesSummary(): Promise<{ studentId: number; count: number }[]> {
+    // Group grades by student and count them
+    const result = await this.db.select({
+      studentId: grades.studentId,
+      count: count()
+    })
+    .from(grades)
+    .groupBy(grades.studentId);
+    
+    return result.map(row => ({
+      studentId: row.studentId,
+      count: Number(row.count)
+    }));
+  }
+
   async getDashboardStats(): Promise<DashboardStats> {
     const totalStudents = await this.db.select({ count: count() }).from(students);
     
@@ -565,6 +583,24 @@ export class MemStorage implements IStorage {
     return false;
   }
 
+  async getGradesSummary(): Promise<{ studentId: number; count: number }[]> {
+    // Group grades by student and count them
+    const allGrades = Array.from(this.grades.values());
+    const gradesByStudent = new Map<number, number>();
+    
+    // Count grades for each student
+    allGrades.forEach(grade => {
+      const currentCount = gradesByStudent.get(grade.studentId) || 0;
+      gradesByStudent.set(grade.studentId, currentCount + 1);
+    });
+    
+    // Convert map to array of objects
+    return Array.from(gradesByStudent.entries()).map(([studentId, count]) => ({
+      studentId,
+      count
+    }));
+  }
+  
   async getDashboardStats(): Promise<DashboardStats> {
     const students = Array.from(this.students.values());
     

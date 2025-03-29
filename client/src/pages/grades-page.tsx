@@ -122,17 +122,24 @@ interface ClassCount {
   withGrades: number;
 }
 
-// Function to generate dummy class statistics
-const generateClassStats = (students: Student[]): ClassCount[] => {
+// Function to generate real class statistics
+const generateClassStats = (
+  students: Student[], 
+  studentGrades?: Map<number, number>
+): ClassCount[] => {
   const classes: { [key: string]: { count: number; withGrades: number } } = {};
   
+  // Kelompokkan siswa berdasarkan kelas
   students.forEach(student => {
+    if (!student.className) return; // Skip jika tidak ada nama kelas
+    
     if (!classes[student.className]) {
       classes[student.className] = { count: 0, withGrades: 0 };
     }
     classes[student.className].count += 1;
-    // Randomly determine if a student has grades
-    if (Math.random() > 0.3) {
+    
+    // Periksa apakah siswa memiliki nilai
+    if (studentGrades && studentGrades.has(student.id) && studentGrades.get(student.id)! > 0) {
       classes[student.className].withGrades += 1;
     }
   });
@@ -153,14 +160,31 @@ const GradesPage: React.FC = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isClassImportModalOpen, setIsClassImportModalOpen] = useState(false);
   
-  // Use dummy data for demo
-  const students = dummyStudents;
-  const classStats = generateClassStats(students);
+  // Fetch real student data from API
+  const { data: students = [], isLoading: isLoadingStudents } = useQuery<Student[]>({
+    queryKey: ['/api/students'],
+  });
   
-  // For real implementation, use this:
-  // const { data: students = [], isLoading } = useQuery<Student[]>({
-  //   queryKey: ['/api/students'],
-  // });
+  // Fetch grades data to determine which students have grades
+  const { data: allGrades = [] } = useQuery<{ studentId: number, count: number }[]>({
+    queryKey: ['/api/grades-summary'],
+    enabled: students.length > 0
+  });
+  
+  // Create a map of student IDs to their grade count
+  const studentGradeCounts = React.useMemo(() => {
+    const map = new Map<number, number>();
+    allGrades.forEach(grade => {
+      map.set(grade.studentId, grade.count);
+    });
+    return map;
+  }, [allGrades]);
+  
+  // Generate class statistics based on real data
+  const classStats = React.useMemo(() => {
+    const stats = generateClassStats(students, studentGradeCounts);
+    return stats;
+  }, [students, studentGradeCounts]);
   
   // Filter students based on search and class filter
   const filteredStudents = students.filter(student => {
@@ -332,13 +356,13 @@ const GradesPage: React.FC = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {index % 3 === 0 ? (
-                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                            Belum Ada
-                          </Badge>
-                        ) : (
+                        {studentGradeCounts.has(student.id) && studentGradeCounts.get(student.id)! > 0 ? (
                           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                             Lengkap
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                            Belum Ada
                           </Badge>
                         )}
                       </TableCell>

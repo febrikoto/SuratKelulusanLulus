@@ -598,6 +598,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate Excel template for grade import
+  // Add endpoint to get summary of student grades (count of grades per student)
+  app.get("/api/grades-summary", requireRole(["admin", "guru"]), async (req, res) => {
+    try {
+      // Get all grades from database grouped by student
+      // This endpoint returns an array of objects with studentId and count properties
+      const result = await storage.getGradesSummary();
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: `Error fetching grade summary: ${error.message}` });
+    }
+  });
+  
   app.get("/api/grades/template", requireAuth, async (req, res) => {
     try {
       // We'll send a simple JSON response with sample data structure
