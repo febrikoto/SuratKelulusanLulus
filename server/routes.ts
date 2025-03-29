@@ -1,24 +1,4 @@
-app.get("/api/backup", async (req, res) => {
-    try {
-        const backupData = {
-            message: "Ini adalah backup dari data website Anda.",
-            // Tambahkan data yang ingin Anda simpan di sini
-        };
-
-        const filePath = resolve(__dirname, 'backup.json');
-        writeFileSync(filePath, JSON.stringify(backupData, null, 2)); // Menyimpan data ke dalam backup.json
-
-        res.download(filePath, 'backup.json', (err) => {
-            if (err) {
-                console.error("Error downloading backup:", err);
-                return res.status(500).send("Gagal mengunduh backup");
-            }
-        });
-    } catch (error) {
-        console.error("Error creating backup:", error);
-        res.status(500).json({ message: "Gagal membuat backup" });
-    }
-});import type { Express, Request, Response } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import csvParser from "csv-parser";
@@ -35,11 +15,27 @@ import { formatDate } from "../client/src/lib/utils";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const { requireAuth, requireRole } = setupAuth(app);
-  
-  // Configure multer for file uploads
-  const upload = multer({ 
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 20 * 1024 * 1024 } // 20MB limit
+
+  app.get("/api/backup", async (req, res) => {
+    try {
+      const backupData = {
+        message: "Ini adalah backup dari data website Anda.",
+        // Tambahkan data yang ingin Anda simpan di sini
+      };
+
+      const filePath = path.resolve(__dirname, 'backup.json');
+      fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2));
+
+      res.download(filePath, 'backup.json', (err) => {
+        if (err) {
+          console.error("Error downloading backup:", err);
+          return res.status(500).send("Gagal mengunduh backup");
+        }
+      });
+    } catch (error) {
+      console.error("Error creating backup:", error);
+      res.status(500).json({ message: "Gagal membuat backup" });
+    }
   });
 
   // Student API endpoints
@@ -782,7 +778,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Gagal mengimpor nilai" });
     }
   });
-  
+
   // Import grades by class (one row per student with multiple subject columns)
   app.post("/api/grades/import-class", requireRole(["admin"]), async (req, res) => {
     try {
@@ -891,7 +887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Cache expired or doesn't exist, fetch fresh data
-      let settings = await storage.getSettings();
+      let settings = awaitstorage.getSettings();
       if (!settings) {
         // Create default settings if none exists
         const defaultSettings = {
