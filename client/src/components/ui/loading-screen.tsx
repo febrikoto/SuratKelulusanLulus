@@ -4,9 +4,23 @@ import { Loader2 } from 'lucide-react';
 
 interface LoadingScreenProps {
   message?: string;
+  minDelay?: number;
 }
 
-export function LoadingScreen({ message = 'Memuat...' }: LoadingScreenProps) {
+export function LoadingScreen({ message = 'Memuat...', minDelay = 1000 }: LoadingScreenProps) {
+  const [show, setShow] = React.useState(false);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setShow(true);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!show) {
+    return null;
+  }
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
       <motion.div
@@ -69,3 +83,5 @@ export function LoadingScreen({ message = 'Memuat...' }: LoadingScreenProps) {
     </div>
   );
 }
+
+LoadingScreen.displayName = "LoadingScreen";
