@@ -327,16 +327,7 @@ export default function SubjectsPage() {
       {renderHeader()}
       
       <div className="container mx-auto py-6">
-        <div className="mb-4">
-          <Button 
-            variant="outline" 
-            onClick={() => setLocation('/')}
-            className="flex items-center gap-2"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Kembali ke Dashboard
-          </Button>
-        </div>
+
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
