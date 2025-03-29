@@ -24,7 +24,8 @@ import {
   FileBadge,
   BookOpen,
   DatabaseIcon,
-  FileDown
+  FileDown,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -123,6 +124,7 @@ export default function AdminDashboard() {
   const [selectedStudentId, setSelectedStudentId] = useState<number | undefined>(undefined);
   const [selectedStudentName, setSelectedStudentName] = useState<string | undefined>(undefined);
   const [previewCertificateData, setPreviewCertificateData] = useState<any | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
   // Fetch dashboard stats
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
@@ -130,7 +132,7 @@ export default function AdminDashboard() {
   });
   
   // Fetch students
-  const { data: students, isLoading: studentsLoading } = useQuery<Student[]>({
+  const { data: students, isLoading: studentsLoading, refetch: fetchStudents } = useQuery<Student[]>({
     queryKey: ['/api/students'],
   });
   
@@ -592,28 +594,103 @@ export default function AdminDashboard() {
               
               <div className="border-t pt-4 mt-4">
                 <h3 className="text-sm font-medium mb-2">Upload File Excel</h3>
-                <div className="border-dashed border-2 border-gray-300 rounded-md p-4 text-center cursor-pointer hover:bg-gray-50">
-                  <Upload className="h-6 w-6 mx-auto text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-500">Klik untuk upload file atau tarik dan lepaskan file di sini</p>
-                  <p className="text-xs text-gray-400 mt-1">Format: .xlsx, .xls</p>
+                <div 
+                  className="border-dashed border-2 border-gray-300 rounded-md p-6 text-center cursor-pointer hover:bg-gray-50"
+                  onClick={() => document.getElementById('excel-file-upload')?.click()}
+                >
+                  <input
+                    type="file"
+                    id="excel-file-upload"
+                    className="hidden" 
+                    accept=".xlsx,.xls"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        // Simpan file yang dipilih dalam state
+                        setSelectedFile(file);
+                        
+                        toast({
+                          title: "File dipilih",
+                          description: `File "${file.name}" siap untuk diimport`,
+                        });
+                      }
+                    }}
+                  />
+                  <Upload className="h-8 w-8 mx-auto text-primary mb-3" />
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Klik untuk upload file Excel</p>
+                  <p className="text-xs text-gray-500 mt-1">Format: .xlsx, .xls</p>
                 </div>
+                {selectedFile && (
+                  <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 p-2 rounded-md flex items-center justify-between">
+                    <div className="flex items-center">
+                      <FileSpreadsheet className="h-4 w-4 text-blue-500 mr-2" />
+                      <span className="text-sm truncate max-w-[200px]">{selectedFile.name}</span>
+                    </div>
+                    <button
+                      className="text-gray-500 hover:text-red-500"
+                      onClick={() => setSelectedFile(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
-              onClick={() => setShowImportCsvModal(false)}
+              onClick={() => {
+                setShowImportCsvModal(false);
+                setSelectedFile(null);
+              }}
             >
               Batal
             </Button>
-            <Button 
-              onClick={() => {
-                setShowImportCsvModal(false);
-                toast({
-                  title: "Info",
-                  description: "Fitur import Excel akan segera diimplementasikan",
-                });
+            <Button
+              disabled={!selectedFile}
+              onClick={async () => {
+                if (!selectedFile) return;
+                
+                try {
+                  // Buat FormData untuk mengirim file
+                  const formData = new FormData();
+                  formData.append('file', selectedFile);
+                  
+                  // Kirim file ke endpoint import
+                  const response = await fetch('/api/students/import', {
+                    method: 'POST',
+                    body: formData,
+                  });
+                  
+                  if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error || 'Gagal mengimpor data siswa');
+                  }
+                  
+                  const result = await response.json();
+                  
+                  // Update daftar siswa setelah import berhasil
+                  fetchStudents();
+                  
+                  // Tampilkan pesan sukses
+                  toast({
+                    title: "Import berhasil",
+                    description: `${result.imported} data siswa berhasil diimpor${result.errors ? `, ${result.errors.length} data gagal` : ''}`,
+                    variant: result.errors ? "default" : undefined,
+                  });
+                  
+                  // Tutup modal
+                  setShowImportCsvModal(false);
+                  setSelectedFile(null);
+                } catch (error) {
+                  console.error('Error importing students:', error);
+                  toast({
+                    title: "Gagal import data",
+                    description: error instanceof Error ? error.message : 'Terjadi kesalahan saat mengimpor data',
+                    variant: "destructive",
+                  });
+                }
               }}
             >
               Import
