@@ -16,11 +16,16 @@ import { formatDate } from "../client/src/lib/utils";
 export async function registerRoutes(app: Express): Promise<Server> {
   const { requireAuth, requireRole } = setupAuth(app);
 
+  // Configure multer for file uploads
+  const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 20 * 1024 * 1024 } // 20MB limit
+  });
+
   app.get("/api/backup", async (req, res) => {
     try {
       const backupData = {
         message: "Ini adalah backup dari data website Anda.",
-        // Tambahkan data yang ingin Anda simpan di sini
       };
 
       const filePath = path.resolve(__dirname, 'backup.json');
@@ -43,10 +48,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { status, className } = req.query;
       const query: { status?: string; className?: string } = {};
-      
+
       if (status) query.status = status as string;
       if (className) query.className = className as string;
-      
+
       const students = await storage.getStudents(query);
       res.json(students);
     } catch (error) {
@@ -391,7 +396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(studentId)) {
         return res.status(400).json({ message: "Invalid student ID" });
       }
-
+      
       const grades = await storage.getStudentGrades(studentId);
       res.json(grades);
     } catch (error) {
@@ -443,13 +448,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(studentId)) {
         return res.status(400).json({ message: "ID siswa tidak valid" });
       }
-
+      
       // Check if student exists
       const student = await storage.getStudent(studentId);
       if (!student) {
         return res.status(404).json({ message: "Siswa tidak ditemukan" });
       }
-
+      
       // Handle both single grade and multiple grades
       if (Array.isArray(req.body)) {
         // Multiple grades
@@ -457,17 +462,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...grade,
           studentId
         }));
-
+        
         const validations = gradesData.map(grade => insertGradeSchema.safeParse(grade));
         const invalidGrades = validations.filter(v => !v.success);
-
+        
         if (invalidGrades.length > 0) {
           return res.status(400).json({
             message: "Data nilai tidak valid",
             errors: invalidGrades.map(v => (v as any).error.errors)
           });
         }
-
+        
         const savedGrades = await storage.saveGrades(gradesData);
         return res.status(201).json(savedGrades);
       } else {
@@ -476,7 +481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...req.body,
           studentId
         };
-
+        
         const validation = insertGradeSchema.safeParse(gradeData);
         if (!validation.success) {
           return res.status(400).json({
@@ -484,7 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             errors: validation.error.errors
           });
         }
-
+        
         const savedGrade = await storage.saveGrade(gradeData);
         return res.status(201).json(savedGrade);
       }
@@ -499,12 +504,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(id)) {
         return res.status(400).json({ message: "ID nilai tidak valid" });
       }
-
+      
       const success = await storage.deleteGrade(id);
       if (!success) {
         return res.status(404).json({ message: "Nilai tidak ditemukan" });
       }
-
+      
       res.status(204).end();
     } catch (error) {
       res.status(500).json({ message: "Gagal menghapus nilai" });
@@ -710,7 +715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Gagal mengimpor mata pelajaran" });
     }
   });
-
+  
   // Bulk import grades from Excel
   app.post("/api/grades/import", requireRole(["admin"]), async (req, res) => {
     try {
@@ -778,7 +783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Gagal mengimpor nilai" });
     }
   });
-
+  
   // Import grades by class (one row per student with multiple subject columns)
   app.post("/api/grades/import-class", requireRole(["admin"]), async (req, res) => {
     try {
@@ -871,7 +876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Gagal mengimport nilai kelas: " + error.message });
     }
   });
-
+  
   // Settings API endpoints with caching
   let cachedSettings: any = null;
   let settingsCacheTime = 0;
@@ -887,7 +892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Cache expired or doesn't exist, fetch fresh data
-      let settings = awaitstorage.getSettings();
+      let settings = await storage.getSettings();
       if (!settings) {
         // Create default settings if none exists
         const defaultSettings = {
@@ -926,7 +931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch settings" });
     }
   });
-
+  
   app.post("/api/settings", requireRole(["admin"]), async (req, res) => {
     try {
       // Validasi input menggunakan schema Zod
@@ -951,7 +956,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to save settings" });
     }
   });
-
+  
   app.put("/api/settings", requireRole(["admin"]), async (req, res) => {
     try {
       // Validasi input menggunakan schema Zod
@@ -979,7 +984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update settings" });
     }
   });
-
+  
   // Welcome animation status endpoint
   app.post("/api/user/welcome-status", requireAuth, async (req, res) => {
     try {
@@ -1242,7 +1247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Gagal membuat sertifikat" });
     }
   });
-
+  
   const httpServer = createServer(app);
   return httpServer;
 }
