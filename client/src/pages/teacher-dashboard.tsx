@@ -23,6 +23,30 @@ import { Certificate } from '@/components/Certificate';
 import WelcomeAnimation from '@/components/WelcomeAnimation';
 import { prepareCertificateData } from '@/lib/utils.tsx';
 
+// Added LoadingScreen component -  This is an assumption based on the context.
+const LoadingScreen = ({ message, minDelay = 300 }: { message: string; minDelay?: number }) => {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+    }, minDelay);
+
+    return () => clearTimeout(timeoutId);
+  }, [minDelay]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-4">{message}</p>
+      </div>
+    );
+  }
+  return null; // or return <></>;
+};
+
+
 export default function TeacherDashboard(): React.JSX.Element {
   const { user: authUser, updateWelcomeStatus } = useAuth();
   const [user, setUser] = useState<UserInfo | null>(null);
@@ -37,15 +61,15 @@ export default function TeacherDashboard(): React.JSX.Element {
   const [certificateData, setCertificateData] = useState<CertificateData | null>(null);
   const [showGrades, setShowGrades] = useState(false);
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
-  
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // Fetch user data
   const { data: userData, isLoading: userLoading } = useQuery<UserInfo>({
     queryKey: ['/api/user'],
   });
-  
+
   useEffect(() => {
     if (userData) {
       setUser(userData);
@@ -55,7 +79,7 @@ export default function TeacherDashboard(): React.JSX.Element {
       }
     }
   }, [userData]);
-  
+
   // Handle welcome animation close
   const handleWelcomeClose = async () => {
     try {
@@ -66,59 +90,59 @@ export default function TeacherDashboard(): React.JSX.Element {
       console.error('Failed to update welcome status:', error);
     }
   };
-  
+
   // Fetch dashboard stats
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['/api/dashboard/stats'],
   });
-  
+
   // Fetch students
   const { data: students, isLoading: studentsLoading } = useQuery<Student[]>({
     queryKey: ['/api/students'],
   });
-  
+
   // Fetch school settings
   const { data: schoolSettings, isLoading: settingsLoading } = useQuery({
     queryKey: ['/api/settings'],
   });
-  
+
   const pendingStudents = students
     ? students.filter(student => student.status === 'pending')
     : [];
-  
+
   const filteredStudents = pendingStudents.filter(student => 
     searchTerm === '' ||
     student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.nisn.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
+
   const viewStudentDetails = (id: number) => {
     setSelectedStudentId(id);
     setShowStudentDetailModal(true);
   };
-  
+
   const openVerificationModal = (id: number) => {
     setSelectedStudentId(id);
     setShowVerificationModal(true);
   };
-  
+
   const openRejectionModal = (id: number) => {
     setSelectedStudentId(id);
     setShowRejectionModal(true);
   };
-  
+
   const openCertificatePreview = (student: Student) => {
     const certData = prepareCertificateData(student, showGrades, schoolSettings);
     setCertificateData(certData);
     setShowCertificatePreview(true);
   };
-  
+
   const handleDownloadCertificate = () => {
     if (!certificateData || !certificateData.id) return;
-    
+
     const url = `/api/certificates/${certificateData.id}?showGrades=${showGrades ? 'true' : 'false'}`;
     window.open(url, '_blank');
-    
+
     toast({
       title: "Success",
       description: "SKL sedang diproses dan akan terunduh otomatis",
@@ -140,7 +164,7 @@ export default function TeacherDashboard(): React.JSX.Element {
       });
     }
   };
-  
+
   // Verify student mutation
   const verifyStudentMutation = useMutation({
     mutationFn: async () => {
@@ -169,7 +193,7 @@ export default function TeacherDashboard(): React.JSX.Element {
       });
     },
   });
-  
+
   // Reject student mutation
   const rejectStudentMutation = useMutation({
     mutationFn: async () => {
@@ -198,7 +222,7 @@ export default function TeacherDashboard(): React.JSX.Element {
       });
     },
   });
-  
+
   if (userLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -206,7 +230,7 @@ export default function TeacherDashboard(): React.JSX.Element {
       </div>
     );
   }
-  
+
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -214,19 +238,19 @@ export default function TeacherDashboard(): React.JSX.Element {
       </div>
     );
   }
-  
+
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
       {showWelcomeAnimation && user && (
         <WelcomeAnimation user={user} onClose={handleWelcomeClose} />
       )}
       <TeacherHeader user={user} onLogout={handleLogout} />
-      
+
       <div>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl md:text-2xl font-semibold">Dashboard Guru</h2>
         </div>
-        
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card>
@@ -246,7 +270,7 @@ export default function TeacherDashboard(): React.JSX.Element {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4 flex items-center">
               <div className="p-3 rounded-full bg-green-500 bg-opacity-10 text-green-500 mr-4">
@@ -264,7 +288,7 @@ export default function TeacherDashboard(): React.JSX.Element {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4 flex items-center">
               <div className="p-3 rounded-full bg-blue-500 bg-opacity-10 text-blue-500 mr-4">
@@ -283,7 +307,7 @@ export default function TeacherDashboard(): React.JSX.Element {
             </CardContent>
           </Card>
         </div>
-        
+
         {/* Student Verification Table */}
         <Card className="mb-6">
           <CardHeader>
@@ -303,7 +327,7 @@ export default function TeacherDashboard(): React.JSX.Element {
                 </div>
               </div>
             </div>
-            
+
             {studentsLoading ? (
               <div className="flex justify-center p-10">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -374,7 +398,7 @@ export default function TeacherDashboard(): React.JSX.Element {
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Student Detail Modal */}
       <Dialog open={showStudentDetailModal} onOpenChange={setShowStudentDetailModal}>
         <DialogContent className="sm:max-w-lg">
@@ -387,7 +411,7 @@ export default function TeacherDashboard(): React.JSX.Element {
                 {(() => {
                   const student = students.find(s => s.id === selectedStudentId);
                   if (!student) return <p>Siswa tidak ditemukan</p>;
-                  
+
                   return (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
@@ -424,7 +448,7 @@ export default function TeacherDashboard(): React.JSX.Element {
                           <p className="text-sm capitalize">{student.status}</p>
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-col space-y-3 mt-4">
                         <Button 
                           variant="default"
@@ -437,7 +461,7 @@ export default function TeacherDashboard(): React.JSX.Element {
                           <Eye className="mr-2 h-4 w-4" />
                           Lihat Pratinjau SKL
                         </Button>
-                        
+
                         <div className="flex justify-between">
                           <Button 
                             variant="outline"
@@ -475,7 +499,7 @@ export default function TeacherDashboard(): React.JSX.Element {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* Verification Modal */}
       <Dialog open={showVerificationModal} onOpenChange={setShowVerificationModal}>
         <DialogContent className="sm:max-w-md">
@@ -491,7 +515,7 @@ export default function TeacherDashboard(): React.JSX.Element {
                 {(() => {
                   const student = students.find(s => s.id === selectedStudentId);
                   if (!student) return <p>Siswa tidak ditemukan</p>;
-                  
+
                   return (
                     <div className="space-y-4">
                       <div>
@@ -499,7 +523,7 @@ export default function TeacherDashboard(): React.JSX.Element {
                         <p className="font-medium">NISN: <span className="font-normal">{student.nisn}</span></p>
                         <p className="font-medium">Kelas: <span className="font-normal">{student.className}</span></p>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <label htmlFor="verificationNote" className="text-sm font-medium">
                           Catatan Verifikasi (Opsional)
@@ -511,7 +535,7 @@ export default function TeacherDashboard(): React.JSX.Element {
                           placeholder="Catatan tambahan untuk verifikasi"
                         />
                       </div>
-                      
+
                       <div className="flex justify-end space-x-2 pt-4">
                         <Button
                           variant="outline"
@@ -549,7 +573,7 @@ export default function TeacherDashboard(): React.JSX.Element {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* Rejection Modal */}
       <Dialog open={showRejectionModal} onOpenChange={setShowRejectionModal}>
         <DialogContent className="sm:max-w-md">
@@ -565,7 +589,7 @@ export default function TeacherDashboard(): React.JSX.Element {
                 {(() => {
                   const student = students.find(s => s.id === selectedStudentId);
                   if (!student) return <p>Siswa tidak ditemukan</p>;
-                  
+
                   return (
                     <div className="space-y-4">
                       <div>
@@ -573,7 +597,7 @@ export default function TeacherDashboard(): React.JSX.Element {
                         <p className="font-medium">NISN: <span className="font-normal">{student.nisn}</span></p>
                         <p className="font-medium">Kelas: <span className="font-normal">{student.className}</span></p>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <label htmlFor="rejectionReason" className="text-sm font-medium">
                           Alasan Penolakan <span className="text-red-500">*</span>
@@ -589,7 +613,7 @@ export default function TeacherDashboard(): React.JSX.Element {
                           Alasan ini akan ditampilkan kepada siswa
                         </p>
                       </div>
-                      
+
                       <div className="flex justify-end space-x-2 pt-4">
                         <Button
                           variant="outline"
@@ -627,7 +651,7 @@ export default function TeacherDashboard(): React.JSX.Element {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* Certificate Preview Modal */}
       <Dialog open={showCertificatePreview} onOpenChange={setShowCertificatePreview}>
         <DialogContent className="sm:max-w-4xl h-[90vh] overflow-y-auto">
@@ -640,7 +664,7 @@ export default function TeacherDashboard(): React.JSX.Element {
                 <div id="certificate-preview-container">
                   <Certificate data={certificateData} />
                 </div>
-                
+
                 <div className="flex justify-center space-x-4 mt-6">
                   <Button 
                     onClick={() => {
@@ -655,7 +679,7 @@ export default function TeacherDashboard(): React.JSX.Element {
                   >
                     SKL Tanpa Nilai
                   </Button>
-                  
+
                   <Button 
                     onClick={() => {
                       const student = students?.find(s => s.id === certificateData.id);
@@ -670,7 +694,7 @@ export default function TeacherDashboard(): React.JSX.Element {
                     SKL Dengan Nilai
                   </Button>
                 </div>
-                
+
                 <div className="flex justify-center mt-4">
                   <Button 
                     onClick={handleDownloadCertificate}
