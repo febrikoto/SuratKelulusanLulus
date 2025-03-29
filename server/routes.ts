@@ -8,7 +8,8 @@ import fs from "fs";
 import os from "os";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertStudentSchema, verificationSchema, insertGradeSchema, insertSettingsSchema, insertSubjectSchema } from "@shared/schema";
+import { insertStudentSchema, verificationSchema, insertGradeSchema, insertSettingsSchema, insertSubjectSchema, users } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { CertificateData, SubjectGrade } from "@shared/types";
 import { generateCertificatePDF } from "./certificate-generator"; 
 import { formatDate } from "../client/src/lib/utils";
@@ -772,6 +773,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Gagal menghapus mata pelajaran" });
     }
   });
+  
+  // Get all teachers
+  app.get("/api/teachers", requireRole(["admin"]), async (req, res) => {
+    try {
+      // Query users with role 'guru'
+      const result = await storage.db.select()
+        .from(users)
+        .where(eq(users.role, 'guru'));
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching teachers:", error);
+      res.status(500).json({ message: "Gagal mengambil data guru" });
+    }
+  });
 
   // Bulk import subjects from Excel/CSV
   app.post("/api/subjects/import", requireRole(["admin"]), upload.single('file'), async (req, res) => {
@@ -1127,6 +1143,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, hasSeenWelcome: updatedUser.hasSeenWelcome });
     } catch (error) {
       res.status(500).json({ message: "Failed to update welcome status" });
+    }
+  });
+  
+  // Update user API
+  app.patch("/api/users/:id", requireRole(["admin"]), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const allowedFields = ["fullName", "assignedMajor"];
+      const updates: Record<string, any> = {};
+      
+      // Only allow updating specific fields
+      for (const field of allowedFields) {
+        if (field in req.body) {
+          updates[field] = req.body[field];
+        }
+      }
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+      
+      const updatedUser = await storage.updateUser(userId, updates);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+  
+  // Get teachers list
+  app.get("/api/teachers", requireRole(["admin"]), async (req, res) => {
+    try {
+      // Find all users
+      const allUsers = await Promise.all(
+        Array.from({ length: 100 }).map((_, id) => storage.getUser(id + 1))
+      );
+      
+      // Filter users with role 'guru' and remove undefined users
+      const teachers = allUsers
+        .filter(user => user && user.role === 'guru')
+        .filter(Boolean) as Express.User[];
+      
+      res.json(teachers);
+    } catch (error) {
+      console.error("Error fetching teachers:", error);
+      res.status(500).json({ message: "Gagal mengambil data guru" });
     }
   });
 

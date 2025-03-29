@@ -63,5 +63,6 @@ export interface UserInfo {
   fullName: string;
   role: 'admin' | 'guru' | 'siswa';
   studentId?: number;
+  assignedMajor?: string; // Jurusan yang diampu oleh guru
   hasSeenWelcome?: boolean;
 }

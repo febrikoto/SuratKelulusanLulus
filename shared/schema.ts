@@ -31,8 +31,8 @@ export const settings = pgTable("settings", {
   graduationTime: varchar("graduation_time", { length: 20 }).default(""),
   cityName: varchar("city_name", { length: 100 }).default(""),
   provinceName: varchar("province_name", { length: 100 }).default(""),
-  majorList: text("major_list").default("semua,MIPA,IPS,BAHASA"),
-  classList: text("class_list").default("XII IPA 1,XII IPA 2,XII IPS 1,XII IPS 2"),
+  majorList: text("major_list").default("semua,TKJ,MM,AK,RPL,TKR,TBSM,BDP,OTKP"),
+  classList: text("class_list").default("XII TKJ 1,XII TKJ 2,XII MM 1,XII MM 2,XII AK 1,XII AK 2,XII RPL 1,XII RPL 2"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
@@ -46,6 +46,7 @@ export const students = pgTable("students", {
   birthDate: varchar("birth_date", { length: 20 }).notNull(),
   parentName: varchar("parent_name", { length: 100 }).notNull(),
   className: varchar("class_name", { length: 20 }).notNull(),
+  major: varchar("major", { length: 50 }).default(""), // Jurusan siswa (TKJ, MM, AK, dll)
   status: varchar("status", { length: 20 }).notNull().default("pending"),
   verifiedBy: integer("verified_by").references(() => users.id),
   verificationDate: timestamp("verification_date"),
@@ -61,6 +62,7 @@ export const users = pgTable("users", {
   fullName: varchar("full_name", { length: 100 }).notNull(),
   role: userRoleEnum("role").notNull().default("siswa"),
   studentId: integer("student_id").references(() => students.id),
+  assignedMajor: text("assigned_major").default(""), // Jurusan yang diampu (untuk role guru)
   hasSeenWelcome: boolean("has_seen_welcome").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -122,8 +124,8 @@ export const insertSettingsSchema = createInsertSchema(settings)
     graduationTime: z.string().optional().default(""),
     cityName: z.string().optional().default(""),
     provinceName: z.string().optional().default(""),
-    majorList: z.string().optional().default("semua,MIPA,IPS,BAHASA"),
-    classList: z.string().optional().default("XII IPA 1,XII IPA 2,XII IPS 1,XII IPS 2")
+    majorList: z.string().optional().default("semua,TKJ,MM,AK,RPL,TKR,TBSM,BDP,OTKP"),
+    classList: z.string().optional().default("XII TKJ 1,XII TKJ 2,XII MM 1,XII MM 2,XII AK 1,XII AK 2,XII RPL 1,XII RPL 2")
   });
 
 export const insertGradeSchema = createInsertSchema(grades).omit({

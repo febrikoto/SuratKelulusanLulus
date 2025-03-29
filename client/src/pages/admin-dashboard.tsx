@@ -25,7 +25,8 @@ import {
   BookOpen,
   DatabaseIcon,
   FileDown,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +56,8 @@ import GradeImportModal from '@/components/modals/GradeImportModal';
 import SchoolSettingsModal from '@/components/modals/SchoolSettingsModal';
 import CertificateSettingsModal from '@/components/modals/CertificateSettingsModal';
 import BulkDeleteModal from '@/components/modals/BulkDeleteModal';
+import { TeacherManagementTable } from '@/components/TeacherManagementTable';
+import { EditTeacherModal } from '@/components/modals/EditTeacherModal';
 
 export default function AdminDashboard() {
   const { user: authUser, updateWelcomeStatus } = useAuth();
@@ -291,6 +294,25 @@ export default function AdminDashboard() {
             >
               <BookOpen className="mr-2 h-4 w-4" />
               Mata Pelajaran
+            </Button>
+            
+            <Button 
+              onClick={() => {
+                const section = document.getElementById('teacher-management-section');
+                if (section) {
+                  section.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  toast({
+                    title: "Info",
+                    description: "Sedang memuat pengelolaan guru..."
+                  });
+                }
+              }}
+              variant="outline"
+              className="border-indigo-500 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+            >
+              <Users className="mr-2 h-4 w-4" />
+              Kelola Guru
             </Button>
             
             <Button 
@@ -824,6 +846,19 @@ export default function AdminDashboard() {
         isOpen={showBulkDeleteModal}
         onClose={() => setShowBulkDeleteModal(false)}
       />
+      
+      {/* Teacher Management Section */}
+      <Card className="mb-6 mt-10" id="teacher-management-section">
+        <CardHeader>
+          <CardTitle>Pengelolaan Guru</CardTitle>
+          <CardDescription>
+            Kelola data guru dan pembagian jurusan yang diampu
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TeacherManagementTable settings={schoolSettings} />
+        </CardContent>
+      </Card>
       
       {/* Edit Student Modal */}
       <EditStudentModal
