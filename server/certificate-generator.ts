@@ -603,7 +603,7 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
         try {
           // Posisikan QR code tepat di atas nama kepala sekolah dengan ukuran lebih kecil
           const qrX = signatureX;  // Posisi X sama dengan posisi nama kepala sekolah
-          const qrY = y + 40;  // Posisi Y sejajar dengan posisi tanda tangan biasa
+          const qrY = y + 15;  // Posisi Y lebih tinggi untuk menciptakan jarak dengan tanda tangan (diubah dari 40 ke 15)
           doc.image(qrCodeBuffer, qrX, qrY, { width: 80 }); // Ukuran diperkecil menjadi 80
           
           // Tambahkan teks "TTE" di bawah QR

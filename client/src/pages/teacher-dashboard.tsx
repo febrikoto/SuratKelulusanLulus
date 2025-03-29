@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Student } from '@shared/schema';
 import { DashboardStats, UserInfo, CertificateData } from '@shared/types';
-import { Loader2, Search, Eye, CheckCircle, XCircle, Download } from 'lucide-react';
+import { Loader2, Search, Eye, CheckCircle, XCircle, Download, LayoutDashboard, GraduationCap, BookText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -22,6 +22,7 @@ import TeacherHeader from '@/components/TeacherHeader';
 import { Certificate } from '@/components/Certificate';
 import WelcomeAnimation from '@/components/WelcomeAnimation';
 import { prepareCertificateData } from '@/lib/utils.tsx';
+import { AnimatedTabs, AnimatedTabsList, AnimatedTabsTrigger, AnimatedTabsContent } from '@/components/ui/animated-tabs';
 
 // Added LoadingScreen component -  This is an assumption based on the context.
 const LoadingScreen = ({ message, minDelay = 300 }: { message: string; minDelay?: number }) => {
@@ -61,6 +62,7 @@ export default function TeacherDashboard(): React.JSX.Element {
   const [certificateData, setCertificateData] = useState<CertificateData | null>(null);
   const [showGrades, setShowGrades] = useState(false);
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -251,152 +253,249 @@ export default function TeacherDashboard(): React.JSX.Element {
           <h2 className="text-xl md:text-2xl font-semibold">Dashboard Guru</h2>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4 flex items-center">
-              <div className="p-3 rounded-full bg-yellow-500 bg-opacity-10 text-yellow-500 mr-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Menunggu Verifikasi</p>
-                {statsLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <p className="text-2xl font-semibold">{stats?.pendingStudents || 0}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+        <AnimatedTabs value={activeTab} onValueChange={setActiveTab}>
+          <AnimatedTabsList className="mb-6">
+            <AnimatedTabsTrigger 
+              value="dashboard" 
+              icon={<LayoutDashboard className="w-4 h-4" />}
+              activeColor="bg-blue-500">
+              Dashboard
+            </AnimatedTabsTrigger>
+            <AnimatedTabsTrigger 
+              value="nilai" 
+              icon={<GraduationCap className="w-4 h-4" />}
+              activeColor="bg-green-500">
+              Nilai
+            </AnimatedTabsTrigger>
+            <AnimatedTabsTrigger 
+              value="mata-pelajaran" 
+              icon={<BookText className="w-4 h-4" />}
+              activeColor="bg-purple-500">
+              Mata Pelajaran
+            </AnimatedTabsTrigger>
+          </AnimatedTabsList>
+          
+          <AnimatedTabsContent value="dashboard">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <Card>
+                <CardContent className="p-4 flex items-center">
+                  <div className="p-3 rounded-full bg-yellow-500 bg-opacity-10 text-yellow-500 mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Menunggu Verifikasi</p>
+                    {statsLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <p className="text-2xl font-semibold">{stats?.pendingStudents || 0}</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="p-4 flex items-center">
-              <div className="p-3 rounded-full bg-green-500 bg-opacity-10 text-green-500 mr-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Sudah Diverifikasi</p>
-                {statsLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <p className="text-2xl font-semibold">{stats?.verifiedStudents || 0}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardContent className="p-4 flex items-center">
+                  <div className="p-3 rounded-full bg-green-500 bg-opacity-10 text-green-500 mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Sudah Diverifikasi</p>
+                    {statsLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <p className="text-2xl font-semibold">{stats?.verifiedStudents || 0}</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="p-4 flex items-center">
-              <div className="p-3 rounded-full bg-blue-500 bg-opacity-10 text-blue-500 mr-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Total Siswa</p>
-                {statsLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <p className="text-2xl font-semibold">{stats?.totalStudents || 0}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Student Verification Table */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Verifikasi Data Siswa</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex mb-4">
-              <div className="relative w-full">
-                <Input
-                  placeholder="Cari siswa..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
-                </div>
-              </div>
+              <Card>
+                <CardContent className="p-4 flex items-center">
+                  <div className="p-3 rounded-full bg-blue-500 bg-opacity-10 text-blue-500 mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Total Siswa</p>
+                    {statsLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <p className="text-2xl font-semibold">{stats?.totalStudents || 0}</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
-            {studentsLoading ? (
-              <div className="flex justify-center p-10">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              </div>
-            ) : filteredStudents.length === 0 ? (
-              <div className="text-center py-10 text-gray-500">
-                {searchTerm 
-                  ? "Tidak ada data siswa yang sesuai dengan pencarian" 
-                  : "Tidak ada siswa yang menunggu verifikasi"}
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>NISN</TableHead>
-                      <TableHead>Nama Siswa</TableHead>
-                      <TableHead>Kelas</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredStudents.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell>{student.nisn}</TableCell>
-                        <TableCell>{student.fullName}</TableCell>
-                        <TableCell>{student.className}</TableCell>
-                        <TableCell>
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                            Menunggu Verifikasi
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => viewStudentDetails(student.id)}
-                              title="Lihat Detail"
-                            >
-                              <Eye className="h-4 w-4 text-blue-600" />
+            {/* Student Verification Table */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Verifikasi Data Siswa</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex mb-4">
+                  <div className="relative w-full">
+                    <Input
+                      placeholder="Cari siswa..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Search className="h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
+                </div>
+
+                {studentsLoading ? (
+                  <div className="flex justify-center p-10">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                  </div>
+                ) : filteredStudents.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500">
+                    {searchTerm 
+                      ? "Tidak ada data siswa yang sesuai dengan pencarian" 
+                      : "Tidak ada siswa yang menunggu verifikasi"}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>NISN</TableHead>
+                          <TableHead>Nama Siswa</TableHead>
+                          <TableHead>Kelas</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Aksi</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredStudents.map((student) => (
+                          <TableRow key={student.id}>
+                            <TableCell>{student.nisn}</TableCell>
+                            <TableCell>{student.fullName}</TableCell>
+                            <TableCell>{student.className}</TableCell>
+                            <TableCell>
+                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                Menunggu Verifikasi
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => viewStudentDetails(student.id)}
+                                  title="Lihat Detail"
+                                >
+                                  <Eye className="h-4 w-4 text-blue-600" />
+                                </Button>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  className="bg-green-500 hover:bg-green-600"
+                                  onClick={() => openVerificationModal(student.id)}
+                                >
+                                  Verifikasi
+                                </Button>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  className="bg-red-500 hover:bg-red-600"
+                                  onClick={() => openRejectionModal(student.id)}
+                                >
+                                  Tolak
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </AnimatedTabsContent>
+          
+          <AnimatedTabsContent value="nilai">
+            <Card>
+              <CardHeader>
+                <CardTitle>Daftar Nilai</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-10">
+                  <h3 className="text-lg font-semibold mb-2">Pengelolaan Nilai Siswa</h3>
+                  <p className="text-gray-500 mb-6">Di sini Anda dapat mengelola nilai siswa berdasarkan kelas dan mata pelajaran.</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {students && students.filter(student => student.status === 'verified').length > 0 ? (
+                      students.filter(student => student.status === 'verified').slice(0, 3).map(student => (
+                        <Card key={student.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <p className="font-semibold">{student.fullName}</p>
+                            <p className="text-sm text-gray-500">NISN: {student.nisn}</p>
+                            <p className="text-sm text-gray-500">Kelas: {student.className}</p>
+                            <Button className="w-full mt-3" variant="outline" size="sm"
+                              onClick={() => viewStudentDetails(student.id)}>
+                              Lihat Detail
                             </Button>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="bg-green-500 hover:bg-green-600"
-                              onClick={() => openVerificationModal(student.id)}
-                            >
-                              Verifikasi
-                            </Button>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="bg-red-500 hover:bg-red-600"
-                              onClick={() => openRejectionModal(student.id)}
-                            >
-                              Tolak
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <div className="col-span-3 p-8 text-center bg-gray-50 rounded-lg">
+                        <p className="text-gray-500">
+                          Tidak ada siswa yang sudah diverifikasi. Verifikasi siswa terlebih dahulu untuk mengelola nilai.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </AnimatedTabsContent>
+          
+          <AnimatedTabsContent value="mata-pelajaran">
+            <Card>
+              <CardHeader>
+                <CardTitle>Mata Pelajaran</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-10">
+                  <h3 className="text-lg font-semibold mb-2">Daftar Mata Pelajaran</h3>
+                  <p className="text-gray-500 mb-6">Di sini Anda dapat melihat dan mengelola daftar mata pelajaran untuk siswa.</p>
+                  
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Kode</TableHead>
+                          <TableHead>Mata Pelajaran</TableHead>
+                          <TableHead>Kelompok</TableHead>
+                          <TableHead>Jurusan</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8">
+                            <p className="text-gray-500">Data mata pelajaran belum tersedia</p>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </AnimatedTabsContent>
+        </AnimatedTabs>
       </div>
 
       {/* Student Detail Modal */}
