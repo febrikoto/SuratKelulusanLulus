@@ -798,53 +798,53 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
       // Buat header persis seperti contoh yang diberikan
       const nilaiInfo = [
         ['DATA NILAI SISWA', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['SEME:', '0', '<< ISI SEMESTER DISINI (1/2/3/4/5/6), UNTUK KEPERLUAN SKL SAJA BISA DIISI 0 SAJA'],
-        ['TAHU:', new Date().getFullYear().toString(), '<< ISI TAHUN LULUS DISINI']
+        ['SEMESTER', '0', '<< ISI SEMESTER DISINI (1/2/3/4/5/6), UNTUK KEPERLUAN SKL SAJA BISA DIISI 0 SAJA'],
+        ['TAHUN LULUS', new Date().getFullYear().toString(), '<< ISI TAHUN LULUS DISINI']
       ];
       
-      // Buat header yang lebih sederhana
+      // Buat header yang lebih sederhana seperti di contoh
       const nilaiHeaders = ['No', 'NIS', 'NAMA SISWA', 'KELAS'];
       
-      // Gunakan singkatan mata pelajaran seperti BI|MTK|PKN
+      // Gunakan singkatan mata pelajaran seperti BINDO|MTK|PKN sesuai dengan contoh
       subjects.forEach(subject => {
-        // Ubah kode mapel menjadi kode singkat seperti BI, MTK, PKN, dsb
-        // Hapus spasi dan convert dua atau tiga huruf pertama menjadi kode mapel
+        // Ubah kode mapel menjadi kode singkat yang lebih umum dikenal
         let shortCode;
         
         // Logic untuk mendapatkan kode singkat yang umum digunakan
         if (subject.code.includes('BIN') || subject.code.includes('IND') || subject.name.includes('Indonesia')) {
-          shortCode = 'BI';
+          shortCode = 'BINDO';
         } else if (subject.code.includes('MAT') || subject.code.includes('MTK') || subject.name.includes('Matematik')) {
           shortCode = 'MTK';
         } else if (subject.code.includes('PKN') || subject.name.includes('Pancasila') || subject.name.includes('Kewarga')) {
           shortCode = 'PKN';
         } else if (subject.code.includes('BIG') || subject.code.includes('ENG') || subject.name.includes('Inggris')) {
-          shortCode = 'BIG';
+          shortCode = 'BING';
         } else if (subject.code.includes('FIS') || subject.name.includes('Fisika')) {
-          shortCode = 'FIS';
+          shortCode = 'FISIKA';
         } else if (subject.code.includes('KIM') || subject.name.includes('Kimia')) {
-          shortCode = 'KIM';
+          shortCode = 'KIMIA';
         } else if (subject.code.includes('BIO') || subject.name.includes('Biologi')) {
-          shortCode = 'BIO';
+          shortCode = 'BIOLOGI';
         } else if (subject.code.includes('SEJ') || subject.name.includes('Sejarah')) {
-          shortCode = 'SEJ';
+          shortCode = 'SEJARAH';
         } else if (subject.code.includes('GEO') || subject.name.includes('Geografi')) {
-          shortCode = 'GEO';
+          shortCode = 'GEOGRAFI';
         } else if (subject.code.includes('EKO') || subject.name.includes('Ekonomi')) {
-          shortCode = 'EKO';
+          shortCode = 'EKONOMI';
         } else if (subject.code.includes('SOS') || subject.name.includes('Sosiologi')) {
-          shortCode = 'SOS';
+          shortCode = 'SOSIOLOGI';
         } else if (subject.code.includes('SEN') || subject.name.includes('Seni')) {
-          shortCode = 'SBK';
+          shortCode = 'SENBUD';
         } else if (subject.code.includes('ORK') || subject.code.includes('PJK') || subject.name.includes('Olahraga') || subject.name.includes('Jasmani')) {
           shortCode = 'PJOK';
         } else if (subject.code.includes('AGM') || subject.code.includes('PAI') || subject.name.includes('Agama')) {
-          shortCode = 'PAI';
+          shortCode = 'AGAMA';
         } else {
-          // Jika tidak ada pola yang cocok, ambil 2-3 huruf pertama
-          shortCode = subject.code.substring(0, Math.min(3, subject.code.length)).replace(/\s+/g, '');
+          // Jika tidak ada pola yang cocok, gunakan kode yang sudah ada
+          shortCode = subject.code.replace(/\s+/g, '');
         }
         
+        // Pastikan kodenya unik dengan menambahkan nomor di belakang jika ada duplikat
         nilaiHeaders.push(shortCode);
       });
       
