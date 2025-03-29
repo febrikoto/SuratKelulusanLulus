@@ -1309,14 +1309,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       ws['!cols'] = colWidths;
       
-      // Add comments/notes to cells
-      ws.A1.c = [{ a: "Guru", t: "NISN harus 10 digit angka" }];
-      ws.B1.c = [{ a: "Guru", t: "NIS harus diisi, minimal 3 karakter" }];
-      ws.C1.c = [{ a: "Guru", t: "Nama lengkap siswa" }];
-      ws.D1.c = [{ a: "Guru", t: "Tempat lahir siswa" }];
-      ws.E1.c = [{ a: "Guru", t: "Format tanggal: YYYY-MM-DD (tahun-bulan-tanggal)" }];
-      ws.F1.c = [{ a: "Guru", t: "Nama orang tua/wali siswa" }];
-      ws.G1.c = [{ a: "Guru", t: "Kelas siswa, sudah terisi otomatis" }];
+      // Add comments/notes to cells - Menggunakan format cell address (A1, B1, etc.)
+      if (!ws.A1) ws.A1 = {};
+      if (!ws.B1) ws.B1 = {};
+      if (!ws.C1) ws.C1 = {};
+      if (!ws.D1) ws.D1 = {};
+      if (!ws.E1) ws.E1 = {};
+      if (!ws.F1) ws.F1 = {};
+      if (!ws.G1) ws.G1 = {};
+      
+      // Menambahkan keterangan menggunakan metadata di workbook
+      const comments = {
+        A1: { text: "NISN harus 10 digit angka", author: "Petunjuk" },
+        B1: { text: "NIS harus diisi, minimal 3 karakter", author: "Petunjuk" },
+        C1: { text: "Nama lengkap siswa", author: "Petunjuk" },
+        D1: { text: "Tempat lahir siswa", author: "Petunjuk" },
+        E1: { text: "Format tanggal: YYYY-MM-DD (tahun-bulan-tanggal)", author: "Petunjuk" },
+        F1: { text: "Nama orang tua/wali siswa", author: "Petunjuk" },
+        G1: { text: "Kelas siswa, sudah terisi otomatis", author: "Petunjuk" }
+      };
+      
+      // Menambahkan comments ke worksheet
+      if (!ws.comments) ws.comments = [];
+      for (const [cellAddr, comment] of Object.entries(comments)) {
+        ws.comments.push({ 
+          ref: cellAddr, 
+          author: comment.author,
+          text: comment.text
+        });
+      }
+      
+      // Membuat deskripsi di baris pertama
+      ws.A4 = { t: "s", v: "PETUNJUK:" };
+      ws.A5 = { t: "s", v: "1. Baris 1 berisi header, jangan diubah" };
+      ws.A6 = { t: "s", v: "2. Baris 2 berisi contoh data, boleh diubah" };
+      ws.A7 = { t: "s", v: "3. Baris 3 dan seterusnya untuk data baru" };
+      ws.A8 = { t: "s", v: "4. Pastikan format tanggal adalah YYYY-MM-DD (tahun-bulan-tanggal)" };
+      ws.A9 = { t: "s", v: "5. NISN wajib 10 digit angka" };
       
       // Add worksheet to workbook
       XLSX.utils.book_append_sheet(wb, ws, "Data Siswa");
