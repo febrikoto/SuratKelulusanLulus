@@ -49,6 +49,7 @@ import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/u
 import AdminHeader from '@/components/AdminHeader';
 import { Certificate } from '@/components/Certificate';
 import AddStudentModal from '@/components/modals/AddStudentModal';
+import EditStudentModal from '@/components/modals/EditStudentModal';
 import GradesModal from '@/components/modals/GradesModal';
 import GradeImportModal from '@/components/modals/GradeImportModal';
 import SchoolSettingsModal from '@/components/modals/SchoolSettingsModal';
@@ -172,6 +173,14 @@ export default function AdminDashboard() {
   const viewStudentDetails = (id: number) => {
     setSelectedStudentId(id);
     setShowStudentDetailModal(true);
+  };
+  
+  // Untuk modal edit siswa
+  const [showEditStudentModal, setShowEditStudentModal] = useState(false);
+  
+  const editStudent = (id: number) => {
+    setSelectedStudentId(id);
+    setShowEditStudentModal(true);
   };
   
   const generateCertificate = (student: Student) => {
@@ -496,6 +505,14 @@ export default function AdminDashboard() {
                             >
                               <Eye className="h-4 w-4 text-blue-600" />
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => editStudent(student.id)}
+                              title="Edit Data"
+                            >
+                              <PencilLine className="h-4 w-4 text-orange-600" />
+                            </Button>
                             {student.status === 'verified' && (
                               <Button
                                 variant="ghost"
@@ -806,6 +823,13 @@ export default function AdminDashboard() {
       <BulkDeleteModal
         isOpen={showBulkDeleteModal}
         onClose={() => setShowBulkDeleteModal(false)}
+      />
+      
+      {/* Edit Student Modal */}
+      <EditStudentModal
+        isOpen={showEditStudentModal}
+        onClose={() => setShowEditStudentModal(false)}
+        studentId={selectedStudentId}
       />
       
       {/* Hidden certificate for PDF generation */}

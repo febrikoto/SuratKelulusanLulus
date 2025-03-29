@@ -148,6 +148,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update student" });
     }
   });
+  
+  // Endpoint PATCH untuk edit student (sama dengan PUT tetapi lebih REST standard)
+  app.patch("/api/students/:id", requireRole(["admin"]), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid student ID" });
+      }
+
+      const validation = insertStudentSchema.partial().safeParse(req.body);
+
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid student data", 
+          errors: validation.error.errors 
+        });
+      }
+
+      const updatedStudent = await storage.updateStudent(id, req.body);
+      if (!updatedStudent) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+
+      res.json(updatedStudent);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update student" });
+    }
+  });
 
   app.delete("/api/students/:id", requireRole(["admin"]), async (req, res) => {
     try {
