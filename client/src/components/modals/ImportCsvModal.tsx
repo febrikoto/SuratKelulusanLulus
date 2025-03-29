@@ -186,6 +186,7 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({ isOpen, onClose 
                   onDragOver={handleDrag}
                   onDragLeave={handleDrag}
                   onDrop={handleDrop}
+                  onClick={() => inputRef.current?.click()}
                 >
                   <input 
                     type="file" 
@@ -195,7 +196,7 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({ isOpen, onClose 
                     accept=".csv,.xlsx"
                     onChange={handleFileChange} 
                   />
-                  <label htmlFor="csvFile" className="cursor-pointer block">
+                  <div className="cursor-pointer">
                     <Upload className="h-10 w-10 mx-auto text-gray-400 mb-2" />
                     
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Klik untuk memilih file CSV atau Excel</p>
@@ -203,7 +204,7 @@ export const ImportCsvModal: React.FC<ImportCsvModalProps> = ({ isOpen, onClose 
                     <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                       <span className="font-semibold">Tips:</span> Gunakan template Excel untuk hasil terbaik
                     </p>
-                  </label>
+                  </div>
                   
                   {file && (
                     <div className="mt-2 text-sm text-primary font-medium flex items-center justify-center">
