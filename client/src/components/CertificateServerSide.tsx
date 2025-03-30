@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { CertificateLoading } from "@/components/CertificateLoading";
 import { useToast } from '@/hooks/use-toast';
+import { ConfettiCelebration } from "@/components/ConfettiCelebration";
 
 interface CertificateServerSideProps {
   studentId: number;
@@ -13,6 +14,7 @@ export const CertificateServerSide: React.FC<CertificateServerSideProps> = ({ st
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
   const { toast } = useToast();
   
   // Type for loading step status
@@ -76,6 +78,9 @@ export const CertificateServerSide: React.FC<CertificateServerSideProps> = ({ st
       
       updateStepStatus(2, 'success');
       
+      // Tampilkan konfeti
+      setShowConfetti(true);
+      
       // Successful toast
       toast({
         title: 'Berhasil!',
@@ -125,6 +130,12 @@ export const CertificateServerSide: React.FC<CertificateServerSideProps> = ({ st
           progress={(currentStep + 1) / loadingSteps.length * 100}
         />
       )}
+      
+      <ConfettiCelebration 
+        show={showConfetti} 
+        duration={4000}
+        onComplete={() => setShowConfetti(false)}
+      />
     </>
   );
 };
