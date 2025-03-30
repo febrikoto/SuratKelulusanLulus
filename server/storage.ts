@@ -631,26 +631,7 @@ export class MemStorage implements IStorage {
       count
     }));
   }
-  
-  async getDashboardStats(): Promise<DashboardStats> {
-    const students = Array.from(this.students.values());
-    
-    // Mendapatkan daftar kelas unik
-    const uniqueClasses = new Set<string>();
-    students.forEach(student => {
-      if (student.className && student.className.trim() !== '') {
-        uniqueClasses.add(student.className);
-      }
-    });
-    
-    return {
-      totalStudents: students.length,
-      verifiedStudents: students.filter(s => s.status === 'verified').length,
-      pendingStudents: students.filter(s => s.status === 'pending').length,
-      rejectedStudents: students.filter(s => s.status === 'rejected').length,
-      totalClasses: uniqueClasses.size
-    };
-  }
+  // Method getDashboardStats sudah diimplementasikan di atas
 
   async hashPassword(password: string): Promise<string> {
     const salt = randomBytes(16).toString("hex");
