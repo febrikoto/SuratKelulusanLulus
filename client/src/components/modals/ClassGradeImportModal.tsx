@@ -1101,7 +1101,7 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
   
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
-      <DialogContent className="sm:max-w-5xl">
+      <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Import Nilai Kelas</DialogTitle>
           <DialogDescription>
@@ -1109,7 +1109,7 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 flex-1 overflow-y-auto pr-1">
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 mb-3">
             <div className="flex items-start space-x-3">
               <Info className="h-5 w-5 text-blue-500 mt-0.5" />
@@ -1133,7 +1133,7 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Pilih kelas" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[180px] overflow-y-auto">
                   {classList.map((className: string) => (
                     <SelectItem key={className} value={className}>
                       {className}
@@ -1427,7 +1427,7 @@ const ClassGradeImportModal: React.FC<ClassGradeImportModalProps> = ({
           </div>
         )}
         
-        <DialogFooter>
+        <DialogFooter className="sticky bottom-0 bg-background pt-2 mt-auto">
           <Button
             variant="outline"
             onClick={handleCloseModal}
