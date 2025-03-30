@@ -1,0 +1,53 @@
+# Konfigurasi .htaccess untuk aplikasi SKL di Niagahoster
+# Redirect semua request ke aplikasi Node.js
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Jangan redirect file/direktori yang sudah ada
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    
+    # Redirect ke port 3000 (atau port lain yang digunakan Node.js)
+    # Catatan: Pastikan port ini sama dengan yang dikonfigurasi di Node.js app di Niagahoster
+    RewriteRule ^(.*)$ http://localhost:3000/$1 [P,L]
+    
+    # Alternatif redirect untuk beberapa konfigurasi server
+    # RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
+</IfModule>
+
+# Fallback jika mod_rewrite tidak tersedia
+<IfModule !mod_rewrite.c>
+    <Files ~ "\.(css|js|jpg|jpeg|png|gif|svg|ico|woff|woff2|ttf|eot)$">
+        Allow from all
+    </Files>
+    
+    # Redirect semua request ke aplikasi.js
+    FallbackResource /start.js
+</IfModule>
+
+# Pengaturan keamanan
+<IfModule mod_headers.c>
+    # Security headers
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    
+    # Cache static files
+    <FilesMatch "\.(ico|pdf|jpg|jpeg|png|gif|svg|js|css|swf|woff|woff2)$">
+        Header set Cache-Control "max-age=86400, public"
+    </FilesMatch>
+</IfModule>
+
+# Deny access to sensitive files
+<FilesMatch "^\.env|\.git|package-lock\.json|\.htaccess$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Paksa HTTPS
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
