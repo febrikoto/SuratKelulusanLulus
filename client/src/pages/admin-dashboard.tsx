@@ -476,6 +476,19 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
         
+        {/* Teacher Management Section */}
+        <Card className="mb-6" id="teacher-management-section">
+          <CardHeader>
+            <CardTitle>Pengelolaan Guru</CardTitle>
+            <CardDescription>
+              Kelola data guru dan pembagian jurusan yang diampu
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TeacherManagementTable settings={schoolSettings} />
+          </CardContent>
+        </Card>
+        
         {/* Student Data Table */}
         <Card className="mb-6">
           <CardHeader>
@@ -866,17 +879,7 @@ export default function AdminDashboard() {
       />
       
       {/* Teacher Management Section */}
-      <Card className="mb-6 mt-10" id="teacher-management-section">
-        <CardHeader>
-          <CardTitle>Pengelolaan Guru</CardTitle>
-          <CardDescription>
-            Kelola data guru dan pembagian jurusan yang diampu
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <TeacherManagementTable settings={schoolSettings} />
-        </CardContent>
-      </Card>
+      {/* Teacher Management Section sudah dipindahkan ke atas */}
       
       {/* Edit Student Modal */}
       <EditStudentModal
