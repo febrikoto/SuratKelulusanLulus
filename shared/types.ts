@@ -48,6 +48,7 @@ export interface DashboardStats {
   verifiedStudents: number;
   pendingStudents: number;
   rejectedStudents: number;
+  totalClasses: number;
 }
 
 export interface ToastProps {

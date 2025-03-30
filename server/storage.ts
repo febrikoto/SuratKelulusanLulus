@@ -4,7 +4,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import session from "express-session";
 import createMemoryStore from "memorystore";
-import { eq, and, sql, count } from "drizzle-orm";
+import { eq, and, sql, count, isNotNull as notNull, ne as not } from "drizzle-orm";
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import connectPg from "connect-pg-simple";
@@ -353,11 +353,24 @@ export class DatabaseStorage implements IStorage {
       .from(students)
       .where(eq(students.status, 'rejected'));
     
+    // Mendapatkan jumlah kelas unik dengan menggunakan SQL distinct count
+    const classesQuery = await this.db.selectDistinct({ className: students.className })
+      .from(students)
+      .where(
+        and(
+          notNull(students.className),
+          not(eq(students.className, ''))
+        )
+      );
+    
+    const totalClasses = classesQuery.length;
+    
     return {
       totalStudents: Number(totalStudents[0].count),
       verifiedStudents: Number(verifiedStudents[0].count),
       pendingStudents: Number(pendingStudents[0].count),
-      rejectedStudents: Number(rejectedStudents[0].count)
+      rejectedStudents: Number(rejectedStudents[0].count),
+      totalClasses
     };
   }
 
@@ -627,11 +640,20 @@ export class MemStorage implements IStorage {
   async getDashboardStats(): Promise<DashboardStats> {
     const students = Array.from(this.students.values());
     
+    // Mendapatkan daftar kelas unik
+    const uniqueClasses = new Set<string>();
+    students.forEach(student => {
+      if (student.className && student.className.trim() !== '') {
+        uniqueClasses.add(student.className);
+      }
+    });
+    
     return {
       totalStudents: students.length,
       verifiedStudents: students.filter(s => s.status === 'verified').length,
       pendingStudents: students.filter(s => s.status === 'pending').length,
-      rejectedStudents: students.filter(s => s.status === 'rejected').length
+      rejectedStudents: students.filter(s => s.status === 'rejected').length,
+      totalClasses: uniqueClasses.size
     };
   }
 
