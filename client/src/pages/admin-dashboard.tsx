@@ -573,11 +573,11 @@ export default function AdminDashboard() {
       
       {/* Import Excel Modal */}
       <Dialog open={showImportCsvModal} onOpenChange={setShowImportCsvModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Import Data Siswa dari Excel</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-4 flex-1 overflow-y-auto pr-1">
             <p className="text-sm text-gray-500 mb-4">
               Silahkan unduh template Excel untuk kelas yang diperlukan, isi data siswa dan upload kembali.
             </p>
