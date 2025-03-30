@@ -69,10 +69,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
 
+  // Cache untuk statistik dashboard
+  let cachedDashboardStats: any = null;
+  let dashboardStatsCacheTime = 0;
+  const DASHBOARD_CACHE_TTL = 5 * 60 * 1000; // 5 menit dalam milidetik
+  
+  // Fungsi untuk mendapatkan statistik dashboard dengan caching
+  async function getDashboardStatsWithCache() {
+    // Periksa apakah cache masih valid
+    if (cachedDashboardStats && (Date.now() - dashboardStatsCacheTime < DASHBOARD_CACHE_TTL)) {
+      return cachedDashboardStats;
+    }
+    
+    // Jika tidak, ambil data baru dari penyimpanan
+    const stats = await storage.getDashboardStats();
+    
+    // Perbarui cache
+    cachedDashboardStats = stats;
+    dashboardStatsCacheTime = Date.now();
+    
+    return stats;
+  }
+  
   // Dashboard statistics
   app.get("/api/dashboard", requireAuth, async (req, res) => {
     try {
-      const stats = await storage.getDashboardStats();
+      const stats = await getDashboardStatsWithCache();
       res.json(stats);
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
@@ -83,13 +105,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Alias for dashboard statistics to maintain compatibility with frontend
   app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
     try {
-      const stats = await storage.getDashboardStats();
+      const stats = await getDashboardStatsWithCache();
       res.json(stats);
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
       res.status(500).json({ message: "Failed to fetch dashboard statistics" });
     }
   });
+  
+  // Fungsi untuk membatalkan cache dashboard 
+  // (akan dipanggil saat data siswa berubah)
+  function invalidateDashboardCache() {
+    cachedDashboardStats = null;
+    dashboardStatsCacheTime = 0;
+  }
 
   // Settings API endpoints
   app.get("/api/settings", async (req, res) => {
@@ -516,6 +545,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const newStudent = await storage.createStudent(req.body);
+      
+      // Invalidate dashboard cache karena data siswa berubah
+      invalidateDashboardCache();
+      
       res.status(201).json(newStudent);
     } catch (error) {
       res.status(500).json({ message: "Failed to create student" });
@@ -551,6 +584,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Student not found" });
       }
 
+      // Invalidate dashboard cache karena data siswa berubah
+      invalidateDashboardCache();
+
       res.json(updatedStudent);
     } catch (error) {
       res.status(500).json({ message: "Failed to update student" });
@@ -568,6 +604,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Student not found" });
       }
+      
+      // Invalidate dashboard cache karena data siswa berubah
+      invalidateDashboardCache();
 
       res.status(204).end();
     } catch (error) {
@@ -597,6 +636,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedStudent) {
         return res.status(404).json({ message: "Student not found" });
       }
+      
+      // Invalidate dashboard cache karena status verifikasi siswa berubah
+      invalidateDashboardCache();
 
       res.json(updatedStudent);
     } catch (error) {
@@ -1169,6 +1211,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           })
           .on('end', () => {
+            // Invalidate dashboard cache karena data siswa berubah
+            invalidateDashboardCache();
+            
             res.json({
               success: true,
               imported: results.length,
@@ -1191,6 +1236,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
+        // Invalidate dashboard cache karena data siswa berubah
+        invalidateDashboardCache();
+        
         res.json({
           success: true,
           imported: results.length,
