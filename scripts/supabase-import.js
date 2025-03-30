@@ -89,25 +89,52 @@ async function main() {
           const snakeCaseBatch = batch.map(record => {
             const snakeCaseRecord = {};
             Object.keys(record).forEach(key => {
-              const snakeKey = key.replace(/([A-Z])/g, "_$1").toLowerCase();
-              snakeCaseRecord[snakeKey] = record[key];
+              // Handle special case where key might already be snake_case
+              if (key.includes('_')) {
+                snakeCaseRecord[key] = record[key];
+              } else {
+                const snakeKey = key.replace(/([A-Z])/g, "_$1").toLowerCase();
+                snakeCaseRecord[snakeKey] = record[key];
+              }
             });
             return snakeCaseRecord;
           });
           
-          // Insert or update records
-          const { error } = await supabase
-            .from(tableName)
-            .upsert(snakeCaseBatch, { 
-              onConflict: 'id',
-              ignoreDuplicates: false
-            });
+          // Inspect the first record for debugging
+          if (index === 0) {
+            console.log(`Sample record for ${tableName}:`, JSON.stringify(snakeCaseBatch[0]).substring(0, 100) + '...');
+          }
           
-          if (error) {
-            console.error(`Error importing batch ${index+1}/${batches.length} for ${tableName}:`, error);
-          } else {
-            importedCount += batch.length;
-            console.log(`- Imported batch ${index+1}/${batches.length} (${importedCount}/${data.length} records)`);
+          // Log the request to debug
+          console.log(`Attempting to insert into table: ${tableName}`);
+          
+          try {
+            // Insert or update records
+            const { data: result, error } = await supabase
+              .from(tableName)
+              .upsert(snakeCaseBatch, { 
+                onConflict: 'id',
+                ignoreDuplicates: false
+              });
+            
+            if (error) {
+              console.error(`Error importing batch ${index+1}/${batches.length} for ${tableName}:`, JSON.stringify(error));
+              // If it's a permission error, let's try just logging in
+              if (error.code === 'PGRST301' || error.message?.includes('permission')) {
+                console.log('Trying to check auth status...');
+                const { data: authData, error: authError } = await supabase.auth.getUser();
+                if (authError) {
+                  console.error('Auth error:', JSON.stringify(authError));
+                } else {
+                  console.log('Auth status:', authData ? 'Authenticated' : 'Not authenticated');
+                }
+              }
+            } else {
+              importedCount += batch.length;
+              console.log(`- Imported batch ${index+1}/${batches.length} (${importedCount}/${data.length} records)`);
+            }
+          } catch (innerError) {
+            console.error(`Unexpected error when importing to ${tableName}:`, innerError);
           }
         } catch (batchError) {
           console.error(`Error processing batch ${index+1}/${batches.length} for ${tableName}:`, batchError);

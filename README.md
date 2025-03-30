@@ -118,6 +118,16 @@ Untuk restore database dari file backup:
 node scripts/import_database.js path/to/backup.json
 ```
 
+### Migrasi ke Supabase
+
+Untuk migrasi data dari database Postgres lokal ke Supabase, baca panduan lengkap di [docs/PANDUAN_IMPORT_SUPABASE.md](docs/PANDUAN_IMPORT_SUPABASE.md).
+
+Panduan ini mencakup:
+- Cara membuat skema database di Supabase
+- Cara mengimpor data melalui SQL Editor Supabase
+- Cara mengimpor data melalui API Supabase
+- Troubleshooting masalah umum migrasi
+
 ### Troubleshooting
 
 #### Masalah Koneksi Database
