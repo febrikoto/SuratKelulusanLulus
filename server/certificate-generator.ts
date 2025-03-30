@@ -129,51 +129,84 @@ export async function generateCertificatePDF(data: CertificateData, filePath: st
       // Header: logos & school name
       const headerY = 35;
       const headerHeight = 80;
+      let lineY = headerY + headerHeight;
       
-      // Logo Kementerian di kiri
-      if (data.ministryLogo) {
+      // Cek apakah menggunakan headerImage atau format teks
+      if (data.useHeaderImage && data.headerImage) {
         try {
-          doc.image(data.ministryLogo, doc.page.margins.left, headerY, {
-            width: 60
+          // Menggunakan gambar KOP surat
+          const headerWidth = doc.page.width - (doc.page.margins.left + doc.page.margins.right);
+          doc.image(data.headerImage, doc.page.margins.left, headerY, {
+            width: headerWidth,
+            align: 'center'
           });
-        } catch (e) {
-          console.error("Error loading ministry logo:", e);
-        }
-      }
-      
-      // Logo Sekolah di kanan
-      if (data.schoolLogo) {
-        try {
-          doc.image(data.schoolLogo, doc.page.width - doc.page.margins.right - 60, headerY, {
-            width: 60
-          });
-        } catch (e) {
-          console.error("Error loading school logo:", e);
-        }
-      }
-      
-      // Kop surat dengan teks (di tengah antara kedua logo)
-      doc.fontSize(11).font('Helvetica-Bold'); // Lebih kecil dari 13
-      addCenteredText(`PEMERINTAH PROVINSI ${data.provinceName.toUpperCase()}`, headerY);
-      addCenteredText('DINAS PENDIDIKAN', headerY + 14); // Jarak lebih kecil
-      addCenteredText(data.schoolName.toUpperCase(), headerY + 28, 12); // Lebih kecil dari 14
-      doc.fontSize(9).font('Helvetica'); // Lebih kecil dari 10
-      addCenteredText(`Jalan: ${data.schoolAddress}`, headerY + 42); // Jarak lebih kecil
-      
-      if (data.schoolEmail || data.schoolWebsite) {
-        let contactText = '';
-        if (data.schoolEmail) contactText += `E-mail: ${data.schoolEmail} `;
-        if (data.schoolEmail && data.schoolWebsite) contactText += ' - ';
-        if (data.schoolWebsite) contactText += `Website: ${data.schoolWebsite}`;
-        addCenteredText(contactText, headerY + 65);
-      }
 
+          // Tinggi header yang dinamis
+          const imgHeight = 100; // Perkiraan tinggi gambar
+          lineY = headerY + imgHeight;
+          
+        } catch (e) {
+          console.error("Error loading header image:", e);
+          // Fallback ke teks KOP jika gambar gagal dimuat
+          lineY = createTextHeader();
+        }
+      } else {
+        // Gunakan format teks untuk KOP surat
+        lineY = createTextHeader();
+      }
+      
       // Garis pemisah header
-      const lineY = headerY + headerHeight;
       doc.moveTo(doc.page.margins.left, lineY)
          .lineTo(doc.page.width - doc.page.margins.right, lineY)
          .lineWidth(2)
          .stroke();
+      
+      // Function untuk menampilkan KOP surat dalam format teks
+      function createTextHeader(): number {
+        // Logo Kementerian di kiri
+        if (data.ministryLogo) {
+          try {
+            doc.image(data.ministryLogo, doc.page.margins.left, headerY, {
+              width: 60
+            });
+          } catch (e) {
+            console.error("Error loading ministry logo:", e);
+          }
+        }
+        
+        // Logo Sekolah di kanan
+        if (data.schoolLogo) {
+          try {
+            doc.image(data.schoolLogo, doc.page.width - doc.page.margins.right - 60, headerY, {
+              width: 60
+            });
+          } catch (e) {
+            console.error("Error loading school logo:", e);
+          }
+        }
+        
+        // Kop surat dengan teks (di tengah antara kedua logo)
+        doc.fontSize(11).font('Helvetica-Bold'); // Lebih kecil dari 13
+        addCenteredText(`PEMERINTAH PROVINSI ${data.provinceName.toUpperCase()}`, headerY);
+        addCenteredText('DINAS PENDIDIKAN', headerY + 14); // Jarak lebih kecil
+        addCenteredText('CABANG DINAS WILAYAH VI', headerY + 28);
+        addCenteredText(data.schoolName.toUpperCase(), headerY + 42, 12); // Lebih kecil dari 14
+        
+        doc.fontSize(9).font('Helvetica'); // Lebih kecil dari 10
+        addCenteredText(`Jalan: ${data.schoolAddress}`, headerY + 56); // Jarak lebih kecil
+        
+        let contactY = headerY + 70;
+        if (data.schoolEmail || data.schoolWebsite) {
+          let contactText = '';
+          if (data.schoolEmail) contactText += `E-mail: ${data.schoolEmail} `;
+          if (data.schoolEmail && data.schoolWebsite) contactText += ' - ';
+          if (data.schoolWebsite) contactText += `Website: ${data.schoolWebsite}`;
+          addCenteredText(contactText, contactY);
+          contactY += 14; // Tambahkan jarak jika ada teks kontak
+        }
+        
+        return headerY + headerHeight + 15; // Garis pemisah sedikit lebih ke bawah
+      }
 
       // Title
       const titleY = lineY + 20; // Lebih kecil dari 30

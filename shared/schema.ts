@@ -19,6 +19,8 @@ export const settings = pgTable("settings", {
   headmasterSignature: text("headmaster_signature").default(""),
   schoolStamp: text("school_stamp").default(""),
   useDigitalSignature: boolean("use_digital_signature").default(true), // Pilihan untuk menggunakan TTE atau TTD biasa
+  headerImage: text("header_image").default(""), // Gambar KOP surat
+  useHeaderImage: boolean("use_header_image").default(false), // Pilihan untuk menggunakan KOP gambar atau teks
   certHeader: varchar("cert_header", { length: 200 }).notNull().default("SURAT KETERANGAN LULUS"),
   certFooter: text("cert_footer").notNull().default("Surat ini berlaku sebagai bukti kelulusan sampai ijazah diterbitkan."),
   certBeforeStudentData: text("cert_before_student_data").notNull().default("Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:"),
@@ -113,6 +115,8 @@ export const insertSettingsSchema = createInsertSchema(settings)
     headmasterSignature: z.string().optional().default(""),
     schoolStamp: z.string().optional().default(""),
     useDigitalSignature: z.boolean().optional().default(true),
+    headerImage: z.string().optional().default(""),
+    useHeaderImage: z.boolean().optional().default(false),
     certHeader: z.string().optional().default("SURAT KETERANGAN LULUS"),
     certFooter: z.string().optional().default("Surat ini berlaku sebagai bukti kelulusan sampai ijazah diterbitkan."),
     certBeforeStudentData: z.string().optional().default("Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:"),

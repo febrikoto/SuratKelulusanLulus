@@ -1128,6 +1128,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update settings" });
     }
   });
+  
+  // Endpoint untuk menghapus gambar (logo, stempel, ttd, kop)
+  app.delete("/api/settings/image/:type", requireRole(["admin"]), async (req, res) => {
+    try {
+      const { type } = req.params;
+      
+      // Validasi tipe gambar yang bisa dihapus
+      const validImageTypes = ['schoolLogo', 'ministryLogo', 'headmasterSignature', 'schoolStamp', 'headerImage'];
+      if (!validImageTypes.includes(type)) {
+        return res.status(400).json({ message: "Invalid image type" });
+      }
+      
+      // Dapatkan settings saat ini
+      const settings = await storage.getSettings();
+      if (!settings) {
+        return res.status(404).json({ message: "Settings not found" });
+      }
+      
+      // Buat objek update dengan nilai gambar yang dihapus (string kosong)
+      const updateData = { [type]: '' } as any;
+      
+      // Jika yang dihapus adalah headerImage, nonaktifkan penggunaannya
+      if (type === 'headerImage') {
+        updateData.useHeaderImage = false;
+      }
+      
+      const updatedSettings = await storage.updateSettings(updateData);
+      
+      // Invalidate settings cache
+      cachedSettings = updatedSettings;
+      settingsCacheTime = Date.now();
+      
+      res.json(updatedSettings);
+    } catch (error) {
+      console.error("Delete image error:", error);
+      res.status(500).json({ message: "Failed to delete image" });
+    }
+  });
 
   // Welcome animation status endpoint
   app.post("/api/user/welcome-status", requireAuth, async (req, res) => {
@@ -1448,6 +1486,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         schoolLogo: settings.schoolLogo || '',
         schoolStamp: settings.schoolStamp || '',
         ministryLogo: settings.ministryLogo || '',
+        headerImage: settings.headerImage || '',
+        useHeaderImage: typeof settings.useHeaderImage === 'boolean' ? settings.useHeaderImage : false,
         useDigitalSignature: typeof settings.useDigitalSignature === 'boolean' ? settings.useDigitalSignature : true,
         cityName: settings.cityName || '',
         provinceName: settings.provinceName || '',

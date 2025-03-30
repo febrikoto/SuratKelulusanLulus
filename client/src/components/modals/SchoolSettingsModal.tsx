@@ -43,6 +43,8 @@ const formSchema = z.object({
   headmasterNip: z.string().min(5, { message: 'NIP kepala sekolah wajib diisi' }),
   headmasterSignature: z.string().default(''),
   schoolStamp: z.string().default(''),
+  headerImage: z.string().default(''),
+  useHeaderImage: z.boolean().default(false),
   schoolEmail: z.string().email({ message: 'Format email tidak valid' }).optional().or(z.literal('')),
   schoolWebsite: z.string()
     .refine(
@@ -88,6 +90,7 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
   const ministryLogoFileRef = useRef<HTMLInputElement>(null);
   const headmasterSignatureFileRef = useRef<HTMLInputElement>(null);
   const schoolStampFileRef = useRef<HTMLInputElement>(null);
+  const headerImageFileRef = useRef<HTMLInputElement>(null);
   
   // Form hook
   const form = useForm<FormValues>({
@@ -101,6 +104,8 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
       headmasterNip: '',
       headmasterSignature: '',
       schoolStamp: '',
+      headerImage: '',
+      useHeaderImage: false,
       schoolEmail: '',
       schoolWebsite: '',
       useDigitalSignature: true,
@@ -119,6 +124,8 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
         headmasterNip: settings.headmasterNip || '',
         headmasterSignature: settings.headmasterSignature || '',
         schoolStamp: settings.schoolStamp || '',
+        headerImage: settings.headerImage || '',
+        useHeaderImage: settings.useHeaderImage !== undefined ? settings.useHeaderImage : false,
         schoolEmail: settings.schoolEmail || '',
         schoolWebsite: settings.schoolWebsite || '',
         useDigitalSignature: settings.useDigitalSignature !== undefined ? settings.useDigitalSignature : true,
@@ -417,6 +424,72 @@ const SchoolSettingsModal: React.FC<SchoolSettingsModalProps> = ({ isOpen, onClo
                             <img src={field.value} alt="Stempel Sekolah" className="w-full h-full object-contain" />
                           </div>
                         )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                {/* Letterhead Image Upload & Toggle */}
+                <div className="space-y-5">
+                  <div className="flex items-center space-x-2 mb-2 bg-background py-2 border-b">
+                    <FileImage className="h-5 w-5 text-primary" />
+                    <h3 className="text-md font-semibold">KOP Surat</h3>
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="useHeaderImage"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Gunakan Gambar KOP Surat</FormLabel>
+                          <FormDescription>
+                            Aktifkan untuk menggunakan gambar KOP surat yang diupload. Nonaktifkan untuk menggunakan format teks.
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="headerImage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Upload Gambar KOP Surat</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            ref={headerImageFileRef}
+                            onChange={() => handleFileUpload(headerImageFileRef, 'headerImage')}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => headerImageFileRef.current?.click()}
+                            className="w-full"
+                          >
+                            <FileImage className="mr-2 h-4 w-4" />
+                            Pilih Gambar KOP
+                          </Button>
+                        </div>
+                        {field.value && (
+                          <div className="mt-2 relative w-full border rounded overflow-hidden">
+                            <img src={field.value} alt="KOP Surat" className="w-full h-full object-contain" />
+                          </div>
+                        )}
+                        <FormDescription>
+                          Gambar KOP surat untuk header sertifikat kelulusan. Lebih baik menggunakan gambar dengan resolusi tinggi dan format .png dengan latar belakang transparan.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

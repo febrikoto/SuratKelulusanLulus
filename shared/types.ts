@@ -31,6 +31,8 @@ export interface CertificateData {
   schoolLogo?: string; // URL logo sekolah
   schoolStamp?: string; // URL stempel sekolah
   ministryLogo?: string; // URL logo kementerian
+  headerImage?: string; // URL gambar KOP surat
+  useHeaderImage?: boolean; // Pilihan menggunakan KOP gambar atau teks
   useDigitalSignature?: boolean; // Pilihan menggunakan TTE atau TTD biasa
   cityName: string;
   provinceName: string;

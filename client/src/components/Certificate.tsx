@@ -80,39 +80,47 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
           </div>
         </div>
         {/* Header dengan logo dan kop surat */}
-        <div className="flex justify-between items-center mb-2">
-          <div className="w-20 h-20">
-            {data.ministryLogo ? (
-              <img src={data.ministryLogo} alt="Logo Kementerian" className="w-full h-full object-contain" />
-            ) : (
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                <circle cx="50" cy="50" r="48" fill="#f0f0f0" stroke="#333" strokeWidth="1" />
-                <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#333">LOGO KEMENTERIAN</text>
-              </svg>
-            )}
+        {data.useHeaderImage && data.headerImage ? (
+          // Jika menggunakan gambar KOP surat
+          <div className="w-full mb-2">
+            <img src={data.headerImage} alt="Kop Surat" className="w-full object-contain" />
           </div>
-          <div className="text-center">
-            <p className="font-bold">PEMERINTAH PROVINSI {data.provinceName.toUpperCase()}</p>
-            <p className="font-bold">DINAS PENDIDIKAN</p>
-            <p className="font-bold">CABANG DINAS WILAYAH VI</p>
-            <p className="font-bold text-xl">{data.schoolName.toUpperCase()}</p>
-            <p className="text-sm">Jalan: {data.schoolAddress}</p>
-            <div className="flex justify-center items-center gap-2 text-sm">
-              <p>E-mail: {data.schoolEmail || ""}</p>
-              <p>Website: {data.schoolWebsite || ""}</p>
+        ) : (
+          // Jika menggunakan teks KOP surat
+          <div className="flex justify-between items-center mb-2">
+            <div className="w-20 h-20">
+              {data.ministryLogo ? (
+                <img src={data.ministryLogo} alt="Logo Kementerian" className="w-full h-full object-contain" />
+              ) : (
+                <svg viewBox="0 0 100 100" className="w-full h-full">
+                  <circle cx="50" cy="50" r="48" fill="#f0f0f0" stroke="#333" strokeWidth="1" />
+                  <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#333">LOGO KEMENTERIAN</text>
+                </svg>
+              )}
+            </div>
+            <div className="text-center">
+              <p className="font-bold">PEMERINTAH PROVINSI {data.provinceName.toUpperCase()}</p>
+              <p className="font-bold">DINAS PENDIDIKAN</p>
+              <p className="font-bold">CABANG DINAS WILAYAH VI</p>
+              <p className="font-bold text-xl">{data.schoolName.toUpperCase()}</p>
+              <p className="text-sm">Jalan: {data.schoolAddress}</p>
+              <div className="flex justify-center items-center gap-2 text-sm">
+                <p>E-mail: {data.schoolEmail || ""}</p>
+                <p>Website: {data.schoolWebsite || ""}</p>
+              </div>
+            </div>
+            <div className="w-20 h-20">
+              {data.schoolLogo ? (
+                <img src={data.schoolLogo} alt="Logo Sekolah" className="w-full h-full object-contain" />
+              ) : (
+                <svg viewBox="0 0 100 100" className="w-full h-full">
+                  <circle cx="50" cy="50" r="48" fill="#f0f0f0" stroke="#333" strokeWidth="1" />
+                  <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#333">LOGO SEKOLAH</text>
+                </svg>
+              )}
             </div>
           </div>
-          <div className="w-20 h-20">
-            {data.schoolLogo ? (
-              <img src={data.schoolLogo} alt="Logo Sekolah" className="w-full h-full object-contain" />
-            ) : (
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                <circle cx="50" cy="50" r="48" fill="#f0f0f0" stroke="#333" strokeWidth="1" />
-                <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#333">LOGO SEKOLAH</text>
-              </svg>
-            )}
-          </div>
-        </div>
+        )}
       
         <div className="border-b-2 border-black mb-4"></div>
       
