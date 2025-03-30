@@ -353,15 +353,10 @@ export class DatabaseStorage implements IStorage {
       .from(students)
       .where(eq(students.status, 'rejected'));
     
-    // Mendapatkan jumlah kelas unik dengan menggunakan SQL distinct count
+    // Mendapatkan jumlah kelas unik dengan pendekatan yang lebih sederhana
     const classesQuery = await this.db.selectDistinct({ className: students.className })
       .from(students)
-      .where(
-        and(
-          notNull(students.className),
-          not(eq(students.className, ''))
-        )
-      );
+      .where(sql`${students.className} IS NOT NULL AND ${students.className} != ''`);
     
     const totalClasses = classesQuery.length;
     
