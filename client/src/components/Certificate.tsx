@@ -94,6 +94,7 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
           <div className="text-center">
             <p className="font-bold">PEMERINTAH PROVINSI {data.provinceName.toUpperCase()}</p>
             <p className="font-bold">DINAS PENDIDIKAN</p>
+            <p className="font-bold">CABANG DINAS WILAYAH VI</p>
             <p className="font-bold text-xl">{data.schoolName.toUpperCase()}</p>
             <p className="text-sm">Jalan: {data.schoolAddress}</p>
             <div className="flex justify-center items-center gap-2 text-sm">
@@ -310,10 +311,12 @@ export const Certificate: React.FC<CertificateProps> = ({ data, showDownloadButt
                   <svg viewBox="0 0 100 100" className="w-full h-full">
                     <circle cx="50" cy="50" r="48" fill="none" stroke="#4444DD" strokeWidth="2" />
                     <circle cx="50" cy="50" r="40" fill="none" stroke="#4444DD" strokeWidth="1" />
-                    <text x="50" y="35" textAnchor="middle" fill="#4444DD" fontSize="6">PEMERINTAH PROVINSI</text>
-                    <text x="50" y="45" textAnchor="middle" fill="#4444DD" fontSize="6">{data.provinceName.toUpperCase()}</text>
-                    <text x="50" y="55" textAnchor="middle" fill="#4444DD" fontSize="6">{data.schoolName.toUpperCase()}</text>
-                    <text x="50" y="65" textAnchor="middle" fill="#4444DD" fontSize="6">{data.cityName.toUpperCase()}</text>
+                    <text x="50" y="30" textAnchor="middle" fill="#4444DD" fontSize="6">PEMERINTAH PROVINSI</text>
+                    <text x="50" y="38" textAnchor="middle" fill="#4444DD" fontSize="6">{data.provinceName.toUpperCase()}</text>
+                    <text x="50" y="46" textAnchor="middle" fill="#4444DD" fontSize="6">DINAS PENDIDIKAN</text>
+                    <text x="50" y="54" textAnchor="middle" fill="#4444DD" fontSize="6">CABANG DINAS WILAYAH VI</text>
+                    <text x="50" y="62" textAnchor="middle" fill="#4444DD" fontSize="6">{data.schoolName.toUpperCase()}</text>
+                    <text x="50" y="70" textAnchor="middle" fill="#4444DD" fontSize="6">{data.cityName.toUpperCase()}</text>
                   </svg>
                 )}
               </div>
