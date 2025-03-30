@@ -6,10 +6,16 @@
  * node scripts/export_database.js
  */
 
-const { drizzle } = require('drizzle-orm/postgres-js');
-const postgres = require('postgres');
-const fs = require('fs');
-const path = require('path');
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+// Get the directory name
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Jalankan dengan NODE_ENV=development untuk logging lebih detail
 const isDev = process.env.NODE_ENV === 'development';
@@ -17,7 +23,7 @@ const isDev = process.env.NODE_ENV === 'development';
 // Load .env file jika ada
 try {
   if (fs.existsSync('.env')) {
-    require('dotenv').config();
+    dotenv.config();
     console.log('Loaded environment variables from .env file');
   }
 } catch (error) {
@@ -35,7 +41,7 @@ if (!databaseUrl) {
 // Load schema
 let users, students, settings, grades, subjects;
 try {
-  const schema = require('../shared/schema');
+  const schema = await import('../shared/schema.ts');
   users = schema.users;
   students = schema.students;
   settings = schema.settings;
@@ -122,4 +128,7 @@ async function main() {
 }
 
 // Run the export
-main();
+main().catch(error => {
+  console.error('Unhandled error during export:', error);
+  process.exit(1);
+});
