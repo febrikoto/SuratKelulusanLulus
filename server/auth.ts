@@ -21,6 +21,30 @@ declare global {
   }
 }
 
+// Authentication middleware
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+}
+
+// Role-based middleware
+export function requireRole(roles: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    const user = req.user as User;
+    if (!roles.includes(user.role)) {
+      return res.status(403).json({ message: "You don't have permission to access this resource" });
+    }
+    
+    next();
+  };
+}
+
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "skl-application-secret",
@@ -113,29 +137,5 @@ export function setupAuth(app: Express) {
     });
   });
 
-  // Auth middleware
-  function requireAuth(req: Request, res: Response, next: NextFunction) {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    next();
-  }
-
-  // Role-based middleware
-  function requireRole(roles: string[]) {
-    return (req: Request, res: Response, next: NextFunction) => {
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-      
-      const user = req.user as User;
-      if (!roles.includes(user.role)) {
-        return res.status(403).json({ message: "You don't have permission to access this resource" });
-      }
-      
-      next();
-    };
-  }
-
-  return { requireAuth, requireRole };
+  // The middleware functions are now exported at the top of the file
 }

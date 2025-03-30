@@ -1,39 +1,427 @@
-import type { Express, Request, Response } from "express";
-import { createServer, type Server } from "http";
-import multer from "multer";
-import csvParser from "csv-parser";
-import { Readable } from "stream";
 import path from "path";
 import fs from "fs";
-import os from "os";
-import { setupAuth } from "./auth";
+import { Express, Request, Response, NextFunction } from "express";
+import { Server } from "http";
+import { Readable } from "stream";
+import csvParser from "csv-parser";
+import { eq, and, sql, desc, asc, inArray } from "drizzle-orm";
+
 import { storage } from "./storage";
-import { insertStudentSchema, verificationSchema, insertGradeSchema, insertSettingsSchema, insertSubjectSchema, users } from "@shared/schema";
-import { eq } from "drizzle-orm";
-import { CertificateData, SubjectGrade } from "@shared/types";
-import { generateCertificatePDF } from "./certificate-generator"; 
-import { formatDate } from "../client/src/lib/utils";
+import {
+  insertStudentSchema,
+  insertSettingsSchema,
+  insertGradeSchema,
+  insertSubjectSchema,
+  verificationSchema,
+  users,
+  grades,
+  students,
+  subjects
+} from "@shared/schema";
+import { setupAuth, requireAuth, requireRole } from "./auth";
+import multer from "multer";
+import { generateCertificatePDF } from "./certificate-generator";
+import { CertificateData } from "@shared/types";
 import * as XLSX from 'xlsx';
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  const { requireAuth, requireRole } = setupAuth(app);
+// Setup multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+});
 
-  // Configure multer for file uploads
-  const upload = multer({ 
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 20 * 1024 * 1024 } // 20MB limit
+// Cache settings to reduce database hits
+let cachedSettings: any = null;
+let settingsCacheTime = 0;
+const SETTINGS_CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
+
+// Utility function to convert Excel date to YYYY-MM-DD
+function excelDateToYMD(excelDate: number) {
+  // Excel dates are number of days since Dec 30, 1899
+  const date = new Date((excelDate - 25569) * 86400 * 1000);
+  return date.toISOString().split('T')[0];
+}
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Ensure uploads directory exists
+  if (!fs.existsSync('uploads')) {
+    fs.mkdirSync('uploads');
+  }
+
+  if (!fs.existsSync('uploads/logos')) {
+    fs.mkdirSync('uploads/logos', { recursive: true });
+  }
+
+  if (!fs.existsSync('uploads/signatures')) {
+    fs.mkdirSync('uploads/signatures', { recursive: true });
+  }
+
+  if (!fs.existsSync('uploads/stamps')) {
+    fs.mkdirSync('uploads/stamps', { recursive: true });
+  }
+
+  if (!fs.existsSync('uploads/headers')) {
+    fs.mkdirSync('uploads/headers', { recursive: true });
+  }
+  
+  // Sets up /api/register, /api/login, /api/logout, /api/user
+  setupAuth(app);
+
+  // Dashboard statistics
+  app.get("/api/dashboard", requireAuth, async (req, res) => {
+    try {
+      const stats = await storage.getDashboardStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard statistics" });
+    }
   });
 
-  app.get("/api/backup", async (req, res) => {
+  // Settings API endpoints
+  app.get("/api/settings", async (req, res) => {
     try {
-      const backupData = {
-        message: "Ini adalah backup dari data website Anda.",
+      // Check if cache is valid
+      if (cachedSettings && (Date.now() - settingsCacheTime < SETTINGS_CACHE_TTL)) {
+        return res.json(cachedSettings);
+      }
+
+      const settings = await storage.getSettings();
+      if (!settings) {
+        // If no settings exist, create default settings
+        const defaultSettings = {
+          schoolName: "YOUR SCHOOL NAME",
+          schoolAddress: "School Address",
+          schoolEmail: "school@example.com",
+          schoolWebsite: "www.school.example",
+          cityName: "City",
+          provinceName: "Province",
+          academicYear: new Date().getFullYear() + "/" + (new Date().getFullYear() + 1),
+          graduationDate: new Date().toISOString().split('T')[0],
+          headmasterName: "Headmaster Name",
+          headmasterNip: "123456789",
+          certNumberPrefix: "SKL",
+          certBeforeStudentData: "Menerangkan bahwa:",
+          certAfterStudentData: "Telah mengikuti Ujian Sekolah dalam program pendidikan:",
+          certRegulationText: "Berdasarkan hasil Ujian Sekolah (US) serta nilai rapor yang bersangkutan dinyatakan:",
+          certCriteriaText: "LULUS",
+          useDigitalSignature: false,
+          useHeaderImage: false,
+          classList: "X,XI,XII"
+        };
+
+        const newSettings = await storage.saveSettings(defaultSettings);
+        
+        // Update cache
+        cachedSettings = newSettings;
+        settingsCacheTime = Date.now();
+        
+        return res.json(newSettings);
+      }
+
+      // Update cache
+      cachedSettings = settings;
+      settingsCacheTime = Date.now();
+
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.put("/api/settings", requireRole(["admin"]), async (req, res) => {
+    try {
+      const validation = insertSettingsSchema.partial().safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({
+          message: "Invalid settings data",
+          errors: validation.error.errors
+        });
+      }
+
+      const updatedSettings = await storage.updateSettings(req.body);
+      
+      // Invalidate settings cache
+      cachedSettings = updatedSettings;
+      settingsCacheTime = Date.now();
+      
+      res.json(updatedSettings);
+    } catch (error) {
+      console.error("Update settings error:", error);
+      res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+  
+  // Endpoint untuk menghapus gambar (logo, stempel, ttd, kop)
+  app.delete("/api/settings/image/:type", requireRole(["admin"]), async (req, res) => {
+    try {
+      const { type } = req.params;
+      
+      // Validasi tipe gambar yang bisa dihapus
+      const validImageTypes = ['schoolLogo', 'ministryLogo', 'headmasterSignature', 'schoolStamp', 'headerImage'];
+      if (!validImageTypes.includes(type)) {
+        return res.status(400).json({ message: "Invalid image type" });
+      }
+      
+      // Dapatkan settings saat ini
+      const settings = await storage.getSettings();
+      if (!settings) {
+        return res.status(404).json({ message: "Settings not found" });
+      }
+      
+      // Buat objek update dengan nilai gambar yang dihapus (string kosong)
+      const updateData = { [type]: '' } as any;
+      
+      // Jika yang dihapus adalah headerImage, nonaktifkan penggunaannya
+      if (type === 'headerImage') {
+        updateData.useHeaderImage = false;
+      }
+      
+      const updatedSettings = await storage.updateSettings(updateData);
+      
+      // Invalidate settings cache
+      cachedSettings = updatedSettings;
+      settingsCacheTime = Date.now();
+      
+      res.json(updatedSettings);
+    } catch (error) {
+      console.error("Delete image error:", error);
+      res.status(500).json({ message: "Failed to delete image" });
+    }
+  });
+
+  // School Logo Upload
+  app.post("/api/upload/school-logo", requireRole(["admin"]), upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Generate a unique filename
+      const filename = `school_logo_${Date.now()}${path.extname(req.file.originalname)}`;
+      const filepath = path.join('uploads/logos', filename);
+
+      // Save the file
+      fs.writeFileSync(filepath, req.file.buffer);
+
+      // Update the school logo in settings
+      const settings = await storage.getSettings();
+      if (!settings) {
+        return res.status(404).json({ message: "Settings not found" });
+      }
+
+      const updatedSettings = await storage.updateSettings({
+        schoolLogo: filepath
+      });
+
+      // Invalidate settings cache
+      cachedSettings = updatedSettings;
+      settingsCacheTime = Date.now();
+
+      res.json({
+        message: "Logo uploaded successfully",
+        path: filepath,
+        settings: updatedSettings
+      });
+    } catch (error) {
+      console.error("Error uploading school logo:", error);
+      res.status(500).json({ message: "Failed to upload school logo" });
+    }
+  });
+
+  // Letterhead Image Upload
+  app.post("/api/upload/header-image", requireRole(["admin"]), upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Generate a unique filename
+      const filename = `header_image_${Date.now()}${path.extname(req.file.originalname)}`;
+      const filepath = path.join('uploads/headers', filename);
+
+      // Save the file
+      fs.writeFileSync(filepath, req.file.buffer);
+
+      // Update the header image in settings
+      const settings = await storage.getSettings();
+      if (!settings) {
+        return res.status(404).json({ message: "Settings not found" });
+      }
+
+      const updatedSettings = await storage.updateSettings({
+        headerImage: filepath,
+        useHeaderImage: true // Automatically set to use this image
+      });
+
+      // Invalidate settings cache
+      cachedSettings = updatedSettings;
+      settingsCacheTime = Date.now();
+
+      res.json({
+        message: "Header image uploaded successfully",
+        path: filepath,
+        settings: updatedSettings
+      });
+    } catch (error) {
+      console.error("Error uploading header image:", error);
+      res.status(500).json({ message: "Failed to upload header image" });
+    }
+  });
+
+  // Ministry Logo Upload
+  app.post("/api/upload/ministry-logo", requireRole(["admin"]), upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Generate a unique filename
+      const filename = `ministry_logo_${Date.now()}${path.extname(req.file.originalname)}`;
+      const filepath = path.join('uploads/logos', filename);
+
+      // Save the file
+      fs.writeFileSync(filepath, req.file.buffer);
+
+      // Update the ministry logo in settings
+      const settings = await storage.getSettings();
+      if (!settings) {
+        return res.status(404).json({ message: "Settings not found" });
+      }
+
+      const updatedSettings = await storage.updateSettings({
+        ministryLogo: filepath
+      });
+
+      // Invalidate settings cache
+      cachedSettings = updatedSettings;
+      settingsCacheTime = Date.now();
+
+      res.json({
+        message: "Logo uploaded successfully",
+        path: filepath,
+        settings: updatedSettings
+      });
+    } catch (error) {
+      console.error("Error uploading ministry logo:", error);
+      res.status(500).json({ message: "Failed to upload ministry logo" });
+    }
+  });
+
+  // Headmaster Signature Upload
+  app.post("/api/upload/headmaster-signature", requireRole(["admin"]), upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Generate a unique filename
+      const filename = `signature_${Date.now()}${path.extname(req.file.originalname)}`;
+      const filepath = path.join('uploads/signatures', filename);
+
+      // Save the file
+      fs.writeFileSync(filepath, req.file.buffer);
+
+      // Update the signature in settings
+      const settings = await storage.getSettings();
+      if (!settings) {
+        return res.status(404).json({ message: "Settings not found" });
+      }
+
+      const updatedSettings = await storage.updateSettings({
+        headmasterSignature: filepath
+      });
+
+      // Invalidate settings cache
+      cachedSettings = updatedSettings;
+      settingsCacheTime = Date.now();
+
+      res.json({
+        message: "Signature uploaded successfully",
+        path: filepath,
+        settings: updatedSettings
+      });
+    } catch (error) {
+      console.error("Error uploading signature:", error);
+      res.status(500).json({ message: "Failed to upload signature" });
+    }
+  });
+
+  // School Stamp Upload
+  app.post("/api/upload/school-stamp", requireRole(["admin"]), upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Generate a unique filename
+      const filename = `stamp_${Date.now()}${path.extname(req.file.originalname)}`;
+      const filepath = path.join('uploads/stamps', filename);
+
+      // Save the file
+      fs.writeFileSync(filepath, req.file.buffer);
+
+      // Update the stamp in settings
+      const settings = await storage.getSettings();
+      if (!settings) {
+        return res.status(404).json({ message: "Settings not found" });
+      }
+
+      const updatedSettings = await storage.updateSettings({
+        schoolStamp: filepath
+      });
+
+      // Invalidate settings cache
+      cachedSettings = updatedSettings;
+      settingsCacheTime = Date.now();
+
+      res.json({
+        message: "Stamp uploaded successfully",
+        path: filepath,
+        settings: updatedSettings
+      });
+    } catch (error) {
+      console.error("Error uploading stamp:", error);
+      res.status(500).json({ message: "Failed to upload stamp" });
+    }
+  });
+
+  // Create database backup
+  app.get("/api/backup", requireRole(["admin"]), async (req, res) => {
+    try {
+      // Get all data from different tables
+      const studentsData = await storage.getStudents();
+      const usersData = await storage.db.select().from(users);
+      const settingsData = await storage.getSettings();
+      const gradesData = await storage.db.select().from(grades);
+      const subjectsData = await storage.db.select().from(subjects);
+
+      // Create a backup object
+      const backup = {
+        timestamp: new Date().toISOString(),
+        students: studentsData,
+        users: usersData,
+        settings: settingsData,
+        grades: gradesData,
+        subjects: subjectsData
       };
 
-      const filePath = path.resolve(__dirname, 'backup.json');
-      fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2));
+      // Create temp directory if it doesn't exist
+      const tempDir = path.join(process.cwd(), 'temp');
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
 
-      res.download(filePath, 'backup.json', (err) => {
+      // Create a backup file
+      const backupFile = path.join(tempDir, `skl_backup_${Date.now()}.json`);
+      fs.writeFileSync(backupFile, JSON.stringify(backup, null, 2));
+
+      // Send the file to the client
+      res.download(backupFile, 'backup.json', (err) => {
         if (err) {
           console.error("Error downloading backup:", err);
           return res.status(500).send("Gagal mengunduh backup");
@@ -139,32 +527,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const updatedStudent = await storage.updateStudent(id, req.body);
-      if (!updatedStudent) {
-        return res.status(404).json({ message: "Student not found" });
-      }
-
-      res.json(updatedStudent);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to update student" });
-    }
-  });
-  
-  // Endpoint PATCH untuk edit student (sama dengan PUT tetapi lebih REST standard)
-  app.patch("/api/students/:id", requireRole(["admin"]), async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid student ID" });
-      }
-
-      const validation = insertStudentSchema.partial().safeParse(req.body);
-
-      if (!validation.success) {
-        return res.status(400).json({ 
-          message: "Invalid student data", 
-          errors: validation.error.errors 
-        });
+      // If NISN is being updated, check if it already exists
+      if (req.body.nisn) {
+        const existingStudent = await storage.getStudentByNisn(req.body.nisn);
+        if (existingStudent && existingStudent.id !== id) {
+          return res.status(409).json({ message: "Student with this NISN already exists" });
+        }
       }
 
       const updatedStudent = await storage.updateStudent(id, req.body);
@@ -196,156 +564,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CSV/Excel Import endpoint
-  app.post("/api/students/import", requireRole(["admin"]), upload.single('file'), async (req, res) => {
+  // Verify student endpoint
+  app.post("/api/students/:id/verify", requireRole(["admin"]), async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ message: "Tidak ada file yang diupload" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid student ID" });
       }
 
-      const results: any[] = [];
-      const errors: any[] = [];
-
-      // Deteksi format file dan proses sesuai format
-      if (req.file.mimetype === 'text/csv' || req.file.originalname.endsWith('.csv')) {
-        // Parse CSV file
-        const stream = Readable.from(req.file.buffer.toString());
-
-        stream
-          .pipe(csvParser())
-          .on('data', async (data) => {
-            try {
-              // Map CSV columns to student schema
-              const studentData = {
-                nisn: data.nisn,
-                nis: data.nis,
-                fullName: data.fullName,
-                birthPlace: data.birthPlace,
-                birthDate: data.birthDate,
-                parentName: data.parentName,
-                className: data.className,
-                status: 'pending'
-              };
-
-              await processStudentData(studentData, results, errors);
-            } catch (error) {
-              errors.push({ data, error: "Gagal memproses baris data" });
-            }
-          })
-          .on('end', () => {
-            res.json({
-              success: true,
-              imported: results.length,
-              errors: errors.length > 0 ? errors : null
-            });
-          });
-      } else if (
-        req.file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
-        req.file.originalname.endsWith('.xlsx')
-      ) {
-        try {
-          // Parse Excel file
-          const workbook = XLSX.read(req.file.buffer);
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          
-          // Convert Excel to JSON (skip header row)
-          const data = XLSX.utils.sheet_to_json(worksheet, { 
-            range: 1,
-            header: ["nisn", "nis", "fullName", "birthPlace", "birthDate", "parentName", "className"]
-          }) as Record<string, any>[];
-
-          console.log("Excel data parsed:", data);
-
-          // Process each row
-          for (const row of data) {
-            // Safely extract values with type checking
-            const nisn = typeof row.nisn === 'string' || typeof row.nisn === 'number' ? String(row.nisn) : '';
-            const nis = typeof row.nis === 'string' || typeof row.nis === 'number' ? String(row.nis) : '';
-            const fullName = typeof row.fullName === 'string' ? row.fullName : '';
-            
-            // Skip empty rows or header rows
-            if (!nisn && !nis && !fullName) continue;
-            if (nisn === 'nisn' || nis === 'nis' || fullName === 'fullName') continue;
-            
-            try {
-              // Format tanggal lahir dengan benar (Excel mungkin menyimpan sebagai serial number)
-              const rawBirthDate = row.birthDate;
-              let birthDate = '';
-              
-              if (typeof rawBirthDate === 'string') {
-                birthDate = rawBirthDate;
-              } else if (typeof rawBirthDate === 'number' && !isNaN(rawBirthDate)) {
-                // Jika berupa angka, konversi dari Excel serial number ke tanggal
-                const excelEpoch = new Date(1899, 11, 30);
-                const excelDate = new Date(excelEpoch.getTime() + (rawBirthDate * 24 * 60 * 60 * 1000));
-                birthDate = excelDate.toISOString().split('T')[0]; // Format YYYY-MM-DD
-              }
-
-              const birthPlace = typeof row.birthPlace === 'string' ? row.birthPlace : '';
-              const parentName = typeof row.parentName === 'string' ? row.parentName : '';
-              const className = typeof row.className === 'string' ? row.className : '';
-
-              const studentData = {
-                nisn,
-                nis,
-                fullName,
-                birthPlace,
-                birthDate,
-                parentName,
-                className,
-                status: 'pending' as const
-              };
-
-              await processStudentData(studentData, results, errors);
-            } catch (error) {
-              errors.push({ data: row, error: "Gagal memproses baris data" });
-            }
-          }
-          
-          res.json({
-            success: true,
-            imported: results.length,
-            errors: errors.length > 0 ? errors : null
-          });
-        } catch (error) {
-          console.error("Error parsing Excel:", error);
-          return res.status(400).json({ message: "Gagal memproses file Excel" });
-        }
-      } else {
-        return res.status(400).json({ message: "Hanya file CSV atau Excel (.xlsx) yang diperbolehkan" });
-      }
-    } catch (error) {
-      console.error("Import error:", error);
-      res.status(500).json({ message: "Gagal mengimpor data siswa" });
-    }
-  });
-
-  // Helper function to process student data
-  async function processStudentData(studentData: any, results: any[], errors: any[]) {
-    const validation = insertStudentSchema.safeParse(studentData);
-
-    if (!validation.success) {
-      errors.push({ data: studentData, errors: validation.error.errors });
-      return;
-    }
-
-    // Check if student already exists
-    const existingStudent = await storage.getStudentByNisn(studentData.nisn);
-    if (existingStudent) {
-      errors.push({ data: studentData, error: "Siswa dengan NISN ini sudah ada" });
-      return;
-    }
-
-    const newStudent = await storage.createStudent(studentData);
-    results.push(newStudent);
-  }
-
-  // Verification API
-  app.post("/api/students/verify", requireRole(["guru"]), async (req, res) => {
-    try {
       const validation = verificationSchema.safeParse(req.body);
-
       if (!validation.success) {
         return res.status(400).json({ 
           message: "Invalid verification data", 
@@ -355,7 +582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = req.user as Express.User;
       const updatedStudent = await storage.verifyStudent(req.body, user.id);
-
+      
       if (!updatedStudent) {
         return res.status(404).json({ message: "Student not found" });
       }
@@ -366,155 +593,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Certificate API endpoint for PDF generation
-  app.get("/api/certificates/:studentId", requireAuth, async (req, res) => {
-    try {
-      const studentId = parseInt(req.params.studentId);
-      const showGrades = req.query.showGrades === 'true';
-
-      if (isNaN(studentId)) {
-        return res.status(400).json({ error: 'Invalid student ID' });
-      }
-
-      // Get the student data
-      const student = await storage.getStudent(studentId);
-      if (!student) {
-        return res.status(404).json({ error: 'Student not found' });
-      }
-
-      // Get settings
-      const settings = await storage.getSettings();
-      if (!settings) {
-        return res.status(404).json({ error: 'School settings not found' });
-      }
-
-      // Get grades for the student if needed
-      let grades: SubjectGrade[] = [];
-      let averageGrade = 0;
-
-      if (showGrades) {
-        const studentGrades = await storage.getStudentGrades(studentId);
-
-        if (studentGrades && studentGrades.length > 0) {
-          // Use grade.subjectName directly as we store it in the grade object
-          grades = studentGrades.map((grade) => ({
-            name: grade.subjectName,
-            value: grade.value
-          }));
-
-          // Calculate average
-          const sum = studentGrades.reduce((acc, grade) => acc + grade.value, 0);
-          averageGrade = sum / studentGrades.length;
-        }
-      }
-
-      // Compose the certificate data
-      const certificateData: CertificateData = {
-        id: student.id,
-        nisn: student.nisn,
-        nis: student.nis,
-        fullName: student.fullName,
-        birthPlace: student.birthPlace,
-        birthDate: student.birthDate,
-        parentName: student.parentName,
-        className: student.className,
-        certNumber: `${settings.certNumberPrefix || ''}${student.id}/SKL/${new Date().getFullYear()}`,
-        certNumberPrefix: settings.certNumberPrefix || undefined,
-        certBeforeStudentData: settings.certBeforeStudentData || undefined,
-        certAfterStudentData: settings.certAfterStudentData || undefined,
-        certRegulationText: settings.certRegulationText || undefined,
-        certCriteriaText: settings.certCriteriaText || undefined,
-        issueDate: new Date().toISOString(),
-        graduationDate: settings.graduationDate || new Date().toISOString().split('T')[0],
-        graduationTime: settings.graduationTime || undefined,
-        headmasterName: settings.headmasterName,
-        headmasterNip: settings.headmasterNip,
-        headmasterSignature: settings.headmasterSignature || undefined,
-        schoolName: settings.schoolName,
-        schoolAddress: settings.schoolAddress,
-        schoolEmail: settings.schoolEmail || undefined,
-        schoolWebsite: settings.schoolWebsite || undefined,
-        schoolLogo: settings.schoolLogo || undefined,
-        schoolStamp: settings.schoolStamp || undefined,
-        ministryLogo: settings.ministryLogo || undefined,
-        useDigitalSignature: typeof settings.useDigitalSignature === 'boolean' ? settings.useDigitalSignature : true,
-        cityName: settings.cityName || 'Jakarta',
-        provinceName: settings.provinceName || 'DKI Jakarta',
-        academicYear: settings.academicYear,
-        showGrades: showGrades,
-        majorName: "MIPA", // Default to MIPA since majorName is not in settings
-        grades: grades,
-        averageGrade: averageGrade
-      };
-
-      // Generate a PDF file and send it as response
-      const filePath = path.join(os.tmpdir(), `certificate-${student.id}.pdf`);
-
-      await generateCertificatePDF(certificateData, filePath);
-
-      res.download(filePath, `SKL-${student.fullName.replace(/\s+/g, '-')}-${student.nisn}.pdf`, (err) => {
-        if (err) {
-          console.error('Error sending file:', err);
-          res.status(500).json({ error: 'Error sending certificate file' });
-        }
-
-        // Remove the temporary file after sending
-        fs.unlink(filePath, (unlinkErr) => {
-          if (unlinkErr) {
-            console.error('Error removing temporary file:', unlinkErr);
-          }
-        });
-      });
-    } catch (error) {
-      console.error('Error generating certificate:', error);
-      res.status(500).json({ error: 'Failed to generate certificate' });
-    }
-  });
-
-  // Dashboard stats API with caching
-  let cachedStats: any = null;
-  let statsCacheTime = 0;
-  const STATS_CACHE_TTL = 1 * 60 * 1000; // 1 minute in milliseconds
-
-  app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
-    try {
-      const now = Date.now();
-
-      // Return cached stats if valid
-      if (cachedStats && (now - statsCacheTime < STATS_CACHE_TTL)) {
-        return res.json(cachedStats);
-      }
-
-      // Cache expired or doesn't exist, fetch fresh data
-      const stats = await storage.getDashboardStats();
-
-      // Update cache
-      cachedStats = stats;
-      statsCacheTime = now;
-
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
-      res.status(500).json({ message: "Failed to fetch dashboard stats" });
-    }
-  });
+  // Note: Certificate PDF generation endpoint is implemented below (around line 1230)
 
   // Grades API endpoints
-  app.get("/api/students/:id/grades", requireAuth, async (req, res) => {
-    try {
-      const studentId = parseInt(req.params.id);
-      if (isNaN(studentId)) {
-        return res.status(400).json({ message: "Invalid student ID" });
-      }
-
-      const grades = await storage.getStudentGrades(studentId);
-      res.json(grades);
-    } catch (error) {
-      res.status(500).json({ message: "Gagal mengambil nilai siswa" });
-    }
-  });
-
-  // New general endpoint for adding grades
   app.post("/api/grades", requireRole(["admin"]), async (req, res) => {
     try {
       const { studentId, subjectName, value } = req.body;
@@ -1001,379 +1082,435 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Save all grades
       if (gradesData.length > 0) {
         const savedGrades = await storage.saveGrades(gradesData);
-
-        res.status(201).json({ 
-          message: 'Nilai kelas berhasil diimport',
-          success: savedGrades.length,
-          total: gradesData.length
+        
+        res.status(200).json({
+          success: successCount,
+          errors: errorCount,
+          message: `Berhasil mengimpor ${successCount} nilai, dengan ${errorCount} error.`
         });
       } else {
-        res.status(400).json({ message: "Tidak ada nilai yang valid untuk diimport" });
+        res.status(400).json({ message: "Tidak ada nilai yang valid untuk disimpan" });
       }
-    } catch (error: any) {
-      console.error("Error importing class grades:", error);
-      res.status(500).json({ message: "Gagal mengimport nilai kelas: " + error.message });
-    }
-  });
-
-  // Settings API endpoints with caching
-  let cachedSettings: any = null;
-  let settingsCacheTime = 0;
-  const SETTINGS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
-
-  app.get("/api/settings", async (req, res) => {
-    try {
-      const now = Date.now();
-
-      // Return cached settings if valid
-      if (cachedSettings && (now - settingsCacheTime < SETTINGS_CACHE_TTL)) {
-        return res.json(cachedSettings);
-      }
-
-      // Cache expired or doesn't exist, fetch fresh data
-      let settings = await storage.getSettings();
-      if (!settings) {
-        // Create default settings if none exists
-        const defaultSettings = {
-          schoolName: "SMA Negeri 1",
-          schoolAddress: "Jl. Pendidikan No. 1",
-          schoolEmail: "",
-          schoolWebsite: "",
-          schoolLogo: "",
-          ministryLogo: "",
-          headmasterName: "Drs. Suparman, M.Pd.",
-          headmasterNip: "196501011990011001",
-          headmasterSignature: "",
-          schoolStamp: "",
-          useDigitalSignature: true,
-          certHeader: "SURAT KETERANGAN LULUS",
-          certFooter: "Surat ini berlaku sebagai bukti kelulusan sampai ijazah diterbitkan.",
-          certBeforeStudentData: "Yang bertanda tangan di bawah ini, Kepala Sekolah Menengah Atas, menerangkan bahwa:",
-          certAfterStudentData: "telah dinyatakan LULUS dari Satuan Pendidikan berdasarkan hasil rapat pleno kelulusan.",
-          certRegulationText: "Berdasarkan peraturan Kementerian Pendidikan dan Kebudayaan No. 1 Tahun 2024 tentang Kriteria Kelulusan SMA/SMK/MA.",
-          certCriteriaText: "Kriteria kelulusan meliputi: 1) Menyelesaikan seluruh program pembelajaran; 2) Memperoleh nilai sikap/perilaku minimal Baik; 3) Lulus ujian sekolah.",
-          academicYear: "2023/2024",
-          graduationDate: "2024-05-03",
-          graduationTime: "10:00",
-          cityName: "Jakarta",
-          provinceName: "DKI Jakarta",
-          certNumberPrefix: "SKL/2024",
-          majorList: "semua,MIPA,IPS,BAHASA",
-          classList: "XII IPA 1,XII IPA 2,XII IPS 1,XII IPS 2"
-        };
-
-        settings = await storage.saveSettings(defaultSettings);
-      }
-
-      // Update cache
-      cachedSettings = settings;
-      settingsCacheTime = now;
-
-      res.json(settings);
     } catch (error) {
-      console.error("Error fetching settings:", error);
-      res.status(500).json({ message: "Failed to fetch settings" });
+      console.error("Failed to import grades by class:", error);
+      res.status(500).json({ message: "Gagal mengimpor nilai" });
     }
   });
 
-  app.post("/api/settings", requireRole(["admin"]), async (req, res) => {
+  // Fetch student grades
+  app.get("/api/students/:id/grades", requireAuth, async (req, res) => {
     try {
-      // Validasi input menggunakan schema Zod
-      const parsedData = insertSettingsSchema.safeParse(req.body);
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID siswa tidak valid" });
+      }
 
-      if (!parsedData.success) {
-        return res.status(400).json({ 
-          message: "Invalid settings data", 
-          errors: parsedData.error.format() 
+      // Check if student exists
+      const student = await storage.getStudent(id);
+      if (!student) {
+        return res.status(404).json({ message: "Siswa tidak ditemukan" });
+      }
+
+      // Check user permissions - siswa can only access their own grades
+      const user = req.user as Express.User;
+      if (user.role === 'siswa' && user.studentId !== id) {
+        return res.status(403).json({ message: "Anda tidak berhak mengakses nilai siswa lain" });
+      }
+
+      const grades = await storage.getStudentGrades(id);
+      res.json(grades);
+    } catch (error) {
+      console.error("Error fetching grades:", error);
+      res.status(500).json({ message: "Gagal mengambil data nilai" });
+    }
+  });
+
+  // Import students from Excel/CSV
+  app.post("/api/students/import", requireRole(["admin"]), upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Tidak ada file yang diunggah" });
+      }
+
+      // Determine file type from mimetype
+      const isCSV = req.file.mimetype === 'text/csv';
+      const isExcel = req.file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+                     req.file.mimetype === 'application/vnd.ms-excel';
+
+      if (!isCSV && !isExcel) {
+        return res.status(400).json({ message: "Format file tidak didukung. Harap unggah file Excel atau CSV." });
+      }
+
+      const results: any[] = [];
+      const errors: any[] = [];
+
+      // Process the file accordingly
+      if (isCSV) {
+        // Parse CSV
+        const stream = Readable.from(req.file.buffer.toString());
+        stream
+          .pipe(csvParser())
+          .on('data', async (data) => {
+            try {
+              await processStudentData(data, results, errors);
+            } catch (error) {
+              errors.push({ data, error: "Gagal memproses data siswa" });
+            }
+          })
+          .on('end', () => {
+            res.json({
+              success: true,
+              imported: results.length,
+              errors: errors.length > 0 ? errors : null
+            });
+          });
+      } else {
+        // Parse Excel
+        const workbook = XLSX.read(req.file.buffer);
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const data = XLSX.utils.sheet_to_json(worksheet);
+
+        // Process each row
+        for (const row of data as any[]) {
+          try {
+            await processStudentData(row, results, errors);
+          } catch (error) {
+            errors.push({ data: row, error: "Gagal memproses data siswa" });
+          }
+        }
+
+        res.json({
+          success: true,
+          imported: results.length,
+          errors: errors.length > 0 ? errors : null
         });
       }
-
-      const savedSettings = await storage.saveSettings(parsedData.data);
-
-      // Invalidate settings cache
-      cachedSettings = savedSettings;
-      settingsCacheTime = Date.now();
-
-      res.status(201).json(savedSettings);
     } catch (error) {
-      console.error("Save settings error:", error);
-      res.status(500).json({ message: "Failed to save settings" });
+      console.error("Failed to import students:", error);
+      res.status(500).json({ message: "Gagal mengimpor data siswa" });
     }
   });
 
-  app.put("/api/settings", requireRole(["admin"]), async (req, res) => {
+  async function processStudentData(studentData: any, results: any[], errors: any[]) {
+    // Map data fields to our schema
+    // Handle different column name variations
+    const nisn = studentData.NISN || studentData.nisn;
+    const nis = studentData.NIS || studentData.nis;
+    const fullName = studentData['Nama Lengkap'] || studentData['NAMA LENGKAP'] || studentData.name || studentData.fullName;
+    const birthPlace = studentData['Tempat Lahir'] || studentData.birthPlace;
+    
+    // Handle date format variations (could be string or Excel date number)
+    let birthDate = studentData['Tanggal Lahir'] || studentData.birthDate;
+    if (typeof birthDate === 'number') {
+      birthDate = excelDateToYMD(birthDate);
+    }
+    
+    const parentName = studentData['Nama Orang Tua'] || studentData.parentName;
+    const className = studentData['Kelas'] || studentData.className;
+    const major = studentData['Jurusan'] || studentData.major;
+
+    // Prepare student data object
+    const sanitizedData = {
+      nisn,
+      nis,
+      fullName,
+      birthPlace,
+      birthDate,
+      parentName,
+      className,
+      major
+    };
+
+    const validation = insertStudentSchema.safeParse(sanitizedData);
+
+    if (!validation.success) {
+      errors.push({ 
+        data: studentData, 
+        errors: validation.error.errors,
+        message: "Data tidak valid"
+      });
+      return;
+    }
+
+    // Check if student with NISN already exists
+    const existingStudent = await storage.getStudentByNisn(nisn);
+    if (existingStudent) {
+      errors.push({ 
+        data: studentData, 
+        error: "Siswa dengan NISN ini sudah ada",
+        message: `NISN ${nisn} sudah terdaftar`
+      });
+      return;
+    }
+
+    // Create new student in database
+    const newStudent = await storage.createStudent(sanitizedData);
+    
+    // Also create user account for the student (using NISN as username)
+    const hashedPassword = await storage.hashPassword(nisn); // Use NISN as initial password too
+    const userAccount = await storage.createUser({
+      username: nisn,
+      password: hashedPassword,
+      fullName: fullName,
+      role: 'siswa',
+      studentId: newStudent.id,
+      hasSeenWelcome: false
+    });
+
+    results.push({
+      student: newStudent,
+      user: {
+        id: userAccount.id,
+        username: userAccount.username,
+        role: userAccount.role
+      }
+    });
+  }
+
+  // User API endpoints
+  app.get("/api/users", requireRole(["admin"]), async (req, res) => {
     try {
-      // Validasi input menggunakan schema Zod
-      const parsedData = insertSettingsSchema.partial().safeParse(req.body);
-
-      if (!parsedData.success) {
-        return res.status(400).json({ 
-          message: "Invalid settings data", 
-          errors: parsedData.error.format() 
-        });
-      }
-
-      const updatedSettings = await storage.updateSettings(parsedData.data);
-      if (!updatedSettings) {
-        return res.status(404).json({ message: "Settings not found" });
-      }
-
-      // Invalidate settings cache
-      cachedSettings = updatedSettings;
-      settingsCacheTime = Date.now();
-
-      res.json(updatedSettings);
+      const result = await storage.db.select()
+        .from(users);
+      
+      res.json(result);
     } catch (error) {
-      console.error("Update settings error:", error);
-      res.status(500).json({ message: "Failed to update settings" });
-    }
-  });
-  
-  // Endpoint untuk menghapus gambar (logo, stempel, ttd, kop)
-  app.delete("/api/settings/image/:type", requireRole(["admin"]), async (req, res) => {
-    try {
-      const { type } = req.params;
-      
-      // Validasi tipe gambar yang bisa dihapus
-      const validImageTypes = ['schoolLogo', 'ministryLogo', 'headmasterSignature', 'schoolStamp', 'headerImage'];
-      if (!validImageTypes.includes(type)) {
-        return res.status(400).json({ message: "Invalid image type" });
-      }
-      
-      // Dapatkan settings saat ini
-      const settings = await storage.getSettings();
-      if (!settings) {
-        return res.status(404).json({ message: "Settings not found" });
-      }
-      
-      // Buat objek update dengan nilai gambar yang dihapus (string kosong)
-      const updateData = { [type]: '' } as any;
-      
-      // Jika yang dihapus adalah headerImage, nonaktifkan penggunaannya
-      if (type === 'headerImage') {
-        updateData.useHeaderImage = false;
-      }
-      
-      const updatedSettings = await storage.updateSettings(updateData);
-      
-      // Invalidate settings cache
-      cachedSettings = updatedSettings;
-      settingsCacheTime = Date.now();
-      
-      res.json(updatedSettings);
-    } catch (error) {
-      console.error("Delete image error:", error);
-      res.status(500).json({ message: "Failed to delete image" });
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Gagal mengambil data pengguna" });
     }
   });
 
-  // Welcome animation status endpoint
-  app.post("/api/user/welcome-status", requireAuth, async (req, res) => {
+  app.put("/api/user-welcome", requireAuth, async (req, res) => {
     try {
       const user = req.user as Express.User;
-      const hasSeenWelcome = req.body.hasSeenWelcome === true;
-
-      const updatedUser = await storage.updateUserWelcomeStatus(user.id, hasSeenWelcome);
+      const updatedUser = await storage.updateUserWelcomeStatus(user.id, true);
+      
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
       }
-
-      res.json({ success: true, hasSeenWelcome: updatedUser.hasSeenWelcome });
+      
+      res.json(updatedUser);
     } catch (error) {
+      console.error("Error updating welcome status:", error);
       res.status(500).json({ message: "Failed to update welcome status" });
     }
   });
-  
-  // Update user API
-  app.patch("/api/users/:id", requireRole(["admin"]), async (req, res) => {
+
+  app.put("/api/users/:id", requireRole(["admin"]), async (req, res) => {
     try {
-      const userId = parseInt(req.params.id);
-      
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Invalid user ID" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID pengguna tidak valid" });
       }
-      
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
+
+      const updateData = { ...req.body };
+      delete updateData.id; // Prevent ID update
+      delete updateData.password; // Password should be updated via separate endpoint
+
+      // If changing role to 'guru', we need to check the assignedMajor field
+      if (updateData.role === 'guru' && !updateData.assignedMajor) {
+        return res.status(400).json({ 
+          message: "Guru harus memiliki jurusan yang diampu", 
+          field: "assignedMajor" 
+        });
       }
+
+      // Validation logic for user updates can be added here
+      const updatedUser = await storage.updateUser(id, updateData);
       
-      const allowedFields = ["fullName", "assignedMajor"];
-      const updates: Record<string, any> = {};
-      
-      // Only allow updating specific fields
-      for (const field of allowedFields) {
-        if (field in req.body) {
-          updates[field] = req.body[field];
-        }
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Pengguna tidak ditemukan" });
       }
-      
-      if (Object.keys(updates).length === 0) {
-        return res.status(400).json({ message: "No valid fields to update" });
-      }
-      
-      const updatedUser = await storage.updateUser(userId, updates);
+
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating user:", error);
-      res.status(500).json({ message: "Failed to update user" });
+      res.status(500).json({ message: "Gagal memperbarui pengguna" });
     }
   });
-  
-  // Create new user (used for creating teachers)
-  app.post("/api/users", requireRole(["admin"]), async (req, res) => {
+
+  // Teachers creation endpoint 
+  app.post("/api/teachers", requireRole(["admin"]), async (req, res) => {
     try {
-      // Validate input data
-      const { username, password, fullName, role, assignedMajor } = req.body;
-      
-      if (!username || !password || !fullName || !role) {
-        return res.status(400).json({ message: "Missing required fields" });
+      const { username, fullName, assignedMajor } = req.body;
+
+      if (!username || !fullName || !assignedMajor) {
+        return res.status(400).json({ message: "Data guru tidak lengkap" });
       }
-      
+
       // Check if username already exists
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
+        return res.status(409).json({ message: "Username sudah digunakan" });
       }
+
+      // Create default password using "guru123"
+      const hashedPassword = await storage.hashPassword("guru123");
       
-      // Create user
-      const newUser = await storage.createUser({
+      // Create the teacher account
+      const newTeacher = await storage.createUser({
         username,
-        password: await storage.hashPassword(password),
+        password: hashedPassword,
         fullName,
-        role,
+        role: 'guru',
         studentId: null,
-        assignedMajor: assignedMajor === "null" ? null : assignedMajor
+        assignedMajor,
+        hasSeenWelcome: false
       });
-      
-      // Remove password from response
-      const { password: _, ...userWithoutPassword } = newUser;
-      
-      res.status(201).json(userWithoutPassword);
+
+      res.status(201).json(newTeacher);
     } catch (error) {
-      console.error("Error creating user:", error);
-      res.status(500).json({ message: "Failed to create user" });
-    }
-  });
-  
-  // Get teachers list
-  app.get("/api/teachers", requireRole(["admin"]), async (req, res) => {
-    try {
-      // Find all users
-      const allUsers = await Promise.all(
-        Array.from({ length: 100 }).map((_, id) => storage.getUser(id + 1))
-      );
-      
-      // Filter users with role 'guru' and remove undefined users
-      const teachers = allUsers
-        .filter(user => user && user.role === 'guru')
-        .filter(Boolean) as Express.User[];
-      
-      res.json(teachers);
-    } catch (error) {
-      console.error("Error fetching teachers:", error);
-      res.status(500).json({ message: "Gagal mengambil data guru" });
+      console.error("Error creating teacher:", error);
+      res.status(500).json({ message: "Gagal membuat akun guru" });
     }
   });
 
-  // Bulk delete endpoint (admin only)
-  app.post("/api/admin/bulk-delete", requireRole(["admin"]), async (req, res) => {
+  // Change password endpoint
+  app.post("/api/change-password", requireAuth, async (req, res) => {
     try {
-      const { targets } = req.body;
+      const { currentPassword, newPassword } = req.body;
+      const user = req.user as Express.User;
 
-      if (!targets || !Array.isArray(targets) || targets.length === 0) {
-        return res.status(400).json({ message: "No targets specified for deletion" });
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Data tidak lengkap" });
       }
 
-      const results = {
-        deleted: 0,
-        errors: 0,
-        details: {} as Record<string, { success: number, failed: number }>
-      };
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password baru terlalu pendek" });
+      }
 
-      // Process each target type
-      for (const target of targets) {
-        results.details[target] = { success: 0, failed: 0 };
+      // Get user's current password hash
+      const currentUser = await storage.getUser(user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "Pengguna tidak ditemukan" });
+      }
 
-        if (target === 'students') {
-          try {
-            const students = await storage.getStudents();
-            for (const student of students) {
-              try {
-                await storage.deleteStudent(student.id);
-                results.deleted++;
-                results.details[target].success++;
-              } catch (err) {
-                results.errors++;
-                results.details[target].failed++;
-              }
-            }
-          } catch (err) {
-            results.errors++;
-          }
-        } 
-        else if (target === 'subjects') {
-          try {
-            const subjects = await storage.getSubjects();
-            for (const subject of subjects) {
-              try {
-                await storage.deleteSubject(subject.id);
-                results.deleted++;
-                results.details[target].success++;
-              } catch (err) {
-                results.errors++;
-                results.details[target].failed++;
-              }
-            }
-          } catch (err) {
-            results.errors++;
-          }
-        } 
-        else if (target === 'grades') {
-          try {
-            // For grades, we need to get all students and their grades
-            const students = await storage.getStudents();
-            for (const student of students) {
-              try {
-                const grades = await storage.getStudentGrades(student.id);
-                for (const grade of grades) {
-                  try {
-                    await storage.deleteGrade(grade.id);
-                    results.deleted++;
-                    results.details[target].success++;
-                  } catch (err) {
-                    results.errors++;
-                    results.details[target].failed++;
-                  }
-                }
-              } catch (err) {
-                results.errors++;
-              }
-            }
-          } catch (err) {
-            results.errors++;
-          }
-        } 
-        else if (target === 'logs') {
-          // Logs are not implemented yet, but we'll include it for future use
-          results.details[target].success = 0;
-          results.details[target].failed = 0;
-          // Would delete logs here if implemented
+      // Verify current password
+      const isCurrentPasswordValid = await storage.comparePasswords(currentPassword, currentUser.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(401).json({ message: "Password saat ini tidak valid" });
+      }
+
+      // Hash new password
+      const hashedPassword = await storage.hashPassword(newPassword);
+
+      // Update password
+      const updatedUser = await storage.updateUser(user.id, { password: hashedPassword });
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Gagal memperbarui password" });
+      }
+
+      res.json({ message: "Password berhasil diubah" });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Gagal mengubah password" });
+    }
+  });
+
+  // Reset password endpoint (admin only)
+  app.post("/api/users/:id/reset-password", requireRole(["admin"]), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID pengguna tidak valid" });
+      }
+
+      // Get user
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "Pengguna tidak ditemukan" });
+      }
+
+      // Generate new password based on role
+      let newPassword = "";
+      if (user.role === 'siswa') {
+        // For students, use their NISN
+        const student = await storage.getStudent(user.studentId || 0);
+        if (student) {
+          newPassword = student.nisn; // Use NISN as password
+        } else {
+          newPassword = "siswa123"; // Fallback if NISN not found
         }
+      } else if (user.role === 'guru') {
+        newPassword = "guru123";
+      } else {
+        newPassword = "admin123";
       }
 
-      res.json(results);
+      // Hash new password
+      const hashedPassword = await storage.hashPassword(newPassword);
+
+      // Update password
+      const updatedUser = await storage.updateUser(id, { password: hashedPassword });
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Gagal mereset password" });
+      }
+
+      res.json({ 
+        message: "Password berhasil direset", 
+        newPassword: newPassword // Send plaintext password back for admin to communicate to user
+      });
     } catch (error) {
-      console.error('Bulk delete error:', error);
-      res.status(500).json({ message: "Failed to perform bulk delete operation" });
+      console.error("Error resetting password:", error);
+      res.status(500).json({ message: "Gagal mereset password" });
     }
   });
 
-  // Pastikan direktori untuk file sementara PDF ada
-  if (!fs.existsSync('uploads/certificates')) {
-    fs.mkdirSync('uploads/certificates', { recursive: true });
-  }
+  // Generate Excel template for student import
+  app.get("/api/students/import/template", requireRole(["admin"]), async (req, res) => {
+    return generateExcelTemplate(req, res);
+  });
+
+  const generateExcelTemplate = async (req: Request, res: Response) => {
+    try {
+      // Create a new workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Sample data
+      const sampleData = [
+        { 
+          NISN: "1234567890", 
+          NIS: "12345", 
+          "Nama Lengkap": "Nama Siswa", 
+          "Tempat Lahir": "Jakarta", 
+          "Tanggal Lahir": "2005-01-01", 
+          "Nama Orang Tua": "Nama Ayah", 
+          "Kelas": "XII", 
+          "Jurusan": "IPA" 
+        },
+        { 
+          NISN: "0987654321", 
+          NIS: "54321", 
+          "Nama Lengkap": "Nama Siswa 2", 
+          "Tempat Lahir": "Bandung", 
+          "Tanggal Lahir": "2005-02-15", 
+          "Nama Orang Tua": "Nama Ibu", 
+          "Kelas": "XII", 
+          "Jurusan": "IPS" 
+        }
+      ];
+      
+      // Create worksheet with sample data
+      const ws = XLSX.utils.json_to_sheet(sampleData);
+      
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, "Template Siswa");
+      
+      // Create buffer
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      
+      // Set headers for file download
+      res.setHeader('Content-Disposition', 'attachment; filename=template_import_siswa.xlsx');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      
+      // Send file
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error generating template:", error);
+      res.status(500).json({ message: "Gagal membuat template" });
+    }
+  };
 
   // Server-side PDF generation endpoint
   app.get("/api/certificates/:studentId", requireAuth, async (req, res) => {
@@ -1403,58 +1540,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get settings
       const settings = await storage.getSettings();
       if (!settings) {
-        return res.status(500).json({ message: "Pengaturan sekolah tidak ditemukan" });
+        return res.status(404).json({ message: "Pengaturan tidak ditemukan" });
       }
 
-      // Get showGrades from query param
+      // Check if showing grades is requested
       const showGrades = req.query.showGrades === 'true';
 
+      // Create uploads/certificates directory if it doesn't exist
+      if (!fs.existsSync('uploads/certificates')) {
+        fs.mkdirSync('uploads/certificates', { recursive: true });
+      }
+
+      // Generate PDF filename
+      const filename = `certificate_${student.id}_${Date.now()}.pdf`;
+      const filePath = path.join('uploads/certificates', filename);
+
       // Get grades if needed
-      let gradeData: SubjectGrade[] = [];
-      let averageGrade: number | undefined = undefined;
-
+      let grades = [];
       if (showGrades) {
-        const studentGrades = await storage.getStudentGrades(studentId);
+        const studentGrades = await storage.getStudentGrades(student.id);
+        grades = studentGrades.map(grade => ({
+          name: grade.subjectName,
+          value: grade.value
+        }));
+      }
 
-        if (studentGrades && studentGrades.length > 0) {
-          // Format grades as SubjectGrade format
-          gradeData = studentGrades.map(g => ({
-            name: g.subjectName,
-            value: g.value
-          }));
-
-          // Calculate average grade
-          const sum = studentGrades.reduce((acc, grade) => acc + grade.value, 0);
-          averageGrade = Number((sum / studentGrades.length).toFixed(2));
-
-          // Log untuk debugging
-          console.log(`Grades count: ${gradeData.length}, Average: ${averageGrade}`);
-        } else {
-          console.log('No grades found for student');
-
-          // Jika tidak ada grades di database, gunakan sample data (hanya untuk development)
-          gradeData = [
-            { name: "Pendidikan Agama dan Budi Pekerti", value: 87.52 },
-            { name: "Pendidikan Pancasila dan Kewarganegaraan", value: 90.40 },
-            { name: "Bahasa Indonesia", value: 85.04 },
-            { name: "Matematika", value: 87.92 },
-            { name: "Sejarah Indonesia", value: 87.52 },
-            { name: "Bahasa Inggris", value: 86.04 },
-            { name: "Seni Budaya", value: 89.28 },
-            { name: "Pendidikan Jasmani, Olah Raga, dan Kesehatan", value: 91.92 },
-            { name: "Prakarya dan Kewirausahaan", value: 91.20 },
-            { name: "Matematika Peminatan", value: 85.32 },
-            { name: "Biologi", value: 88.56 },
-            { name: "Fisika", value: 87.64 },
-            { name: "Kimia", value: 88.60 },
-            { name: "Sosiologi Peminatan", value: 89.04 },
-            { name: "Bahasa Jepang", value: 87.75 }
-          ];
-
-          // Calculate average for sample data
-          const sum = gradeData.reduce((acc, grade) => acc + grade.value, 0);
-          averageGrade = Number((sum / gradeData.length).toFixed(2));
-        }
+      // Calculate average grade if available
+      let averageGrade;
+      if (grades.length > 0) {
+        const sum = grades.reduce((acc, grade) => acc + grade.value, 0);
+        averageGrade = Math.round((sum / grades.length) * 100) / 100;
       }
 
       // Prepare certificate data
@@ -1467,14 +1582,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         birthDate: student.birthDate,
         parentName: student.parentName,
         className: student.className,
-        certNumber: String(student.id).padStart(3, '0'),
+        certNumber: `${settings.certNumberPrefix || 'SKL'}/${settings.academicYear.replace('/', '-')}/${student.id.toString().padStart(3, '0')}`,
         certNumberPrefix: settings.certNumberPrefix || '',
         certBeforeStudentData: settings.certBeforeStudentData || '',
         certAfterStudentData: settings.certAfterStudentData || '',
         certRegulationText: settings.certRegulationText || '',
         certCriteriaText: settings.certCriteriaText || '',
-        issueDate: formatDate(new Date().toISOString()),
-        graduationDate: settings.graduationDate || formatDate(new Date().toISOString()),
+        issueDate: new Date().toLocaleDateString('id-ID'),
+        graduationDate: settings.graduationDate || new Date().toLocaleDateString('id-ID'),
         graduationTime: settings.graduationTime || '',
         headmasterName: settings.headmasterName || '',
         headmasterNip: settings.headmasterNip || '',
@@ -1487,20 +1602,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         schoolStamp: settings.schoolStamp || '',
         ministryLogo: settings.ministryLogo || '',
         headerImage: settings.headerImage || '',
-        useHeaderImage: typeof settings.useHeaderImage === 'boolean' ? settings.useHeaderImage : false,
-        useDigitalSignature: typeof settings.useDigitalSignature === 'boolean' ? settings.useDigitalSignature : true,
+        useHeaderImage: settings.useHeaderImage || false,
+        useDigitalSignature: settings.useDigitalSignature || false,
         cityName: settings.cityName || '',
         provinceName: settings.provinceName || '',
         academicYear: settings.academicYear || '',
-        majorName: settings.majorList?.split(',')[0] || 'MIPA',
+        majorName: student.major || 'MIPA',
         showGrades,
-        grades: gradeData,
+        grades,
         averageGrade
       };
-
-      // Generate a unique filename
-      const filename = `certificate_${student.nisn}_${Date.now()}.pdf`;
-      const filePath = path.join(process.cwd(), 'uploads', 'certificates', filename);
 
       // Generate PDF
       await generateCertificatePDF(certificateData, filePath);
@@ -1511,147 +1622,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Error sending PDF:", err);
         }
 
-        // Delete the temporary file after sending
-        fs.unlink(filePath, (unlinkErr) => {
-          if (unlinkErr) {
-            console.error("Error deleting temporary PDF:", unlinkErr);
-          }
-        });
+        // Delete the file after sending
+        setTimeout(() => {
+          fs.unlink(filePath, (err) => {
+            if (err) {
+              console.error("Error deleting file:", err);
+            }
+          });
+        }, 5000);
       });
-
     } catch (error) {
       console.error("Error generating certificate:", error);
       res.status(500).json({ message: "Gagal membuat sertifikat" });
     }
   });
 
-  // Generate Excel Import Template
-  // Function to generate Excel template
-  const generateExcelTemplate = async (req: Request, res: Response) => {
+  // Generate Excel template for grade import (by class)
+  app.get("/api/grades/template-class", requireRole(["admin", "guru"]), async (req, res) => {
     try {
-      // Support both query parameters: className and class
-      let className = req.query.className as string;
-      if (!className) {
-        className = req.query.class as string;
-      }
+      // Get class name from query
+      const className = req.query.className as string;
+      
+      // Get major from query
+      const major = req.query.major as string;
       
       if (!className) {
-        return res.status(400).json({ message: "Nama kelas diperlukan" });
+        return res.status(400).json({ message: "Parameter kelas diperlukan" });
+      }
+
+      // Get students in the class
+      const query: { className: string; major?: string } = { className };
+      if (major) {
+        query.major = major;
       }
       
-      // Create workbook
+      const students = await storage.getStudents(query);
+      
+      // Get subjects
+      const subjectsQuery: { major?: string } = {};
+      if (major) {
+        subjectsQuery.major = major;
+      }
+      
+      const subjects = await storage.getSubjects(subjectsQuery);
+      
+      // Create a new workbook
       const wb = XLSX.utils.book_new();
       
-      // Create headers and sample data
+      // Prepare header row with student data columns and subject columns
       const headers = [
-        "nisn", 
-        "nis", 
-        "fullName", 
-        "birthPlace", 
-        "birthDate", 
-        "parentName", 
-        "className"
+        "ID",
+        "NISN",
+        "NIS",
+        "Nama Lengkap",
+        ...subjects.map(subject => subject.code) // Use subject codes as column headers
       ];
       
-      // Create sample rows with explanations
-      const rows = [
-        [
-          // Sample data with explanations
-          "0123456789", // NISN (10 digit)
-          "123456", // NIS (6 digit)
-          "Nama Lengkap Siswa", // Nama lengkap
-          "Jakarta", // Tempat lahir
-          "2005-05-20", // Tanggal lahir (format: YYYY-MM-DD)
-          "Nama Orang Tua", // Nama orang tua
-          className // Kelas
-        ],
-        [
-          // Empty row for user to fill
-          "", "", "", "", "", "", className
-        ]
-      ];
-      
-      // Combine headers and rows
-      const data = [headers, ...rows];
-      
-      // Create worksheet from data
-      const ws = XLSX.utils.aoa_to_sheet(data);
-      
-      // Add column widths for better readability
-      const colWidths = [
-        { wch: 15 }, // nisn
-        { wch: 10 }, // nis
-        { wch: 30 }, // fullName
-        { wch: 15 }, // birthPlace
-        { wch: 15 }, // birthDate
-        { wch: 25 }, // parentName
-        { wch: 10 }  // className
-      ];
-      
-      ws['!cols'] = colWidths;
-      
-      // Add comments/notes to cells - Menggunakan format cell address (A1, B1, etc.)
-      if (!ws.A1) ws.A1 = {};
-      if (!ws.B1) ws.B1 = {};
-      if (!ws.C1) ws.C1 = {};
-      if (!ws.D1) ws.D1 = {};
-      if (!ws.E1) ws.E1 = {};
-      if (!ws.F1) ws.F1 = {};
-      if (!ws.G1) ws.G1 = {};
-      
-      // Menambahkan keterangan menggunakan metadata di workbook
-      const comments = {
-        A1: { text: "NISN harus 10 digit angka", author: "Petunjuk" },
-        B1: { text: "NIS harus diisi, minimal 3 karakter", author: "Petunjuk" },
-        C1: { text: "Nama lengkap siswa", author: "Petunjuk" },
-        D1: { text: "Tempat lahir siswa", author: "Petunjuk" },
-        E1: { text: "Format tanggal: YYYY-MM-DD (tahun-bulan-tanggal)", author: "Petunjuk" },
-        F1: { text: "Nama orang tua/wali siswa", author: "Petunjuk" },
-        G1: { text: "Kelas siswa, sudah terisi otomatis", author: "Petunjuk" }
-      };
-      
-      // Menambahkan comments ke worksheet
-      if (!ws.comments) ws.comments = [];
-      for (const [cellAddr, comment] of Object.entries(comments)) {
-        ws.comments.push({ 
-          ref: cellAddr, 
-          author: comment.author,
-          text: comment.text
+      // Prepare data rows
+      const dataRows = students.map(student => {
+        const row: any = {
+          ID: student.id,
+          NISN: student.nisn,
+          NIS: student.nis,
+          "Nama Lengkap": student.fullName
+        };
+        
+        // Add empty cells for each subject
+        subjects.forEach(subject => {
+          row[subject.code] = "";
         });
-      }
+        
+        return row;
+      });
       
-      // Membuat deskripsi di baris pertama
-      ws.A4 = { t: "s", v: "PETUNJUK:" };
-      ws.A5 = { t: "s", v: "1. Baris 1 berisi header, jangan diubah" };
-      ws.A6 = { t: "s", v: "2. Baris 2 berisi contoh data, boleh diubah" };
-      ws.A7 = { t: "s", v: "3. Baris 3 dan seterusnya untuk data baru" };
-      ws.A8 = { t: "s", v: "4. Pastikan format tanggal adalah YYYY-MM-DD (tahun-bulan-tanggal)" };
-      ws.A9 = { t: "s", v: "5. NISN wajib 10 digit angka" };
+      // Create worksheet with the data
+      const ws = XLSX.utils.json_to_sheet(dataRows);
       
       // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(wb, ws, "Data Siswa");
+      XLSX.utils.book_append_sheet(wb, ws, `Nilai ${className}`);
       
-      // Generate buffer
-      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      // Add a subjects reference sheet
+      const subjectsData = subjects.map(subject => ({
+        code: subject.code,
+        name: subject.name,
+        group: subject.group,
+        credits: subject.credits,
+        id: subject.id
+      }));
       
-      // Set response headers
-      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", `attachment; filename=Template_Import_Siswa_${className}.xlsx`);
+      const subjectSheet = XLSX.utils.json_to_sheet(subjectsData);
+      XLSX.utils.book_append_sheet(wb, subjectSheet, "Mata Pelajaran");
       
-      // Send buffer as response
+      // Create buffer
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      
+      // Set headers for file download
+      const fileName = major 
+        ? `template_nilai_${className}_${major.replace(/\s+/g, '_')}.xlsx` 
+        : `template_nilai_${className}.xlsx`;
+      
+      res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      
+      // Send file
       res.send(buffer);
     } catch (error) {
-      console.error("Error generating Excel template:", error);
-      res.status(500).json({ message: "Gagal membuat template Excel" });
+      console.error("Error generating grade template:", error);
+      res.status(500).json({ message: "Gagal membuat template nilai" });
     }
-  };
+  });
 
-  // Set up both endpoints to use the same handler
-  app.get("/api/students/template/excel", requireRole(["admin"]), generateExcelTemplate);
-  
-  // Alias for backward compatibility
-  app.get("/api/export/student-template", requireRole(["admin"]), generateExcelTemplate);
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
 
-  const httpServer = createServer(app);
+  // Create HTTP server
+  const httpServer = new Server(app);
+
   return httpServer;
 }
