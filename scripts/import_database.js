@@ -6,15 +6,21 @@
  * node scripts/import_database.js <path_to_full_export.json>
  */
 
-const { drizzle } = require('drizzle-orm/postgres-js');
-const postgres = require('postgres');
-const fs = require('fs');
-const path = require('path');
+import postgres from 'postgres';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+import { eq } from 'drizzle-orm';
+
+// Directory name setup untuk ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load .env file jika ada
 try {
   if (fs.existsSync('.env')) {
-    require('dotenv').config();
+    dotenv.config();
     console.log('Loaded environment variables from .env file');
   }
 } catch (error) {
@@ -41,16 +47,7 @@ if (!fs.existsSync(importFilePath)) {
   process.exit(1);
 }
 
-// Load schema dari shared/schema.ts
-let schema;
-try {
-  schema = require('../shared/schema');
-  console.log('Successfully loaded schema from shared/schema.ts');
-} catch (error) {
-  console.error('Error loading schema:', error.message);
-  console.error('Make sure you have the shared/schema.ts file and run this from the project root.');
-  process.exit(1);
-}
+// Karena kita tidak dapat mengakses schema langsung, kita akan mengimpor data secara manual
 
 async function main() {
   console.log('Starting database import...');
@@ -75,67 +72,89 @@ async function main() {
   
   // Initialize database connection
   console.log('Connecting to database...');
-  const queryClient = postgres(databaseUrl, { max: 1 });
-  const db = drizzle(queryClient);
+  const sql = postgres(databaseUrl, { max: 1 });
 
   try {
     // Import data table by table
     console.log('\n==== Starting Import Process ====');
     
     // Utility function for importing a table
-    async function importTable(table, data, idField = 'id') {
+    async function importTable(tableName, data, idField = 'id') {
       if (!data || !Array.isArray(data) || data.length === 0) {
-        console.log(`No data to import for ${table}`);
+        console.log(`No data to import for ${tableName}`);
         return 0;
       }
       
-      console.log(`Importing ${data.length} records to ${table}...`);
+      console.log(`Importing ${data.length} records to ${tableName}...`);
       
-      // Handle potential conflicts by checking existing IDs
       try {
-        // Get a list of existing IDs
-        const existingIds = [];
-        if (idField) {
-          const existingRecords = await db.select({ id: schema[table][idField] }).from(schema[table]);
-          existingRecords.forEach(record => existingIds.push(record.id));
-        }
+        let processedCount = 0;
         
-        // Split into inserts and updates
-        const recordsToInsert = [];
-        const recordsToUpdate = [];
-        
-        data.forEach(record => {
-          if (idField && existingIds.includes(record[idField])) {
-            recordsToUpdate.push(record);
-          } else {
-            recordsToInsert.push(record);
-          }
-        });
-        
-        // Process inserts
-        if (recordsToInsert.length > 0) {
-          console.log(`- Inserting ${recordsToInsert.length} new records`);
-          await db.insert(schema[table]).values(recordsToInsert);
-        }
-        
-        // Process updates
-        if (recordsToUpdate.length > 0) {
-          console.log(`- Updating ${recordsToUpdate.length} existing records`);
+        // Process each record
+        for (const record of data) {
+          // Konversi fieldName dari camelCase ke snake_case untuk PostgreSQL
+          const recordSql = {};
+          Object.keys(record).forEach(key => {
+            // Konversi camelCase ke snake_case
+            const snakeKey = key.replace(/([A-Z])/g, "_$1").toLowerCase();
+            recordSql[snakeKey] = record[key];
+          });
           
-          for (const record of recordsToUpdate) {
+          // Cek apakah record sudah ada berdasarkan ID
+          const existingRecord = await sql.unsafe(`
+            SELECT * FROM "${tableName}" 
+            WHERE "${idField}" = ${record[idField]}
+          `);
+          
+          if (existingRecord.length > 0) {
+            // Update existing record
             const id = record[idField];
-            const { [idField]: _, ...updateData } = record;
+            const updateKeys = Object.keys(recordSql).filter(k => k !== idField);
             
-            await db
-              .update(schema[table])
-              .set(updateData)
-              .where(db.eq(schema[table][idField], id));
+            if (updateKeys.length > 0) {
+              // Buat query update dinamis dengan quote untuk handle reserved keywords
+              const setClause = updateKeys.map(key => {
+                // Escape reserved keywords dan nilai string
+                const quotedKey = `"${key}"`;
+                const value = recordSql[key] === null ? 'NULL' : 
+                  typeof recordSql[key] === 'string' ? 
+                    `'${recordSql[key].replace(/'/g, "''")}'` :
+                    recordSql[key];
+                
+                return `${quotedKey} = ${value}`;
+              }).join(', ');
+              
+              await sql.unsafe(`
+                UPDATE "${tableName}" 
+                SET ${setClause}
+                WHERE "${idField}" = ${id}
+              `);
+            }
+          } else {
+            // Insert new record
+            const columns = Object.keys(recordSql).map(col => `"${col}"`); // Quote column names
+            const values = Object.keys(recordSql).map(col => {
+              const val = recordSql[col];
+              if (val === null) return 'NULL';
+              if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`; // Escape quotes
+              return val;
+            });
+            
+            await sql.unsafe(`
+              INSERT INTO "${tableName}" (${columns.join(', ')})
+              VALUES (${values.join(', ')})
+            `);
+          }
+          
+          processedCount++;
+          if (processedCount % 50 === 0) {
+            console.log(`- Processed ${processedCount}/${data.length} records...`);
           }
         }
         
-        return data.length;
+        return processedCount;
       } catch (error) {
-        console.error(`Error importing ${table}:`, error.message);
+        console.error(`Error importing ${tableName}:`, error);
         throw error;
       }
     }
@@ -172,7 +191,7 @@ async function main() {
     console.error('Error during import:', error);
   } finally {
     // Close database connection
-    await queryClient.end();
+    await sql.end();
   }
 }
 
