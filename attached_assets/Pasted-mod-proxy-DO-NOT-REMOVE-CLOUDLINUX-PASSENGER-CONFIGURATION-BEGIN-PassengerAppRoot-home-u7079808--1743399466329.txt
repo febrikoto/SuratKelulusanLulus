@@ -1,0 +1,73 @@
+mod_proxy# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/u7079808/public_html/skl.smkn1lubuksikaping.sch.id"
+PassengerBaseURI "/"
+PassengerNodejs "/home/u7079808/nodevenv/public_html/skl.smkn1lubuksikaping.sch.id/18/bin/node"
+PassengerAppType node
+PassengerStartupFile start.js
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+# JANGAN DIUBAH: KONFIGURASI REDIRECT CLOUDFLARE SPESIAL
+RewriteEngine On
+# Add HSTS header
+<IfModule mod_headers.c>
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+</IfModule>
+# Redirect HTTP to HTTPS
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# Force HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# Node.js proxy configuration
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Jangan proxy request untuk file static yang ada
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+    
+    # Jangan proxy request untuk direktori yang ada
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+    
+    # Proxy homepage
+    RewriteRule ^$ http://localhost:3000/ [P,L]
+    
+    # Proxy semua request lainnya
+    RewriteRule ^(.*)$ http://localhost:3000/$1 [P,L]
+</IfModule>
+# Header untuk proxy
+<IfModule mod_headers.c>
+    RequestHeader set X-Forwarded-Proto "https"
+    RequestHeader set X-Forwarded-Port "443"
+    RequestHeader set X-Forwarded-For %{REMOTE_ADDR}e
+    
+    # Security headers
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+# Konfigurasi cache untuk file statis
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Cache images, scripts, css
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    
+    # Cache fonts
+    ExpiresByType application/font-woff "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+# Kompres output untuk meningkatkan kecepatan
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json
+</IfModule>
