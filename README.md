@@ -105,20 +105,60 @@ NODE_ENV=production
 
 #### Backup Database
 
-Jalankan script backup untuk mengekspor data:
+Aplikasi ini dilengkapi dengan beberapa metode backup:
+
+1. Menggunakan script bash otomatis:
+```bash
+./backup-db.sh
 ```
+Script ini akan membuat backup schema, data, full SQL, dan JSON secara otomatis.
+
+2. Menggunakan script export JSON:
+```bash
 node scripts/export_database.js
+# atau dengan path kustom:
+node scripts/export_database.js path/to/backup.json
 ```
-File backup akan disimpan di folder `backup/` dengan format timestamp.
+
+File backup akan disimpan di folder `backup/sql/` dan `backup/data/` dengan format timestamp.
 
 #### Restore Database
 
 Untuk restore database dari file backup:
+
+1. Menggunakan script bash otomatis:
+```bash
+./restore-from-backup.sh -f path/to/backup_file
 ```
+
+2. Restore dari file JSON:
+```bash
 node scripts/import_database.js path/to/backup.json
 ```
 
-### Migrasi ke Supabase
+3. Restore dari file SQL:
+```bash
+psql -h hostname -U username -d database_name -f path/to/backup.sql
+```
+
+Baca panduan lengkap di:
+- [Panduan Backup dan Restore](docs/PANDUAN_BACKUP_RESTORE.md)
+- [Panduan Backup di Domainesia](docs/PANDUAN_BACKUP_DATABASE_DOMAINESIA.md)
+
+### Migrasi Database
+
+#### Migrasi ke PostgreSQL Domainesia
+
+Untuk migrasi dari Supabase ke PostgreSQL lokal di Domainesia, baca panduan lengkap:
+[Panduan Migrasi Supabase ke PostgreSQL](docs/PANDUAN_MIGRASI_SUPABASE_KE_POSTGRESQL.md)
+
+Panduan ini mencakup:
+- Ekspor data dari Supabase
+- Persiapan database PostgreSQL lokal
+- Impor data ke PostgreSQL lokal
+- Verifikasi dan troubleshooting
+
+#### Migrasi ke Supabase
 
 Untuk migrasi data dari database Postgres lokal ke Supabase, baca panduan lengkap di [docs/PANDUAN_IMPORT_SUPABASE.md](docs/PANDUAN_IMPORT_SUPABASE.md).
 

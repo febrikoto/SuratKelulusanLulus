@@ -41,21 +41,46 @@ if (!databaseUrl) {
 // Load schema
 let users, students, settings, grades, subjects;
 try {
-  const schema = await import('../shared/schema.ts');
+  const schema = await import('../shared/schema.js');
   users = schema.users;
   students = schema.students;
   settings = schema.settings;
   grades = schema.grades;
   subjects = schema.subjects;
-  console.log('Successfully loaded schema from shared/schema.ts');
+  console.log('Successfully loaded schema from shared/schema.js');
 } catch (error) {
   console.error('Error loading schema:', error.message);
-  console.error('Make sure you have the shared/schema.ts file and run this from the project root.');
+  console.error('Make sure you have the shared/schema.js file and run this from the project root.');
   process.exit(1);
 }
 
 async function main() {
   console.log('Starting database export...');
+  
+  // Set output file path
+  let outputPath;
+  if (process.argv.length >= 3) {
+    // Use the specified output file path
+    outputPath = process.argv[2];
+    console.log(`Using specified output path: ${outputPath}`);
+    
+    // Ensure directory exists
+    const outputDir = path.dirname(outputPath);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+      console.log(`Created output directory: ${outputDir}`);
+    }
+  } else {
+    // Use default output directory
+    const exportDir = path.join(__dirname, '..', 'backup', 'data');
+    if (!fs.existsSync(exportDir)) {
+      fs.mkdirSync(exportDir, { recursive: true });
+    }
+    
+    const timestamp = new Date().toISOString().replace(/[:T.]/g, '-').slice(0, 19);
+    outputPath = path.join(exportDir, `full_export_${timestamp}.json`);
+    console.log(`Using default output path: ${outputPath}`);
+  }
   
   console.log('Connecting to database...');
   
@@ -64,12 +89,6 @@ async function main() {
   const db = drizzle(queryClient);
 
   try {
-    // Create export directory
-    const exportDir = path.join(__dirname, '..', 'backup', 'data');
-    if (!fs.existsSync(exportDir)) {
-      fs.mkdirSync(exportDir, { recursive: true });
-    }
-
     const timestamp = new Date().toISOString().replace(/[:T.]/g, '-').slice(0, 19);
     
     // Export data
@@ -105,11 +124,10 @@ async function main() {
     };
     
     // Write to file
-    const exportPath = path.join(exportDir, `full_export_${timestamp}.json`);
-    fs.writeFileSync(exportPath, JSON.stringify(fullExport, null, 2));
+    fs.writeFileSync(outputPath, JSON.stringify(fullExport, null, 2));
 
     console.log('Export completed successfully!');
-    console.log(`Data exported to: ${exportPath}`);
+    console.log(`Data exported to: ${outputPath}`);
     
     // Summary
     console.log('\nExport summary:');
