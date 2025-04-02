@@ -1,283 +1,129 @@
-# Panduan Migrasi Database dari Supabase ke PostgreSQL Lokal di Domainesia
+# Panduan Migrasi dari Supabase ke PostgreSQL di Domainesia
 
-Panduan ini akan membantu Anda memindahkan data dari database Supabase ke PostgreSQL lokal yang dihosting di Domainesia. Proses ini berguna saat ingin memindahkan aplikasi dari lingkungan pengembangan ke produksi.
+Dokumen ini berisi langkah-langkah untuk migrasi database dari Supabase ke PostgreSQL lokal di Domainesia.
 
-## Daftar Isi
-1. [Persiapan](#1-persiapan)
-2. [Ekspor Data dari Supabase](#2-ekspor-data-dari-supabase)
-3. [Persiapan Database Domainesia](#3-persiapan-database-domainesia)
-4. [Impor Data ke PostgreSQL Domainesia](#4-impor-data-ke-postgresql-domainesia)
-5. [Verifikasi Migrasi](#5-verifikasi-migrasi)
-6. [Pengaturan Aplikasi](#6-pengaturan-aplikasi)
-7. [Troubleshooting](#7-troubleshooting)
+## Persiapan Sebelum Migrasi
 
-## 1. Persiapan
+1. **Backup Data dari Supabase**
+   - Ekspor data menggunakan script `scripts/export_database.js`
+   - Simpan file `full_export.json` yang dihasilkan
 
-### Persyaratan
-- Akses ke database Supabase (URL dan kunci API)
-- Akses SSH ke hosting Domainesia
-- Akses ke database PostgreSQL di Domainesia
-- Node.js terinstal di komputer lokal dan server Domainesia
+2. **Menyiapkan Kredensial Database Domainesia**
+   - Buat file `env-for-domainesia.env` dengan kredensial database Domainesia:
+     ```
+     # Database Configuration - Domainesia PostgreSQL
+     DATABASE_URL=postgresql://anytimem_skl:h69bgicM%2A@127.0.0.1:5432/anytimem_sklsmk
+     PGHOST=127.0.0.1
+     PGPORT=5432
+     PGUSER=anytimem_skl
+     PGPASSWORD=h69bgicM*
+     PGDATABASE=anytimem_sklsmk
+     
+     # Session Configuration 
+     SESSION_SECRET=string_acak_32_karakter
+     
+     # Server Configuration
+     PORT=3000
+     NODE_ENV=production
+     ```
 
-### Informasi Koneksi
+## Langkah-Langkah Migrasi
 
-Siapkan informasi koneksi untuk kedua database:
-
-**Supabase:**
-```
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
-
-**PostgreSQL Domainesia:**
-```
-PGUSER=username
-PGPASSWORD=password
-PGHOST=localhost
-PGPORT=5432
-PGDATABASE=database_name
-DATABASE_URL=postgresql://username:password@localhost:5432/database_name
-```
-
-## 2. Ekspor Data dari Supabase
-
-### Metode 1: Menggunakan Script Export
-
-1. Pastikan Anda memiliki file `.env` dengan kredensial Supabase yang benar:
-
-```
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
-
-2. Jalankan script ekspor:
+### 1. Ekspor Data dari Supabase
 
 ```bash
-# Pastikan Anda di direktori root aplikasi
-node scripts/export_database.js backup/data/supabase_export.json
+# Pastikan .env berisi kredensial Supabase
+npm run export-db
 ```
 
-3. Verifikasi file ekspor:
+### 2. Persiapan Deployment ke Domainesia
 
 ```bash
-ls -la backup/data/supabase_export.json
-cat backup/data/supabase_export.json | head -n 20
+# Jalankan script persiapan deployment
+chmod +x prepare-for-deployment.sh
+./prepare-for-deployment.sh
 ```
 
-### Metode 2: Menggunakan Supabase Dashboard
+Script ini akan:
+- Menyalin `env-for-domainesia.env` ke `.env`
+- Membuat atau memastikan file `.htaccess` sudah ada
+- Menginstall semua dependensi
+- Build aplikasi
 
-1. Login ke dashboard Supabase
-2. Pilih project Anda
-3. Buka menu "Database" > "SQL"
-4. Jalankan query ekspor untuk setiap tabel:
+### 3. Deploy ke Domainesia
 
-```sql
--- Export users table
-SELECT * FROM users;
+1. **ZIP Semua File yang Dibutuhkan**
+   ```bash
+   zip -r skl-app.zip dist/ node_modules/ .env .htaccess start.js package.json scripts/ shared/ server/ client/ uploads/
+   ```
 
--- Export students table
-SELECT * FROM students;
+2. **Upload ZIP ke Domainesia**
+   - Login ke cPanel Domainesia
+   - Navigasi ke File Manager
+   - Buka direktori `public_html`
+   - Upload file ZIP
+   - Extract file ZIP
 
--- Export settings table
-SELECT * FROM settings;
+3. **Setting Izin File**
+   - Direktori: 755
+   - File: 644
+   - File eksekusi (sh): 755
 
--- Export grades table
-SELECT * FROM grades;
+### 4. Restore Database di Domainesia
 
--- Export subjects table
-SELECT * FROM subjects;
-```
+1. **Upload File Backup**
+   - Upload file `full_export.json` ke server
 
-5. Untuk setiap hasil query, klik "Download" dan pilih format JSON atau CSV
-6. Simpan file ekspor untuk digunakan nanti
+2. **Restore Database**
+   ```bash
+   cd public_html
+   node scripts/import_database.js full_export.json
+   ```
 
-## 3. Persiapan Database Domainesia
+### 5. Verifikasi Migrasi
 
-### Login ke Panel cPanel Domainesia
+1. **Cek Akses Aplikasi**
+   - Buka alamat website
+   - Login dengan kredensial admin (admin/admin123)
+   - Pastikan semua data dan fitur berfungsi dengan baik
 
-1. Login ke cPanel hosting Domainesia
-2. Navigasi ke bagian "Databases" > "PostgreSQL Databases"
-3. Buat database baru jika belum ada
-4. Buat user database baru jika belum ada
-5. Tambahkan user ke database dan berikan hak akses penuh
+2. **Cek Koneksi Database**
+   ```bash
+   node scripts/check_database.js
+   ```
 
-### Koneksi ke Database PostgreSQL
+## Troubleshooting
 
-SSH ke server Domainesia dan tes koneksi database:
+### Masalah: ERROR CONNECTION REFUSED
 
-```bash
-ssh username@hostname
+Jika terjadi kesalahan "CONNECTION REFUSED", kemungkinan penyebabnya:
 
-# Setelah terhubung ke server
-psql -h localhost -U db_username -d db_name
-```
+1. **Kredensial Database Salah**
+   - Periksa kembali kredensial di file `.env`
+   - Pastikan format Database URL sudah benar
+   - Verifikasi username dan password database
 
-### Siapkan Skema Database
+2. **File .env Tidak Terupdate**
+   - Jalankan kembali `cp env-for-domainesia.env .env`
+   - Restart aplikasi
 
-1. Buat file skema pada server Domainesia:
+3. **Database Tidak Dapat Diakses dari Localhost**
+   - Pastikan setting PostgreSQL di Domainesia mengizinkan koneksi dari localhost
+   - Periksa firewall atau pembatasan akses database
 
-```bash
-cd www/nama-domain.com/public_html
-node scripts/create-supabase-schema.js
-```
+### Masalah: Error Tabel Tidak Ditemukan
 
-atau
+Jika terjadi error "relation does not exist":
 
-```bash
-node scripts/restore_database.js
-```
+1. **Schema Belum Ada**
+   - Jalankan `node scripts/restore_database.js` untuk membuat ulang schema database
 
-Ini akan membuat struktur tabel yang diperlukan di database PostgreSQL lokal.
+2. **Restore Database Gagal**
+   - Periksa log error
+   - Jalankan restore per tabel dengan `node scripts/import_database_raw.js full_export.json`
 
-## 4. Impor Data ke PostgreSQL Domainesia
+## Catatan Penting
 
-### Upload File Ekspor ke Server
-
-Gunakan SFTP atau SCP untuk mengunggah file ekspor JSON:
-
-```bash
-# Dari komputer lokal
-scp backup/data/supabase_export.json username@hostname:/path/to/domain/backup/data/
-```
-
-### Impor Data Menggunakan Script
-
-SSH ke server Domainesia dan jalankan script impor:
-
-```bash
-ssh username@hostname
-
-# Setelah terhubung ke server
-cd www/nama-domain.com/public_html
-
-# Pastikan variabel lingkungan database lokal sudah diatur dengan benar di .env
-# DATABASE_URL=postgresql://username:password@localhost:5432/database_name
-
-# Jalankan script impor
-node scripts/import_database.js backup/data/supabase_export.json
-```
-
-## 5. Verifikasi Migrasi
-
-### Periksa Data yang Diimpor
-
-Periksa apakah data berhasil diimpor dengan benar:
-
-```bash
-# Koneksi ke database PostgreSQL
-psql -h localhost -U db_username -d db_name
-
-# Periksa jumlah baris untuk setiap tabel
-SELECT COUNT(*) FROM users;
-SELECT COUNT(*) FROM students;
-SELECT COUNT(*) FROM settings;
-SELECT COUNT(*) FROM grades;
-SELECT COUNT(*) FROM subjects;
-
-# Periksa data contoh dari setiap tabel
-SELECT * FROM users LIMIT 5;
-SELECT * FROM students LIMIT 5;
-SELECT * FROM settings LIMIT 1;
-```
-
-### Validasi Relasi Database
-
-Verifikasi relasi antara tabel:
-
-```sql
--- Verifikasi relasi user-student
-SELECT u.username, u.full_name, s.nisn, s.full_name 
-FROM users u 
-JOIN students s ON u.student_id = s.id 
-LIMIT 10;
-
--- Verifikasi relasi student-grades
-SELECT s.nisn, s.full_name, g.subject_name, g.value 
-FROM students s 
-JOIN grades g ON g.student_id = s.id 
-LIMIT 10;
-```
-
-## 6. Pengaturan Aplikasi
-
-### Update File .env
-
-Pastikan file `.env` diperbarui dengan kredensial database lokal:
-
-```
-# Database Domainesia
-DATABASE_URL=postgresql://username:password@localhost:5432/database_name
-PGUSER=username
-PGPASSWORD=password
-PGHOST=localhost
-PGPORT=5432
-PGDATABASE=database_name
-
-# Pengaturan aplikasi lainnya
-SESSION_SECRET=your_session_secret
-NODE_ENV=production
-PORT=3000
-```
-
-### Update Service Worker
-
-Pastikan aplikasi terhubung ke database lokal:
-
-```bash
-# Restart aplikasi Node.js
-cd www/nama-domain.com/public_html
-pm2 restart all
-# atau
-node start.js
-```
-
-## 7. Troubleshooting
-
-### Error: Connection Refused
-
-Jika koneksi ke database ditolak:
-
-1. Periksa kredensial database di file `.env`
-2. Pastikan PostgreSQL berjalan dan menerima koneksi dari localhost
-3. Periksa pengaturan firewall (biasanya tidak masalah untuk koneksi lokal)
-
-### Error: Permission Denied
-
-Jika terjadi error izin saat mengakses database:
-
-1. Periksa apakah user database memiliki hak akses yang cukup
-2. Periksa izin pada file dan direktori aplikasi
-
-```bash
-# Berikan izin yang benar pada direktori aplikasi
-chmod -R 755 www/nama-domain.com/public_html
-```
-
-### Error: Schema Tidak Konsisten
-
-Jika skema database tidak konsisten:
-
-1. Bandingkan struktur tabel di kedua database
-2. Jalankan script pembuatan skema lagi jika diperlukan
-3. Pastikan versi aplikasi kompatibel dengan struktur database
-
-### Duplikasi Data
-
-Jika terdapat data duplikat setelah migrasi:
-
-1. Gunakan opsi `--clean` atau hapus data terlebih dahulu:
-
-```sql
--- Hapus data dari tabel dalam urutan yang benar (perhatikan dependensi foreign key)
-TRUNCATE grades CASCADE;
-TRUNCATE users CASCADE;
-TRUNCATE students CASCADE;
-TRUNCATE settings CASCADE;
-TRUNCATE subjects CASCADE;
-```
-
-2. Kemudian jalankan impor lagi
-
----
-
-Untuk bantuan lebih lanjut, silakan hubungi tim teknis atau administrator sistem.
+- **Password Database**: Dalam connection string PostgreSQL, karakter khusus seperti `*` perlu di-encode menjadi `%2A` jika menggunakan format DATABASE_URL.
+- **Node.js Version**: Pastikan menggunakan Node.js versi 18 di Domainesia.
+- **Maintenance Mode**: Aktifkan maintenance mode di website sebelum melakukan migrasi untuk menghindari akses pengguna selama proses migrasi.
